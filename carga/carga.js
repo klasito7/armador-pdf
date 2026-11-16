@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v5";
+  const VER = "v6";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
