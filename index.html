@@ -27,6 +27,17 @@
   button.danger{color:var(--danger)}
   button:disabled{opacity:.5;cursor:default}
   .label{color:var(--muted);font-size:13px}
+  .fdlg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+  .fdlg[hidden]{display:none}
+  .fbox{background:var(--panel);border-radius:14px;padding:18px 20px;max-width:560px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  .fbox h3{margin:0 0 6px;font-size:17px}
+  .fbox p{margin:0 0 10px;color:var(--muted);font-size:13.5px;line-height:1.4}
+  .fbox img{display:block;max-width:100%;max-height:120px;margin:0 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  #fdDate{font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:12px}
+  .frow{display:flex;flex-wrap:wrap;gap:8px}
+  #toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:10px;font-size:14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:90vw}
+  #toast[hidden]{display:none}
+  #toast button{padding:4px 10px;font-size:13px}
   #kbar{position:fixed;right:16px;bottom:70px;z-index:45;background:color-mix(in srgb,var(--ink) 88%,transparent);color:var(--panel);border-radius:12px;padding:8px 10px 8px 12px;font-size:12.5px;display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;max-width:min(760px,calc(100vw - 32px));box-shadow:0 6px 24px rgba(0,0,0,.25);backdrop-filter:blur(6px)}
   #kbar .k{white-space:nowrap}
   #kbar kbd{opacity:1;border-color:color-mix(in srgb,var(--panel) 60%,transparent);margin:0 3px 0 0}
@@ -339,6 +350,18 @@
   <div id="zview"><div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div></div>
 </div></div>
 
+<div class="fdlg" id="fdlg" hidden><div class="fbox">
+  <h3>📅 Fecha de la planilla</h3>
+  <p id="fdMsg"></p>
+  <img id="fdImg" alt="" hidden>
+  <input type="date" id="fdDate">
+  <div class="frow">
+    <button class="primary" id="fdOk">Guardar fecha <kbd>Enter</kbd></button>
+    <button id="fdZone">📐 Marcar dónde está la fecha</button>
+    <button id="fdCancel">Cancelar</button>
+  </div>
+</div></div>
+<div id="toast" hidden></div>
 <div id="kbar" hidden></div>
 <button id="kbarBtn" title="Mostrar atajos" hidden>⌨ Atajos</button>
 
@@ -827,6 +850,8 @@
         else { lastClicked = it; zoom(it); return; }
         lastClicked = it; render();
       });
+      card.addEventListener("mouseenter", () => { hoverItem = it; });
+      card.addEventListener("mouseleave", () => { if (hoverItem === it) hoverItem = null; });
       card.addEventListener("dragstart", e => { dragId = it.id; card.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", it.id); });
       card.addEventListener("dragend", () => { dragId = null; render(); });
       card.addEventListener("dragover", e => {
@@ -1053,7 +1078,11 @@
     zRect = { x: Math.min(zStart.x, p.x), y: Math.min(zStart.y, p.y), w: Math.abs(p.x - zStart.x), h: Math.abs(p.y - zStart.y) };
     zShowSel();
   });
-  zwrap.addEventListener("pointerup", () => { zStart = null; if (zRect && (zRect.w < 0.02 || zRect.h < 0.02)) { zRect = null; zShowSel(); } });
+  zwrap.addEventListener("pointerup", () => {
+    zStart = null;
+    if (zRect && (zRect.w < 0.02 || zRect.h < 0.02)) { zRect = null; zShowSel(); }
+    else if (zRect && zPurpose === "fecha") onFechaZone();
+  });
   window.addEventListener("resize", () => { if (modal.classList.contains("show") && zBase) zSize(); });
 
   $("zApply").onclick = async () => {
@@ -1428,8 +1457,253 @@
   function alertMsg(m) { setStatus(m, "err"); $("setupMsg").textContent = m; }
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
+    if (!$("fdlg").hidden) { fdClose(); return; }
+    if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
     else if (pv.classList.contains("show")) closePreview();
+  });
+
+  /* ================= Leer fecha manuscrita (tecla F) ================= */
+  // Todo corre en el navegador: Tesseract busca la palabra impresa "Fecha" en el formulario
+  // y un modelo de letra manuscrita (TrOCR) lee lo escrito al lado. Nada se sube a internet.
+  let tessP = null, trocrP = null, RawImg = null, hoverItem = null, fdCtx = null, zPurpose = null;
+  function loadScript(src) {
+    return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("No pude cargar " + src)); document.head.appendChild(s); });
+  }
+  function getTess() {
+    if (!tessP) {
+      tessP = (async () => {
+        if (!window.Tesseract) await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+        return Tesseract.createWorker("spa");
+      })();
+      tessP.catch(() => { tessP = null; });
+    }
+    return tessP;
+  }
+  function getTrocr() {
+    if (window.__fakeTrocr) return Promise.resolve(window.__fakeTrocr);
+    if (!trocrP) {
+      trocrP = (async () => {
+        const T = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2");
+        RawImg = T.RawImage;
+        let lastPct = -1;
+        return T.pipeline("image-to-text", "Xenova/trocr-small-handwritten", {
+          progress_callback: p => {
+            if (p.status === "progress" && /onnx/.test(p.file || "")) {
+              const pct = Math.round(p.progress || 0);
+              if (pct !== lastPct) { lastPct = pct; toast(`⬇ Descargando el lector de letra manuscrita (solo la primera vez)… ${pct}%`, { sticky: true }); }
+            }
+          }
+        });
+      })();
+      trocrP.catch(() => { trocrP = null; });
+    }
+    return trocrP;
+  }
+
+  // Recorte en escala de grises con más contraste y margen blanco
+  function cropFor(src, x, y, w, h) {
+    x = Math.max(0, Math.round(x)); y = Math.max(0, Math.round(y));
+    w = Math.min(src.width - x, Math.round(w)); h = Math.min(src.height - y, Math.round(h));
+    if (w < 8 || h < 8) return null;
+    const pad = Math.round(h * 0.15), c = document.createElement("canvas");
+    c.width = w + pad * 2; c.height = h + pad * 2;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.filter = "grayscale(1) contrast(1.35)";
+    ctx.drawImage(src, x, y, w, h, pad, pad, w, h);
+    return c;
+  }
+  async function readHandwriting(c) {
+    const pipe = await getTrocr();
+    if (window.__fakeTrocr) return pipe(c);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    const out = await pipe(await RawImg.fromBlob(blob), { max_new_tokens: 24 });
+    return ((out && out[0] && out[0].generated_text) || "").trim();
+  }
+
+  const MESES = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, set: 9, oct: 10, nov: 11, dic: 12 };
+  function validDate(d, m, y) {
+    d = +d; m = +m; y = +y;
+    if (y < 100) y += 2000;
+    const now = new Date();
+    if (m < 1 || m > 12 || d < 1 || d > 31 || y < 2015 || y > now.getFullYear() + 1) return null;
+    const dt = new Date(y, m - 1, d);
+    if (dt.getMonth() !== m - 1) return null;
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  function parseDate(text) {
+    if (!text) return null;
+    const mw = text.match(/(\d{1,2})\s*(?:de\s*)?(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-záéíóú]*\.?\s*(?:del?\s*)?(\d{2,4})/i);
+    if (mw) { const r = validDate(mw[1], MESES[mw[2].toLowerCase()], mw[3]); if (r) return r; }
+    // Letras que el lector suele confundir con números
+    const t = text.replace(/[OoQD]/g, "0").replace(/[Il|!\]]/g, "1").replace(/[Ss]/g, "5").replace(/[Zz]/g, "2").replace(/[B]/g, "8").replace(/[Gb]/g, "6").replace(/[Tt]/g, "7");
+    const re = /(\d{1,2})\s*[\/\-\.\\,_]\s*(\d{1,2})\s*[\/\-\.\\,_]\s*(\d{2,4})/g;
+    let m;
+    while ((m = re.exec(t))) { const r = validDate(m[1], m[2], m[3]); if (r) return r; }
+    const m8 = t.replace(/\s+/g, "").match(/(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)/);
+    if (m8) { const r = validDate(m8[1], m8[2], m8[3]); if (r) return r; }
+    return null;
+  }
+
+  async function getZones() { return (await kvGet("dateZones")) || []; }
+  async function rememberZone(z) {
+    const zones = (await getZones()).filter(o => {
+      const ix = Math.max(0, Math.min(o.x + o.w, z.x + z.w) - Math.max(o.x, z.x)), iy = Math.max(0, Math.min(o.y + o.h, z.y + z.h) - Math.max(o.y, z.y));
+      return ix * iy < 0.5 * Math.min(o.w * o.h, z.w * z.h);
+    });
+    zones.unshift(z); await kvSet("dateZones", zones.slice(0, 6));
+  }
+
+  // Busca la palabra impresa "Fecha" y arma recortes al costado / abajo / arriba
+  async function labelCrops(page) {
+    const w = await getTess();
+    const { data } = await w.recognize(page, {}, { text: true, blocks: true });
+    const lines = [];
+    (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => lines.push(l))));
+    if (!lines.length && data.lines) lines.push(...data.lines);
+    const cands = [], lineDates = [];
+    for (const l of lines) {
+      const ws = l.words || [];
+      ws.forEach((wd, i) => {
+        const clean = (wd.text || "").toLowerCase().replace(/[^a-záéíóúñ]/g, "");
+        if (!/^fecha/.test(clean)) return;
+        const n1 = (ws[i + 1] && ws[i + 1].text || "").toLowerCase(), n2 = (ws[i + 2] && ws[i + 2].text || "").toLowerCase();
+        if (/^de/.test(n1) && /^(nac|emis|venc|ingr|alta|diag|inic)/.test(n2)) return;   // fecha de nacimiento, etc.
+        const prio = /^de/.test(n1) ? 2 : 1;
+        const { x0, y0, x1, y1 } = wd.bbox, lh = Math.max(12, y1 - y0);
+        const cw = page.width * 0.75;
+        cands.push({ prio, x: x1 + lh * 0.2, y: y0 - lh * 0.7, w: cw, h: lh * 2.4 });       // a la derecha
+        cands.push({ prio: prio + 0.5, x: x0 - lh, y: y1, w: cw, h: lh * 2.6 });            // abajo
+        cands.push({ prio: prio + 0.6, x: x0 - lh, y: y0 - lh * 2.6, w: cw, h: lh * 2.6 }); // arriba
+        const after = ws.slice(i + 1).map(x => x.text).join(" ");
+        const d = parseDate(after); if (d) lineDates.push({ iso: d, raw: after });
+      });
+    }
+    cands.sort((a, b) => a.prio - b.prio);
+    return { cands: cands.slice(0, 9), lineDates };
+  }
+
+  async function readDate(it) {
+    if (!it) { toast("Pasá el mouse por la planilla (o abrila en grande) y apretá F."); return; }
+    toast("📅 Leyendo la fecha…", { sticky: true });
+    let page, lastRaw = "", lastCrop = null;
+    try {
+      page = await pageToCanvas(it, 2200);
+      // 1) Zonas que ya marcaste antes
+      for (const z of (await getZones()).slice(0, 3)) {
+        const c = cropFor(page, z.x * page.width, z.y * page.height, z.w * page.width, z.h * page.height);
+        if (!c) continue;
+        const raw = await readHandwriting(c), iso = parseDate(raw);
+        lastRaw = raw || lastRaw; lastCrop = lastCrop || c;
+        if (iso) return applyDate(iso, it, raw);
+      }
+      // La fecha va siempre abajo a la derecha: se trabaja solo con esa zona
+      const br = document.createElement("canvas");
+      const bx = Math.round(page.width * 0.4), by = Math.round(page.height * 0.6);
+      br.width = page.width - bx; br.height = page.height - by;
+      br.getContext("2d").drawImage(page, bx, by, br.width, br.height, 0, 0, br.width, br.height);
+      // 2) Al lado de la palabra "Fecha" (dentro de esa zona)
+      toast("📅 Buscando la fecha abajo a la derecha…", { sticky: true });
+      let lineDates = [];
+      try {
+        const r = await labelCrops(br); lineDates = r.lineDates;
+        for (const k of r.cands) {
+          const c = cropFor(br, k.x, k.y, k.w, k.h);
+          if (!c) continue;
+          const raw = await readHandwriting(c), iso = parseDate(raw);
+          if (raw) { lastRaw = raw; lastCrop = c; }
+          if (iso) { await rememberZone({ x: (bx + Math.max(0, k.x)) / page.width, y: (by + Math.max(0, k.y)) / page.height, w: Math.min(k.w, br.width - k.x) / page.width, h: k.h / page.height }); return applyDate(iso, it, raw); }
+        }
+      } catch (e) { console.warn("Sin Tesseract, sigo con franjas", e); }
+      // 3) Franjas horizontales de esa zona, de abajo hacia arriba
+      for (let f = 0.82; f >= 0; f -= 0.12) {
+        const c = cropFor(br, 0, br.height * f, br.width, br.height * 0.18);
+        if (!c) continue;
+        const raw = await readHandwriting(c), iso = parseDate(raw);
+        if (raw && !lastRaw) { lastRaw = raw; lastCrop = c; }
+        if (iso) { await rememberZone({ x: bx / page.width, y: (by + br.height * f) / page.height, w: br.width / page.width, h: br.height * 0.18 / page.height }); return applyDate(iso, it, raw); }
+      }
+      if (lineDates.length) return applyDate(lineDates[0].iso, it, lineDates[0].raw);
+    } catch (e) {
+      console.error(e);
+      hideToast();
+      return fdOpen({ it, msg: "No pude usar el lector automático (" + (e.message || e) + "). Poné la fecha a mano o marcá dónde está." });
+    }
+    hideToast();
+    fdOpen({ it, crop: lastCrop, msg: lastRaw ? `No pude entender la fecha. Leí: "${lastRaw}".` : "No encontré la fecha en esta hoja." });
+  }
+
+  function applyDate(iso, it, raw) {
+    if (current) { setNote("fp", iso); $("fechaPlanilla").value = iso; $("fechaPlanilla").classList.remove("missing"); }
+    toast(`📅 Fecha planilla: ${fmtFecha(iso)}` + (current ? "" : " (abrí un socio para guardarla)"), {
+      actions: [{ label: "Corregir", fn: () => fdOpen({ it, iso, msg: raw ? `Leí: "${raw}"` : "" }) }]
+    });
+  }
+
+  /* Popup para poner o marcar la fecha */
+  function fdOpen({ it, iso = "", msg = "", crop = null }) {
+    fdCtx = { it };
+    $("fdMsg").textContent = msg;
+    $("fdDate").value = iso || noteOf(current || {}).fp || "";
+    const img = $("fdImg");
+    if (crop) { img.src = crop.toDataURL("image/jpeg", 0.85); img.hidden = false; } else img.hidden = true;
+    $("fdZone").hidden = !it;
+    $("fdlg").hidden = false;
+    setTimeout(() => $("fdDate").focus(), 30);
+  }
+  function fdClose() { $("fdlg").hidden = true; fdCtx = null; }
+  $("fdCancel").onclick = fdClose;
+  $("fdlg").addEventListener("pointerdown", e => { if (e.target === $("fdlg")) fdClose(); });
+  $("fdOk").onclick = () => {
+    const v = $("fdDate").value;
+    if (!v) { $("fdDate").focus(); return; }
+    if (current) { setNote("fp", v); $("fechaPlanilla").value = v; $("fechaPlanilla").classList.remove("missing"); toast(`📅 Fecha planilla: ${fmtFecha(v)}`); }
+    else toast("Abrí un socio para guardar la fecha.");
+    fdClose();
+  };
+  $("fdDate").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); $("fdOk").click(); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fdClose(); }
+  });
+  $("fdZone").onclick = async () => {
+    const it = fdCtx && fdCtx.it; fdClose();
+    if (!it) return;
+    if (!modal.classList.contains("show") || zItem !== it) await zoom(it);
+    setCropMode(true); zPurpose = "fecha"; zRect = null; zShowSel();
+    toast("📐 Marcá con el mouse un recuadro sobre la fecha escrita a mano.", { sticky: true });
+  };
+  // Al terminar de marcar el recuadro en modo "fecha"
+  async function onFechaZone() {
+    const it = zItem, rect = zRect;
+    zPurpose = null; setCropMode(false); zRect = null; zShowSel();
+    toast("📅 Leyendo la zona marcada…", { sticky: true });
+    try {
+      const page = straighten(await pageToCanvas(it, 2200), zAng);
+      const c = cropFor(page, rect.x * page.width, rect.y * page.height, rect.w * page.width, rect.h * page.height);
+      await rememberZone(rect);
+      const raw = c ? await readHandwriting(c) : "", iso = parseDate(raw);
+      hideToast();
+      fdOpen({ it, iso: iso || "", crop: c, msg: iso ? `Leí: "${raw}". Confirmá con Enter. Ya me acuerdo de esta zona para las próximas planillas.` : `No pude entenderla${raw ? ` (leí "${raw}")` : ""}. Escribila a mano; igual me acuerdo de la zona para la próxima.` });
+    } catch (e) { console.error(e); hideToast(); fdOpen({ it, msg: "No pude leer la zona: " + (e.message || e) }); }
+  }
+
+  /* Avisos flotantes */
+  let toastT = null;
+  function toast(msg, { actions = [], sticky = false } = {}) {
+    const t = $("toast"); t.innerHTML = ""; t.hidden = false;
+    const sp = document.createElement("span"); sp.textContent = msg; t.appendChild(sp);
+    for (const a of actions) { const b = document.createElement("button"); b.textContent = a.label; b.onclick = () => { hideToast(); a.fn(); }; t.appendChild(b); }
+    clearTimeout(toastT); if (!sticky) toastT = setTimeout(hideToast, actions.length ? 7000 : 3500);
+  }
+  function hideToast() { $("toast").hidden = true; }
+
+  // Tecla F
+  document.addEventListener("keydown", e => {
+    if (e.key.toLowerCase() !== "f" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
+    e.preventDefault();
+    readDate(modal.classList.contains("show") ? zItem : (hoverItem || lastClicked));
   });
 
   /* ================= Atajos de teclado ================= */
@@ -1455,8 +1729,8 @@
 
   /* Barrita flotante de atajos (cambia según la pantalla) */
   const KB = {
-    lista: [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["P", "vista previa"], ["Ctrl+S", "guardar"]],
-    visor: [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["Esc", "cerrar"]],
+    lista: [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["F", "leer fecha"], ["P", "vista previa"], ["Ctrl+S", "guardar"]],
+    visor: [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["F", "leer fecha"], ["Esc", "cerrar"]],
     previa: [["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Esc", "volver"]]
   };
   let kbHidden = false, kbMode = "";
