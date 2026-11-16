@@ -7,7 +7,6 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <style>
   :root{
     --bg:#f4f5f7; --panel:#fff; --ink:#1d2330; --muted:#6b7280; --line:#e3e6eb;
@@ -804,7 +803,17 @@
 
 <script>
 (() => {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  // Los PDF se leen en un proceso aparte del navegador (Web Worker) para que la pantalla no se trabe.
+  // El worker se baja del CDN y se arranca desde la propia página; si algo falla, pdf.js usa su modo normal.
+  const PDF_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+  const pdfWorkerReady = (async () => {
+    try {
+      const r = await fetch(PDF_WORKER);
+      if (!r.ok) return;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([await r.text()], { type: "text/javascript" }));
+    } catch (e) { console.warn("Worker de PDF no disponible, sigue en modo normal", e); }
+  })();
   const { PDFDocument, degrees } = PDFLib;
   const $ = id => document.getElementById(id);
   const HAS_FS = "showDirectoryPicker" in window;
@@ -903,7 +912,7 @@
   // Campos que se completan por socio (Hs extras): {nombre} {tipo} {periodo}
   const FIELD_TOKENS = { nombre: "Nombre y apellido", tipo: "Tipo de documentación", periodo: "Período" };
   const usesTok = t => new RegExp("\\{" + t + "\\}", "i").test(tpl);
-  const VAR_RE = /\{(tramite|fecha|nombre|tipo|periodo|cuil)\}/i;
+  const VAR_RE = /\{(tramite|fecha|nombre|tipo|periodo)\}/i;
   // Nombre sugerido desde la carpeta: "30123456 PEREZ JUAN" -> "PEREZ JUAN"
   const nombreDeCarpeta = s => s.name.replace(/\d{7,9}/, "").replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
   function fieldVal(s, f) {
@@ -1119,7 +1128,15 @@
   }
 
   function isListoWith(s) {
-    if (VAR_RE.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return true; return false; }
+    if (VAR_RE.test(tpl)) {
+      // prefiltro: el archivo tiene que contener el DNI o el CUIL del socio (evita probar el patrón con todos)
+      const claves = [/\{dni\}/i.test(tpl) && s.dni, /\{cuil\}/i.test(tpl) && cuilOf(s)].filter(Boolean);
+      if (/\{cuil\}/i.test(tpl) && !cuilOf(s) && !/\{dni\}/i.test(tpl)) return false;
+      const re = listoRegex(s);
+      for (const n of listos) if ((!claves.length || claves.some(c => n.includes(c))) && re.test(n)) return true;
+      return false;
+    }
+    if (/\{cuil\}/i.test(tpl) && !cuilOf(s)) return false;
     return listos.has(nameFor(s).toLowerCase());
   }
   // Listo si está guardado con el formato actual o con el otro número (DNI <-> CUIL), por si cambiaste a mitad de tanda
@@ -1446,6 +1463,7 @@
   }
 
   async function addPdf(f) {
+    await Promise.race([pdfWorkerReady, new Promise(r => setTimeout(r, 4000))]);
     const bytes = new Uint8Array(await f.arrayBuffer());
     const pdfjs = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
     const sid = "s" + (++uid);
@@ -1520,7 +1538,13 @@
         if (e.shiftKey && lastClicked) {
           const a = items.indexOf(lastClicked), z = items.indexOf(it);
           if (a >= 0) { const val = !it.on; for (let k = Math.min(a, z); k <= Math.max(a, z); k++) items[k].on = val; }
-        } else if (e.ctrlKey || e.metaKey) { it.on = !it.on; if (it.on) ctrlSel.add(it.id); else ctrlSel.delete(it.id); }
+        } else if (e.ctrlKey || e.metaKey) {
+          it.on = !it.on; if (it.on) ctrlSel.add(it.id); else ctrlSel.delete(it.id);
+          lastClicked = it;
+          card.classList.toggle("on", it.on); card.classList.toggle("off", !it.on); card.classList.toggle("csel", it.on && ctrlSel.has(it.id));
+          card.querySelector(".check").textContent = it.on ? "✓" : "";
+          return;
+        }
         else { lastClicked = it; zoom(it); return; }
         lastClicked = it; render();
       });
