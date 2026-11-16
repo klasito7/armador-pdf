@@ -27,6 +27,13 @@
   button.danger{color:var(--danger)}
   button:disabled{opacity:.5;cursor:default}
   .label{color:var(--muted);font-size:13px}
+  #kbar{position:fixed;right:16px;bottom:70px;z-index:45;background:color-mix(in srgb,var(--ink) 88%,transparent);color:var(--panel);border-radius:12px;padding:8px 10px 8px 12px;font-size:12.5px;display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;max-width:min(760px,calc(100vw - 32px));box-shadow:0 6px 24px rgba(0,0,0,.25);backdrop-filter:blur(6px)}
+  #kbar .k{white-space:nowrap}
+  #kbar kbd{opacity:1;border-color:color-mix(in srgb,var(--panel) 60%,transparent);margin:0 3px 0 0}
+  #kbar .x{background:none;border:none;color:inherit;opacity:.7;padding:0 2px;font-size:14px;margin-left:auto}
+  #kbar .x:hover{opacity:1}
+  #kbarBtn{position:fixed;right:16px;bottom:70px;z-index:45;border-radius:999px;padding:6px 10px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+  .overlay.show ~ #kbar, .modal.show ~ #kbar{bottom:16px}
   kbd{font:600 10.5px/1 ui-monospace,Consolas,monospace;border:1px solid currentColor;border-radius:4px;padding:2px 4px;opacity:.6;margin-left:3px;vertical-align:1px}
 
   /* Barra superior */
@@ -331,6 +338,9 @@
   </div>
   <div id="zview"><div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div></div>
 </div></div>
+
+<div id="kbar" hidden></div>
+<button id="kbarBtn" title="Mostrar atajos" hidden>⌨ Atajos</button>
 
 <script>
 (() => {
@@ -1426,7 +1436,38 @@
     else if (k === "p") { e.preventDefault(); $("preview").click(); }
   });
 
+  /* Barrita flotante de atajos (cambia según la pantalla) */
+  const KB = {
+    lista: [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["P", "vista previa"], ["Ctrl+S", "guardar"]],
+    visor: [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["Esc", "cerrar"]],
+    previa: [["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Esc", "volver"]]
+  };
+  let kbHidden = false, kbMode = "";
+  function kbUpdate() {
+    let mode = "";
+    if (modal.classList.contains("show")) mode = "visor";
+    else if (pv.classList.contains("show")) mode = "previa";
+    else if (!$("work").hidden && !$("ppOv").classList.contains("show")) mode = "lista";
+    const hb = !mode || kbHidden, hbb = !mode || !kbHidden;   // solo tocar si cambia (evita bucles del observer)
+    if ($("kbar").hidden !== hb) $("kbar").hidden = hb;
+    if ($("kbarBtn").hidden !== hbb) $("kbarBtn").hidden = hbb;
+    if (mode && mode !== kbMode) {
+      $("kbar").innerHTML = KB[mode].map(([k, t]) => `<span class="k">${k.split("+").map(x => `<kbd>${x}</kbd>`).join("+")}${t}</span>`).join("") + '<button class="x" title="Ocultar atajos">✕</button>';
+      $("kbar").querySelector(".x").onclick = () => { kbHidden = true; kvSet("kbHidden", true); kbUpdate(); };
+    }
+    kbMode = mode;
+    // con el pie de página visible, la barra va arriba de él
+    const up = mode === "lista" ? ($("footer").offsetHeight + 12) + "px" : "16px";
+    if ($("kbar").style.bottom !== up) $("kbar").style.bottom = $("kbarBtn").style.bottom = up;
+  }
+  $("kbarBtn").onclick = () => { kbHidden = false; kvSet("kbHidden", false); kbUpdate(); };
+  const kbWatch = ["modal", "pv", "ppOv", "work", "footer"].map(id => $(id));
+  const kbObs = new MutationObserver(kbUpdate);
+  kbWatch.forEach(el => kbObs.observe(el, { attributes: true, attributeFilter: ["class", "hidden"] }));
+  window.addEventListener("resize", kbUpdate);
+
   (async function init() {
+    kbHidden = !!(await kvGet("kbHidden")); kbUpdate();
     tpl = (await kvGet("tpl")) || tpl; $("tpl").value = tpl;
     const OPTS = ["pageSize", "quality", "pdfMode", "colorMode"];
     const saved = (await kvGet("opts")) || {};
