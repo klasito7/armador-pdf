@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v4";
+  const VER = "v5";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -108,6 +108,9 @@
       if (!b) { toast("No hay botón Enviar a revisión a la vista."); return; }
       if (Date.now() - revisionArmada < 3000) { revisionArmada = 0; toast("📤 Enviar a revisión"); b.click(); }
       else { revisionArmada = Date.now(); toast("¿Enviar a revisión? Apretá Ctrl + Shift + S otra vez para confirmar."); }
+    } else if (e.altKey && !e.ctrlKey && k === "p") {
+      e.preventDefault(); e.stopPropagation();
+      if (window.__cr && window.__cr.ver) window.__cr.ver(e.shiftKey);
     } else if (e.key === "F2") {
       const ts = pestanas(); if (!ts.length) return;
       e.preventDefault(); e.stopPropagation();
@@ -123,6 +126,50 @@
     box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>`;
     box.querySelector("[data-close]").onclick = () => box.hidden = true;
     return;
+  }
+
+  /* ---------- Planilla firmada desde la carpeta Firmados ---------- */
+  const idb = () => new Promise((res, rej) => { const q = indexedDB.open("carga-rapida", 1); q.onupgradeneeded = () => q.result.createObjectStore("kv"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  const kv = async (k, val) => { const db = await idb(); return new Promise(res => { const tx = db.transaction("kv", val === undefined ? "readonly" : "readwrite"); const s = tx.objectStore("kv"); const q = val === undefined ? s.get(k) : s.put(val, k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }); };
+  async function carpetaFirmados(nueva) {
+    let dir = nueva ? null : await kv("firmados");
+    if (dir) { let p = await dir.queryPermission({ mode: "read" }); if (p !== "granted") p = await dir.requestPermission({ mode: "read" }); if (p !== "granted") dir = null; }
+    if (!dir) { dir = await window.showDirectoryPicker({ id: "firmados", mode: "read" }); await kv("firmados", dir); }
+    return dir;
+  }
+  // Busca en Firmados el PDF de ese CUIL (o su DNI): primero los _signed, después el más nuevo
+  async function findFirmado(cuil, otra) {
+    const dni = cuil.slice(2, 10).replace(/^0+/, "");
+    const dir = await carpetaFirmados(!!otra);
+    const hits = [];
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind !== "file" || !/\.pdf$/i.test(name)) continue;
+      const nums = name.match(/\d{7,11}/g) || [];
+      if (nums.some(n => n === cuil || n.replace(/^0+/, "") === dni)) hits.push(await h.getFile());
+    }
+    hits.sort((a, b) => (/_signed/i.test(b.name) - /_signed/i.test(a.name)) || b.lastModified - a.lastModified);
+    return { file: hits[0] || null, n: hits.length, dir: dir.name };
+  }
+  // Abre la planilla en una ventana aparte, a la izquierda, para leerla mientras cargás
+  let pdfUrl = "";
+  function verPlanilla(file) {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    pdfUrl = URL.createObjectURL(file);
+    const w = Math.round(screen.availWidth * 0.5), h = screen.availHeight;
+    const win = window.open(pdfUrl, "cr_planilla", `popup,left=0,top=0,width=${w},height=${h}`);
+    if (!win) { say("Chrome bloqueó la ventana: tocá el ícono de la barra de direcciones y permití ventanas emergentes para SURGE."); return false; }
+    return true;
+  }
+  async function abrirPlanilla(cuil, otra) {
+    try {
+      cuil = String(cuil || "").replace(/\D/g, "");
+      if (cuil.length !== 11) { say("Primero el CUIL."); return null; }
+      const r = await findFirmado(cuil, otra);
+      if (!r.file) { say(`No hay PDF de ${cuil} en "${r.dir}". (Para elegir otra carpeta: Alt + Shift + P.)`); return null; }
+      const age = Math.round((Date.now() - r.file.lastModified) / 864e5);
+      if (verPlanilla(r.file)) say(`📄 ${r.file.name} (${age === 0 ? "de hoy" : "hace " + age + " días"})${r.n > 1 ? ` · había ${r.n}, abrí el más nuevo` : ""}`, true);
+      return r.file;
+    } catch (e) { if (e.name !== "AbortError") say("No pude leer la carpeta Firmados: " + e.message); return null; }
   }
 
   /* ---------- Médicos recordados ---------- */
@@ -150,8 +197,8 @@
         </div>
       </div>
       <div class="msg"></div>
-      <div class="btns"><button class="b p" id="cr_go">Completar <kbd>Ctrl+Enter</kbd></button></div>
-      <p class="hint"><kbd>Ctrl+S</kbd> Siguiente / Guardar · <kbd>F2</kbd> pestaña siguiente (<kbd>Shift+F2</kbd> anterior).<br>Paso 1: fecha de planilla y CUIL → Completar → <b>Siguiente</b>. Paso 2: diagnóstico y médico → Completar → apretá <b>Guardar</b>. Mínimo permitido: ${esc(minFecha)}.</p>`;
+      <div class="btns"><button class="b p" id="cr_go">Completar <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_ver">📄 Ver planilla <kbd>Alt+P</kbd></button></div>
+      <p class="hint"><kbd>Ctrl+S</kbd> Siguiente / Guardar · <kbd>F2</kbd> pestaña siguiente (<kbd>Shift+F2</kbd> anterior) · <kbd>Alt+P</kbd> ver la planilla firmada.<br>Paso 1: fecha de planilla y CUIL → Completar → <b>Siguiente</b>. Paso 2: diagnóstico y médico → Completar → apretá <b>Guardar</b>. Mínimo permitido: ${esc(minFecha)}.</p>`;
     const altaDe = s => {
       const d = toDate(s); d.setFullYear(d.getFullYear() - 1);
       let alta = fmt(d), aviso = "";
@@ -199,6 +246,7 @@
         if (fi) setPicker(fi, alta);
         if (!v.abm.fecha_inicio_tratamiento) v.$set(v.abm, "fecha_inicio_tratamiento", alta);
         SS("pend", { cuil, fp: f });
+        abrirPlanilla(cuil);
         say(`✓ Diabetes · ${cuil} · alta ${alta}. Revisá y apretá Siguiente.`, true);
         const wait = setInterval(() => { if (v.can_completar_resto) { clearInterval(wait); upd(); const x = box.querySelector("#cr_fdiag"); if (x) x.focus(); } }, 400);
         return;
@@ -215,6 +263,8 @@
       say("✓ Completado. Revisá y apretá Guardar.", true);
     };
     box.querySelector("#cr_go").onclick = go;
+    window.__cr.ver = otra => abrirPlanilla(box.querySelector("#cr_cuil").value || (document.querySelector('input[placeholder="Ingrese cuil beneficiario"]') || {}).value, otra);
+    box.querySelector("#cr_ver").onclick = e => window.__cr.ver(e.shiftKey);
     box.addEventListener("keydown", e => {
       if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); go(); }
       else if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); const ins = [...box.querySelectorAll("input")].filter(i => i.offsetParent); const n = ins[ins.indexOf(e.target) + 1]; if (n) n.focus(); else go(); }
@@ -261,8 +311,8 @@
       ${editable ? "" : `<p class="msg">Este empadronamiento no se puede editar (aceptado o pendiente). Abrí uno en Borrador, Rechazado o Reempadronar.</p>`}
       <div id="cr_rows">${defs.map(rowHtml).join("")}</div>
       <div class="msg"></div>
-      <div class="btns"><button class="b p" id="cr_go">Completar en SURGE <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_log">📋 Copiar registro de hoy</button><button class="b" id="cr_clear">Limpiar</button></div>
-      <p class="hint">Enter = siguiente · Tab = fecha del valor (vacía = la de planilla; <kbd>2023</kbd> = 01/01/2023) · opciones con las teclas · <kbd>0</kbd> = "no presenta/ninguna" · después <b>Guardar todo</b>.<br><kbd>Ctrl+S</kbd> Guardar todo (en Datos básicos: Guardar) · <kbd>Ctrl+Shift+S</kbd> dos veces = Enviar a revisión · <kbd>F2</kbd> / <kbd>Shift+F2</kbd> cambiar de pestaña.</p>`;
+      <div class="btns"><button class="b p" id="cr_go">Completar en SURGE <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_ver">📄 Ver planilla <kbd>Alt+P</kbd></button><button class="b" id="cr_log">📋 Copiar registro de hoy</button><button class="b" id="cr_clear">Limpiar</button></div>
+      <p class="hint">Enter = siguiente · Tab = fecha del valor (vacía = la de planilla; <kbd>2023</kbd> = 01/01/2023) · opciones con las teclas · <kbd>0</kbd> = "no presenta/ninguna" · después <b>Guardar todo</b>.<br><kbd>Ctrl+S</kbd> Guardar todo (en Datos básicos: Guardar) · <kbd>Ctrl+Shift+S</kbd> dos veces = Enviar a revisión · <kbd>F2</kbd> / <kbd>Shift+F2</kbd> cambiar de pestaña · <kbd>Alt+P</kbd> ver la planilla firmada.</p>`;
     wire(defs);
   }
   function rowHtml(f, i) {
@@ -333,6 +383,7 @@
     });
     box.querySelector("#cr_go").onclick = aplicar;
     box.querySelector("#cr_log").onclick = copiarLog;
+    box.querySelector("#cr_ver").onclick = e => window.__cr.ver(e.shiftKey);
     box.querySelector("#cr_clear").onclick = () => { for (const k of Object.keys(state)) delete state[k]; archivo = null; save(); render(); focusRow(0); };
   }
   const rowInput = k => { const defs = fieldDefs(); const i = defs.findIndex(f => f.k === k); return i >= 0 ? box.querySelector(`.row[data-row="${i}"] .cr_v`) : null; };
@@ -356,32 +407,9 @@
     return ok;
   }
 
-  /* ---------- Planilla firmada desde la carpeta Firmados ---------- */
-  const idb = () => new Promise((res, rej) => { const q = indexedDB.open("carga-rapida", 1); q.onupgradeneeded = () => q.result.createObjectStore("kv"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
-  const kv = async (k, val) => { const db = await idb(); return new Promise(res => { const tx = db.transaction("kv", val === undefined ? "readonly" : "readwrite"); const s = tx.objectStore("kv"); const q = val === undefined ? s.get(k) : s.put(val, k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }); };
-  async function carpetaFirmados(nueva) {
-    let dir = nueva ? null : await kv("firmados");
-    if (dir) { let p = await dir.queryPermission({ mode: "read" }); if (p !== "granted") p = await dir.requestPermission({ mode: "read" }); if (p !== "granted") dir = null; }
-    if (!dir) { dir = await window.showDirectoryPicker({ id: "firmados", mode: "read" }); await kv("firmados", dir); }
-    return dir;
-  }
   async function buscarFirmado(vi, otra) {
-    try {
-      const cuil = cuilPage, dni = cuil ? cuil.slice(2, 10).replace(/^0+/, "") : "";
-      if (!cuil) { say("No encontré el CUIL en la página."); return; }
-      const dir = await carpetaFirmados(!!otra);
-      const hits = [];
-      for await (const [name, h] of dir.entries()) {
-        if (h.kind !== "file" || !/\.pdf$/i.test(name)) continue;
-        const nums = name.match(/\d{7,11}/g) || [];
-        if (nums.some(n => n === cuil || n.replace(/^0+/, "") === dni)) hits.push(await h.getFile());
-      }
-      if (!hits.length) { say(`No hay PDF de ${cuil} en "${dir.name}". (Para elegir otra carpeta: Shift + doble clic.)`); return; }
-      hits.sort((a, b) => (/_signed/i.test(b.name) - /_signed/i.test(a.name)) || b.lastModified - a.lastModified);
-      archivo = hits[0]; vi.value = archivo.name;
-      const age = Math.round((Date.now() - archivo.lastModified) / 864e5);
-      say(`📎 ${archivo.name} (${age === 0 ? "de hoy" : "hace " + age + " días"})${hits.length > 1 ? ` · había ${hits.length}, tomé el más nuevo firmado` : ""}`, age < 60);
-    } catch (e) { if (e.name !== "AbortError") say("No pude leer la carpeta: " + e.message); }
+    const f = await abrirPlanilla(cuilPage, otra);
+    if (f) { archivo = f; vi.value = f.name; }
   }
 
   /* ---------- Pasar todo a SURGE ---------- */
@@ -451,6 +479,8 @@
     else if (e.key === "Escape") box.hidden = true;
     e.stopPropagation();
   });
+  window.__cr.ver = async otra => { const f = await abrirPlanilla(cuilPage, otra); if (f) { archivo = f; const vi = rowInput("hc"); if (vi) vi.value = f.name; } };
   render();
+  if (editable && cuilPage) window.__cr.ver(false);
   if (!box.querySelector("#cr_fp").value) box.querySelector("#cr_fp").focus(); else focusRow(0);
 })();
