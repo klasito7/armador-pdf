@@ -1013,15 +1013,26 @@
   $("zCrop").onclick = () => setCropMode(!zCropMode);
   // Arrastrar para mover (cuando no se está recortando)
   let zPan = null;
+  // ¿El clic cayó sobre la barra de desplazamiento?
+  const onScrollbar = (el, e) => { const r = el.getBoundingClientRect(); return e.clientX >= r.left + el.clientLeft + el.clientWidth || e.clientY >= r.top + el.clientTop + el.clientHeight; };
+  let zDown = null;   // para distinguir clic de arrastre
   zview.addEventListener("pointerdown", e => {
-    if (zCropMode || e.button !== 0) return;
+    if (e.button !== 0 || onScrollbar(zview, e)) return;
+    zDown = { x: e.clientX, y: e.clientY, outside: !e.target.closest("#zwrap"), moved: false };
+    if (zCropMode && !zDown.outside) return;
     zPan = { x: e.clientX, y: e.clientY }; zview.classList.add("panning"); zview.setPointerCapture(e.pointerId);
   });
   zview.addEventListener("pointermove", e => {
+    if (zDown && Math.abs(e.clientX - zDown.x) + Math.abs(e.clientY - zDown.y) > 5) zDown.moved = true;
     if (!zPan) return;
     zview.scrollLeft -= e.clientX - zPan.x; zview.scrollTop -= e.clientY - zPan.y; zPan = { x: e.clientX, y: e.clientY };
   });
-  zview.addEventListener("pointerup", () => { zPan = null; zview.classList.remove("panning"); });
+  zview.addEventListener("pointerup", () => {
+    zPan = null; zview.classList.remove("panning");
+    // Clic (sin arrastrar) fuera de la hoja = cerrar
+    if (zDown && zDown.outside && !zDown.moved) modal.classList.remove("show");
+    zDown = null;
+  });
   document.addEventListener("keydown", e => {
     if (!modal.classList.contains("show") || e.target.tagName === "INPUT") return;
     if (e.key === "ArrowLeft") { e.preventDefault(); zGo(-1); }
@@ -1251,8 +1262,10 @@
     for (const e of order) { if (token !== pvRenderToken || !pv.classList.contains("show")) return; await pvRenderEntry(e, token); }
   }
   let pvPressed = false, pvLast = null;
+  let pvDown = null;
   pvBody.addEventListener("pointerdown", e => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || onScrollbar(pvBody, e)) return;
+    pvDown = { x: e.clientX, y: e.clientY, outside: !e.target.closest("canvas, .pv-part, .lbl") };
     pvPressed = true; pvLast = { x: e.clientX, y: e.clientY };
     pvBody.classList.add("pressing");
   });
@@ -1261,7 +1274,11 @@
     pvBody.scrollLeft -= e.clientX - pvLast.x; pvBody.scrollTop -= e.clientY - pvLast.y;
     pvLast = { x: e.clientX, y: e.clientY };
   });
-  const pvRelease = () => { pvPressed = false; pvBody.classList.remove("pressing"); };
+  const pvRelease = e => {
+    // Clic (sin arrastrar) a los costados de la hoja = cerrar la vista previa
+    if (pvDown && pvDown.outside && e && e.type === "pointerup" && Math.abs(e.clientX - pvDown.x) + Math.abs(e.clientY - pvDown.y) <= 5 && pv.classList.contains("show")) closePreview();
+    pvDown = null; pvPressed = false; pvBody.classList.remove("pressing");
+  };
   window.addEventListener("pointerup", pvRelease);
   window.addEventListener("blur", pvRelease);
   pvBody.addEventListener("wheel", e => {
