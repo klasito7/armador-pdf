@@ -40,10 +40,20 @@
   #toast button{padding:4px 10px;font-size:13px}
   .badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:999px;background:var(--warn);color:#fff;font-size:12px;font-weight:700;text-align:center}
   .badge[hidden]{display:none}
-  .edtop{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
-  #edThumb{width:90px;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff;flex-shrink:0}
-  .edtop>div{flex:1}
-  #edNote{width:100%;font-size:15px;padding:9px 10px}
+  #edThumbs{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px}
+  .edpick{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;color:var(--muted);cursor:pointer;max-width:110px;position:relative}
+  .edpick canvas{width:96px;height:auto;border:2px solid var(--accent);border-radius:6px;background:#fff}
+  .edpick input{position:absolute;top:4px;left:4px;width:18px;height:18px}
+  .edpick input:not(:checked) ~ canvas{border-color:var(--line);opacity:.4}
+  .edpick span{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #edNote{width:100%;font-size:15px;padding:9px 10px;margin-bottom:12px}
+  .card.csel{outline:3px dashed var(--warn);outline-offset:2px}
+  .edrow{position:relative}
+  .edx{position:absolute;top:8px;right:4px;border:none;background:none;color:var(--muted);font-size:16px;padding:2px 6px}
+  .edx:hover{color:var(--danger)}
+  .edthumbs{display:flex;gap:3px;align-items:center;flex-shrink:0}
+  .edthumbs img{width:48px;height:64px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px}
+  .edthumbs span{font-size:12px;color:var(--muted)}
   #edPanel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
   #edPanel.show{transform:none}
   .edhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -51,8 +61,7 @@
   .edhint{margin:8px 14px;color:var(--muted);font-size:12.5px}
   #edList{overflow:auto;flex:1;padding:0 10px 20px}
   .edrow{display:flex;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
-  .edrow img{width:64px;height:84px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px;flex-shrink:0}
-  .edinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .edinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-right:22px}
   .edinfo small{color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .edinfo input{font-size:13.5px;padding:5px 8px}
   .edbtns{display:flex;gap:4px;flex-wrap:wrap}
@@ -387,8 +396,9 @@
 <div id="toast" hidden></div>
 <div class="fdlg" id="edlg" hidden><div class="fbox">
   <h3>📝 Mandar a "Para editar"</h3>
-  <div class="edtop"><canvas id="edThumb"></canvas><div><p id="edWhat"></p>
-    <input type="text" id="edNote" placeholder="¿Qué hay que editarle? (ej: tapar dato, enderezar, falta firma)"></div></div>
+  <p id="edWhat"></p>
+  <div id="edThumbs"></div>
+  <input type="text" id="edNote" placeholder="¿Qué hay que editarle? (ej: tapar dato, enderezar, falta firma)">
   <div class="frow">
     <button class="primary" id="edOk">Guardar <kbd>Enter</kbd></button>
     <button id="edCancel">Cancelar</button>
@@ -560,7 +570,7 @@
       row.innerHTML = `<span class="nb"><span class="n"></span><small></small></span><span class="chip ${st}">${CHIP[st]}</span>`;
       row.querySelector(".n").textContent = s.name;
       const nt = noteOf(s);
-      const ne = editsOf(s).length;
+      const ne = editsOf(s).reduce((a, e) => a + e.pages.length, 0);
       row.querySelector("small").textContent = [nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
       row.onclick = () => openSocio(s);
       box.appendChild(row);
@@ -577,7 +587,7 @@
   });
 
   /* ================= Abrir socio ================= */
-  function resetItems() { items = []; for (const k in sources) delete sources[k]; renderQueue = Promise.resolve(); lastClicked = null; }
+  function resetItems() { ctrlSel.clear(); items = []; for (const k in sources) delete sources[k]; renderQueue = Promise.resolve(); lastClicked = null; }
 
   function showWork(s) {
     $("setup").hidden = true; $("pickHint").hidden = true; $("work").hidden = false; $("footer").hidden = false;
@@ -636,7 +646,7 @@
     const rows = [];
     for (const s of socios) {
       const t = await tramiteInfo(s), nt = noteOf(s);
-      rows.push([s.dni, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.label}: ${e.note || "(sin nota)"}`).join(" | ")]);
+      rows.push([s.dni, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.pages.map(p => p.label).join(", ")}: ${e.note || "(sin nota)"}`).join(" | ")]);
     }
     return rows;
   }
@@ -861,7 +871,7 @@
     items.forEach((it, idx) => {
       const card = document.createElement("div");
       const isCut = it.cut && idx > 0;
-      card.className = "card " + (it.on ? "on" : "off") + (isCut ? " cut" : "");
+      card.className = "card " + (it.on ? "on" : "off") + (isCut ? " cut" : "") + (ctrlSel.has(it.id) && it.on ? " csel" : "");
       card.draggable = true;
       card.innerHTML = `
         ${isCut ? '<span class="cutlbl">✂ Nuevo archivo</span>' : ""}
@@ -886,7 +896,7 @@
         if (e.shiftKey && lastClicked) {
           const a = items.indexOf(lastClicked), z = items.indexOf(it);
           if (a >= 0) { const val = !it.on; for (let k = Math.min(a, z); k <= Math.max(a, z); k++) items[k].on = val; }
-        } else if (e.ctrlKey || e.metaKey) it.on = !it.on;
+        } else if (e.ctrlKey || e.metaKey) { it.on = !it.on; if (it.on) ctrlSel.add(it.id); else ctrlSel.delete(it.id); }
         else { lastClicked = it; zoom(it); return; }
         lastClicked = it; render();
       });
@@ -1402,7 +1412,7 @@
     downloadAll(pvPdfs, $("pvName").value, pvSay);
   };
   /* ================= Photopea integrado ================= */
-  let ppFrame = null, ppReadyResolve = null, ppReady = null, ppQueue = [], ppItem = null, ppBusy = false;
+  let ppFrame = null, ppReadyResolve = null, ppReady = null, ppQueue = [], ppBusy = false;
   function ensurePhotopea() {
     if (ppFrame) return ppReady;
     ppReady = new Promise(res => { ppReadyResolve = res; });
@@ -1417,7 +1427,7 @@
     if (e.data === "done") {
       if (ppReadyResolve) { const r = ppReadyResolve; ppReadyResolve = null; r(); return; }
       const w = ppQueue.shift(); if (w) w.resolve(w.out);
-    } else if (e.data instanceof ArrayBuffer) {
+    } else if (e.data instanceof ArrayBuffer || typeof e.data === "string") {
       if (ppQueue[0]) ppQueue[0].out.push(e.data);
     }
   });
@@ -1430,8 +1440,12 @@
   }
   function ppSay(msg, cls = "") { const s = $("ppInfo"); s.textContent = msg; s.className = cls; }
 
-  async function openPhotopea(it) {
-    ppItem = it;
+  // Abre una o varias hojas en Photopea (cada una en su pestaña)
+  let ppItems = [];
+  async function openPhotopea(arg) {
+    const list = (Array.isArray(arg) ? arg : [arg]).filter(Boolean);
+    if (!list.length) return;
+    ppItems = list;
     $("ppOv").classList.add("show");
     $("ppUse").disabled = true;
     ppSay("Cargando Photopea… (la primera vez tarda unos segundos)");
@@ -1440,60 +1454,80 @@
       const ready = ensurePhotopea();
       if (firstLoad) await Promise.race([ready, new Promise((_, rej) => setTimeout(() => rej(new Error("Photopea tardó demasiado en cargar. Revisá la conexión.")), 60000))]);
       $("ppLoading").style.display = "none";
-      ppSay("Abriendo la página en Photopea…");
-      let buf;
-      const src = sources[it.src];
-      if (it.kind === "img" && src.file && !it.rot) buf = await src.file.arrayBuffer();
-      else {
-        const c = await pageToCanvas(it, 2400);
-        buf = await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer();
+      await ppCloseAll();
+      for (let i = 0; i < list.length; i++) {
+        const it = list[i];
+        ppSay(`Abriendo hoja ${i + 1} de ${list.length} en Photopea…`);
+        let buf;
+        const src = sources[it.src];
+        if (it.kind === "img" && src.file && !it.rot) buf = await src.file.arrayBuffer();
+        else {
+          const c = await pageToCanvas(it, 2400);
+          buf = await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer();
+        }
+        await ppSend(buf);
+        await ppSend(`app.activeDocument.name = "hoja${i}";`);
       }
-      await ppSend(buf);
       $("ppUse").disabled = false;
-      ppSay("Editá la página y cuando termines tocá \"✓ Usar versión editada\". No hace falta guardar desde Photopea.");
+      ppSay(list.length > 1
+        ? `${list.length} hojas abiertas (cada una en su pestaña, arriba en Photopea). Editalas y tocá "✓ Usar versión editada": vuelven todas juntas.`
+        : "Editá la página y cuando termines tocá \"✓ Usar versión editada\". No hace falta guardar desde Photopea.");
     } catch (e) { console.error(e); ppSay(e.message, "err"); }
   }
 
-  async function ppCloseDoc() {
-    try { await ppSend("if (app.documents.length) app.activeDocument.close(SaveOptions.DONOTSAVECHANGES);"); } catch (e) {}
+  async function ppCloseAll() {
+    try { await ppSend("while (app.documents.length) app.activeDocument.close(SaveOptions.DONOTSAVECHANGES);"); } catch (e) {}
   }
 
   $("ppCancel").onclick = async () => {
     $("ppOv").classList.remove("show");
-    if (ppFrame && !ppReadyResolve) await ppCloseDoc();
-    ppItem = null;
+    if (ppFrame && !ppReadyResolve) await ppCloseAll();
+    ppItems = [];
   };
 
+  // Reemplaza la hoja por la versión editada y guarda copia en su carpeta
+  async function applyEditedImage(it, blob) {
+    const editedName = editedNameFor(it.name);
+    it.src = await newImgSource(blob, editedName, new File([blob], editedName, { type: "image/jpeg" }));
+    it.kind = "img"; it.page = 0; it.rot = 0; it.edited = true; it.name = editedName;
+    drawImgThumb(it);
+    const dir = it.dir || (current && current.handle);
+    if (dir && rootDir && await hasPerm(rootDir, false)) {
+      try { await writeFile(dir, editedName, blob); return dir.name; } catch (e) { console.warn(e); }
+    }
+    return "";
+  }
+
   $("ppUse").onclick = async () => {
-    if (!ppItem || ppBusy) return;
+    if (!ppItems.length || ppBusy) return;
     ppBusy = true; $("ppUse").disabled = true;
-    ppSay("Trayendo la versión editada…");
+    ppSay("Trayendo las versiones editadas…");
     try {
-      const out = await ppSend('app.activeDocument.saveToOE("jpg:0.92");');
-      const buf = out[out.length - 1];
-      if (!buf) throw new Error("Photopea no devolvió la imagen. ¿Hay un documento abierto?");
-      const blob = new Blob([buf], { type: "image/jpeg" });
-      const it = ppItem;
-      const baseName = it.name.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2");
-      const editedName = `${baseName} editado.jpg`;
-      it.src = await newImgSource(blob, editedName, new File([blob], editedName, { type: "image/jpeg" }));
-      it.kind = "img"; it.page = 0; it.rot = 0; it.edited = true; it.name = editedName;
-      drawImgThumb(it); render();
-      await ppCloseDoc();
-      let extra = "";
-      const dir = it.dir || (current && current.handle);
-      if (dir && rootDir && await hasPerm(rootDir, false)) {
-        try { await writeFile(dir, editedName, blob); extra = ` Copia guardada en la carpeta ${dir.name}.`; }
-        catch (e) { console.warn(e); }
+      const out = await ppSend('for (var i = 0; i < app.documents.length; i++) { var d = app.documents[i]; app.activeDocument = d; app.echoToOE("DOC:" + d.name); d.saveToOE("jpg:0.92"); }');
+      // Viene: "DOC:hoja0", ArrayBuffer, "DOC:hoja1", ArrayBuffer…
+      const got = new Map(); let name = null, order = 0;
+      for (const m of out) {
+        if (typeof m === "string" && m.startsWith("DOC:")) name = m.slice(4);
+        else if (m instanceof ArrayBuffer) {
+          const idx = /^hoja(\d+)$/.test(name || "") ? +name.slice(4) : order;
+          got.set(idx, m); order++; name = null;
+        }
       }
+      if (!got.size) throw new Error("Photopea no devolvió ninguna imagen. ¿Cerraste las hojas?");
+      const done = [], folders = new Set();
+      for (const [idx, buf] of got) {
+        const it = ppItems[idx]; if (!it) continue;
+        const key = { file: it.origName, page: it.origPage };
+        const f = await applyEditedImage(it, new Blob([buf], { type: "image/jpeg" }));
+        if (f) folders.add(f);
+        done.push(key);
+      }
+      render();
+      await ppCloseAll();
       $("ppOv").classList.remove("show");
-      setStatus(`✓ Página reemplazada por la versión editada.${extra}`, "ok");
-      const pend = current ? edits.filter(x => x.root === rootName() && x.socio === current.name && x.file === it.origName && x.page === it.origPage) : [];
-      if (pend.length) {
-        edits = edits.filter(x => !pend.includes(x)); await saveEdits();
-        toast("✓ Editada y quitada de \"Para editar\"", { actions: [{ label: "Deshacer", fn: async () => { edits.push(...pend); await saveEdits(); } }] });
-      }
-      ppItem = null;
+      setStatus(`✓ ${done.length} hoja(s) reemplazada(s) por la versión editada.` + (folders.size ? ` Copia guardada en ${[...folders].join(", ")}.` : ""), "ok");
+      if (current) await removeEditedPages(current.name, done);
+      ppItems = [];
     } catch (e) { console.error(e); ppSay("Error: " + e.message, "err"); $("ppUse").disabled = false; }
     ppBusy = false;
   };
@@ -1754,27 +1788,48 @@
   });
 
   /* ================= Para editar (planillas a corregir, con nota) ================= */
-  let edits = [], lastHover = null, edTarget = null;
+  // Cada pendiente: {id, root, socio, note, created, pages: [{file, page, label, group, thumb}]}
+  let edits = [], lastHover = null, edTargets = [], ctrlSel = new Set();
   const rootName = () => rootDir ? rootDir.name : "";
   const myEdits = () => edits.filter(e => e.root === rootName());
   const editsOf = s => myEdits().filter(e => e.socio === s.name);
-  const pageLabel = it => it.name;
   const editedNameFor = label => label.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2") + " editado.jpg";
+  const samePage = (p, it) => p.file === it.origName && p.page === it.origPage;
   async function saveEdits() { await kvSet("edits", edits); renderEdits(); renderSocios(); }
+  function thumbOf(it, max = 160) {
+    const th = document.createElement("canvas"), s = Math.min(1, max / Math.max(it.canvas.width, it.canvas.height));
+    th.width = Math.max(1, Math.round(it.canvas.width * s)); th.height = Math.max(1, Math.round(it.canvas.height * s));
+    th.getContext("2d").drawImage(it.canvas, 0, 0, th.width, th.height);
+    return th;
+  }
 
-  function edTargetItem() { return modal.classList.contains("show") ? zItem : (hoverItem || lastHover || lastClicked); }
-  function edAsk(it) {
-    if (!it) { toast("Pasá el mouse por la planilla (o abrila en grande) y tocá 📝."); return; }
+  // Hojas a mandar: las elegidas con Ctrl+clic (que sigan marcadas) + la que tenés abierta o bajo el mouse
+  function edTargetItems() {
+    const main = modal.classList.contains("show") ? zItem : (hoverItem || lastHover || lastClicked);
+    const sel = items.filter(it => ctrlSel.has(it.id) && it.on);
+    const list = [...sel];
+    if (main && !list.includes(main)) list.unshift(main);
+    return list;
+  }
+  function edAsk(list) {
+    if (!list.length) { toast("Pasá el mouse por la planilla (o abrila en grande) y tocá 📝."); return; }
     if (!current) { toast("Abrí un socio para mandar planillas a editar."); return; }
-    edTarget = it;
-    const th = $("edThumb"); th.width = it.canvas.width; th.height = it.canvas.height; th.getContext("2d").drawImage(it.canvas, 0, 0);
-    $("edWhat").textContent = `${current.name} · ${pageLabel(it)}`;
-    const prev = editsOf(current).find(e => e.file === it.origName && e.page === it.origPage);
+    edTargets = list;
+    const box = $("edThumbs"); box.innerHTML = "";
+    list.forEach((it, i) => {
+      const lab = document.createElement("label"); lab.className = "edpick";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; cb.dataset.i = i;
+      const th = thumbOf(it, 200);
+      const cap = document.createElement("span"); cap.textContent = `${items.indexOf(it) + 1}. ${it.name}`;
+      lab.append(cb, th, cap); box.appendChild(lab);
+    });
+    $("edWhat").textContent = `${current.name} · ${list.length} hoja${list.length > 1 ? "s" : ""}` + (list.length > 1 ? " (destildá las que no van)" : "");
+    const prev = list.length === 1 && editsOf(current).find(e => e.pages.some(p => samePage(p, list[0])));
     $("edNote").value = prev ? prev.note : "";
     $("edlg").hidden = false;
     setTimeout(() => $("edNote").focus(), 30);
   }
-  function edClose() { $("edlg").hidden = true; edTarget = null; }
+  function edClose() { $("edlg").hidden = true; edTargets = []; }
   $("edCancel").onclick = edClose;
   $("edlg").addEventListener("pointerdown", e => { if (e.target === $("edlg")) edClose(); });
   $("edNote").addEventListener("keydown", e => {
@@ -1782,65 +1837,83 @@
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); edClose(); }
   });
   $("edOk").onclick = async () => {
-    const it = edTarget; if (!it || !current) return edClose();
+    if (!current) return edClose();
+    const picked = [...$("edThumbs").querySelectorAll("input")].filter(c => c.checked).map(c => edTargets[+c.dataset.i]);
+    if (!picked.length) return edClose();
     const note = $("edNote").value.trim();
-    const prev = edits.find(e => e.root === rootName() && e.socio === current.name && e.file === it.origName && e.page === it.origPage);
-    const th = document.createElement("canvas"), s = Math.min(1, 160 / Math.max(it.canvas.width, it.canvas.height));
-    th.width = Math.max(1, it.canvas.width * s); th.height = Math.max(1, it.canvas.height * s);
-    th.getContext("2d").drawImage(it.canvas, 0, 0, th.width, th.height);
-    const data = { note, thumb: th.toDataURL("image/jpeg", 0.7), label: pageLabel(it), group: it.groupKey || current.sel || "" };
-    if (prev) Object.assign(prev, data);
-    else edits.push({ id: "e" + Date.now() + Math.random().toString(36).slice(2, 6), root: rootName(), socio: current.name, file: it.origName, page: it.origPage, created: Date.now(), ...data });
+    // Si alguna hoja ya estaba pendiente, la saco de la anterior (no duplicar)
+    for (const e of editsOf(current)) e.pages = e.pages.filter(p => !picked.some(it => samePage(p, it)));
+    edits = edits.filter(e => e.pages.length);
+    edits.push({
+      id: "e" + Date.now() + Math.random().toString(36).slice(2, 6), root: rootName(), socio: current.name, note, created: Date.now(),
+      pages: picked.map(it => ({ file: it.origName, page: it.origPage, label: it.name, group: it.groupKey || current.sel || "", thumb: thumbOf(it).toDataURL("image/jpeg", 0.7) }))
+    });
+    picked.forEach(it => ctrlSel.delete(it.id));
     edClose();
-    await saveEdits();
-    toast(`📝 Enviada a "Para editar"${note ? ": " + note : ""}`, { actions: [{ label: "Ver lista", fn: openEdPanel }] });
+    await saveEdits(); render();
+    toast(`📝 ${picked.length > 1 ? picked.length + " hojas enviadas" : "Enviada"} a "Para editar"${note ? ": " + note : ""}`, { actions: [{ label: "Ver lista", fn: openEdPanel }] });
   };
 
-  function locateEntry(e) {
-    const same = it => it.origName === e.file && it.origPage === e.page;
-    return items.find(it => same(it) && it.groupKey === e.group) || items.find(same) ||
-      items.find(it => it.name.toLowerCase() === editedNameFor(e.label).toLowerCase());
+  function locatePage(p) {
+    const same = it => samePage(p, it);
+    return items.find(it => same(it) && it.groupKey === p.group) || items.find(same) ||
+      items.find(it => it.name.toLowerCase() === editedNameFor(p.label).toLowerCase());
   }
   async function goToEntry(e, photopea) {
     const s = socios.find(x => x.name === e.socio);
-    if (!s) { toast("No encuentro la carpeta de ese socio en esta tanda.", {}); return; }
+    if (!s) { toast("No encuentro la carpeta de ese socio en esta tanda."); return; }
     closeEdPanel();
-    if (e.group) s.sel = e.group;
+    const groups = [...new Set(e.pages.map(p => p.group).filter(Boolean))];
+    if (groups.length === 1) s.sel = groups[0]; else if (groups.length > 1) s.sel = "__all";
     await openSocio(s);
-    const it = locateEntry(e);
-    if (!it) { toast("No encontré esa hoja en la carpeta (¿se movió o se renombró?).", {}); return; }
-    lastClicked = it;
-    if (photopea) openPhotopea(it); else zoom(it);
+    const found = e.pages.map(locatePage).filter(Boolean);
+    if (!found.length) { toast("No encontré esas hojas en la carpeta (¿se movieron o se renombraron?)."); return; }
+    if (found.length < e.pages.length) toast(`Encontré ${found.length} de ${e.pages.length} hojas.`);
+    lastClicked = found[0];
+    if (photopea) openPhotopea(found); else zoom(found[0]);
   }
-  async function markDone(e, silent) {
+  async function removeEditedPages(socio, keys) {
+    const before = JSON.stringify(edits);
+    for (const e of edits) if (e.root === rootName() && e.socio === socio) e.pages = e.pages.filter(p => !keys.some(k => k.file === p.file && k.page === p.page));
+    const removed = edits.filter(e => !e.pages.length);
+    edits = edits.filter(e => e.pages.length);
+    if (JSON.stringify(edits) === before) return;
+    await saveEdits();
+    toast("✓ Editadas y quitadas de \"Para editar\"", { actions: [{ label: "Deshacer", fn: async () => { edits = JSON.parse(before); await saveEdits(); } }] });
+  }
+  async function dropEntry(e, msg) {
     edits = edits.filter(x => x !== e);
     await saveEdits();
-    if (!silent) toast("✓ Marcada como editada", { actions: [{ label: "Deshacer", fn: async () => { edits.push(e); await saveEdits(); } }] });
+    toast(msg, { actions: [{ label: "Deshacer", fn: async () => { edits.push(e); await saveEdits(); } }] });
   }
 
   function renderEdits() {
     const list = myEdits().sort((a, b) => natural(a.socio, b.socio) || a.created - b.created);
-    $("edCount").textContent = list.length;
-    $("edCount").hidden = !list.length;
-    const box = $("edList"); if (!box) return;
-    box.innerHTML = "";
+    const nPages = list.reduce((a, e) => a + e.pages.length, 0);
+    $("edCount").textContent = nPages; $("edCount").hidden = !nPages;
+    const box = $("edList"); box.innerHTML = "";
     $("edEmpty").hidden = !!list.length;
     for (const e of list) {
       const row = document.createElement("div"); row.className = "edrow";
-      row.innerHTML = `<img alt=""><div class="edinfo"><b></b><small></small><input type="text" placeholder="¿Qué hay que editarle?"><div class="edbtns">
-        <button data-a="open">🔍 Abrir</button><button data-a="pp" class="pp">✏️ Photopea</button><button data-a="done">✓ Hecho</button></div></div>`;
-      row.querySelector("img").src = e.thumb || "";
-      row.querySelector("b").textContent = e.socio;
-      row.querySelector("small").textContent = `${e.label}${e.group && e.group !== "__all" && e.group !== "__loose" ? " · " + e.group : ""}`;
+      row.innerHTML = `<div class="edthumbs"></div><div class="edinfo"><b></b><small></small><input type="text" placeholder="¿Qué hay que editarle?"><div class="edbtns">
+        <button data-a="open">🔍 Abrir</button><button data-a="pp" class="pp">✏️ Photopea</button><button data-a="done">✓ Hecho</button></div></div>
+        <button class="edx" data-a="drop" title="Descartar esta edición pendiente">✕</button>`;
+      const th = row.querySelector(".edthumbs");
+      e.pages.slice(0, 3).forEach(p => { const im = document.createElement("img"); im.src = p.thumb || ""; th.appendChild(im); });
+      if (e.pages.length > 3) { const m = document.createElement("span"); m.textContent = "+" + (e.pages.length - 3); th.appendChild(m); }
+      row.querySelector("b").textContent = e.socio + (e.pages.length > 1 ? ` · ${e.pages.length} hojas` : "");
+      row.querySelector("small").textContent = e.pages.map(p => p.label).join(", ");
+      row.querySelector("small").title = row.querySelector("small").textContent;
       const inp = row.querySelector("input"); inp.value = e.note || "";
       inp.addEventListener("change", async () => { e.note = inp.value.trim(); await saveEdits(); });
       inp.addEventListener("keydown", ev => { if (ev.key === "Enter") inp.blur(); });
-      row.querySelector(".edbtns").onclick = ev => {
+      row.addEventListener("click", ev => {
         const b = ev.target.closest("button"); if (!b) return;
         if (b.dataset.a === "open") goToEntry(e, false);
         else if (b.dataset.a === "pp") goToEntry(e, true);
-        else markDone(e);
-      };
+        else if (b.dataset.a === "done") dropEntry(e, "✓ Marcada como editada");
+        else if (b.dataset.a === "drop") dropEntry(e, "✕ Edición pendiente descartada");
+      });
       box.appendChild(row);
     }
   }
@@ -1848,7 +1921,7 @@
   function closeEdPanel() { $("edPanel").classList.remove("show"); }
   $("edOpen").onclick = () => $("edPanel").classList.contains("show") ? closeEdPanel() : openEdPanel();
   $("edPanelClose").onclick = closeEdPanel;
-  $("edBtn").onclick = () => edAsk(edTargetItem());
+  $("edBtn").onclick = () => edAsk(edTargetItems());
   $("zPP").onclick = () => { const it = zItem; modal.classList.remove("show"); if (it) openPhotopea(it); };
 
   // Tecla E: mandar a "Para editar"
@@ -1856,7 +1929,7 @@
     if (e.key.toLowerCase() !== "e" || e.ctrlKey || e.metaKey || e.altKey) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("edlg").hidden || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault();
-    edAsk(edTargetItem());
+    edAsk(edTargetItems());
   });
 
   /* ================= Atajos de teclado ================= */
@@ -1929,7 +2002,7 @@
     });
     flags = (await kvGet("flags")) || {};
     notes = (await kvGet("notes")) || {};
-    edits = (await kvGet("edits")) || [];
+    edits = ((await kvGet("edits")) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
     if (HAS_FS) { rootDir = (await kvGet("rootDir")) || null; outDir = (await kvGet("outDir")) || null; }
     updateTplPreview();
     await refreshAll();
