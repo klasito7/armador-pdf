@@ -108,6 +108,9 @@
   aside{width:290px;flex-shrink:0;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
   aside .head{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
   aside .head input{width:100%}
+  .tandarow{display:flex;align-items:center;gap:6px;font-size:13px}
+  .tandarow[hidden]{display:none}
+  #tandaSel{flex:1;font-weight:600}
   .filters{display:flex;gap:4px;flex-wrap:wrap}
   .filters button{font-size:12px;padding:3px 8px;border-radius:999px}
   .filters button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
@@ -210,6 +213,7 @@
   .socio .nb{display:flex;flex-direction:column;min-width:0}
   .socio small{font-size:11.5px;color:var(--muted)}
   .exportbar{display:flex;gap:6px}
+  .exportbar[hidden]{display:none}
   .exportbar button{flex:1;font-size:12.5px;padding:5px 6px}
   .modal canvas{display:block;background:#fff;user-select:none;-webkit-user-drag:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .ztools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
@@ -249,6 +253,7 @@
 <div class="layout">
   <aside id="aside">
     <div class="head">
+      <label class="tandarow" id="tandaRow" hidden>📂 <select id="tandaSel" title="Carpeta de fecha (tanda) que estás trabajando"></select></label>
       <input type="text" id="search" placeholder="🔍 Buscar DNI o nombre…">
       <div class="filters" id="filters">
         <button data-f="all" class="on">Todos</button>
@@ -514,6 +519,23 @@
   let prof = "diabetes";
   const pk = k => prof === "diabetes" ? k : `${prof}:${k}`;   // Diabetes conserva las claves de antes
   let namesMap = {};          // DNI -> "APELLIDO, NOMBRE" (pegado desde Excel)
+  // Tandas: carpetas de fecha (ej. 16-11-26) que adentro tienen las carpetas por DNI
+  let tandas = [], tandaSel = "";
+  const scopeOf = s => (s && s.tanda) || (rootDir ? rootDir.name : "");     // "dónde" vive el socio
+  const sidOf = s => s ? `${s.tanda || ""}/${s.name}` : "";                 // identidad única del socio
+  const flagKey = s => s.tanda ? `${s.tanda}/${s.name}` : s.name;
+  const isSocioName = n => /^\D{0,3}\d{1,2}\.?\d{3}\.?\d{3}(?!\d)/.test(n) && !/^\d{4}-\d{2}-\d{2}_\d+/.test(n);
+  function dateKey(n) {
+    let m = n.match(/(?:^|\D)(\d{1,2})[-_.](\d{1,2})[-_.](\d{2}|\d{4})(?!\d)/);
+    if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+    m = n.match(/(20\d{2})[-_.]?(\d{2})[-_.]?(\d{2})(?!\d)/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
+  }
+  async function hasSocioChild(dir) {
+    let k = 0;
+    for await (const [name, h] of dir.entries()) { if (h.kind === "directory" && isSocioName(name)) return true; if (++k > 60) break; }
+    return false;
+  }
   const usesNamesList = () => Object.keys(namesMap).length > 0;
   let tpl = "{dni} gino";
   let flags = {};             // carpeta -> "noapto"
@@ -616,11 +638,37 @@
     const okRoot = rootDir && await hasPerm(rootDir, false);
     const okOut = outDir && await hasPerm(outDir, false);
     $("reconnect").hidden = !((rootDir && !okRoot) || (outDir && !okOut));
-    socios = [];
+    socios = []; tandas = [];
     if (okRoot) {
-      for await (const [name, h] of rootDir.entries()) if (h.kind === "directory" && !name.startsWith(".")) socios.push({ name, dni: dniOf(name), handle: h });
-      socios.sort((a, b) => natural(a.name, b.name));
+      const direct = [], cands = [];
+      for await (const [name, h] of rootDir.entries()) {
+        if (h.kind !== "directory" || name.startsWith(".")) continue;
+        (isSocioName(name) ? direct : cands).push({ name, handle: h });
+      }
+      for (const c of cands) { if (await hasSocioChild(c.handle)) tandas.push(c); else direct.push(c); }
+      if (!tandas.length) {
+        for (const d of direct) socios.push({ name: d.name, dni: dniOf(d.name), handle: d.handle });
+      } else {
+        // Más nueva primero; las que no tienen fecha, al final
+        tandas.forEach(t => t.key = dateKey(t.name));
+        tandas.sort((a, b) => (b.key || "").localeCompare(a.key || "") || natural(a.name, b.name));
+        if (direct.some(d => isSocioName(d.name))) tandas.push({ name: "Sin carpeta de fecha", handle: rootDir, loose: true, key: "" });
+        if (!tandas.some(t => t.name === tandaSel) && tandaSel !== "__all") {
+          const d = new Date(), hoy = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getFullYear()).slice(2)}`;
+          tandaSel = (tandas.find(t => t.name === hoy) || tandas[0]).name;
+        }
+        for (const t of tandas) {
+          if (tandaSel !== "__all" && t.name !== tandaSel) continue;
+          for await (const [name, h] of t.handle.entries()) {
+            if (h.kind !== "directory" || name.startsWith(".")) continue;
+            if (t.loose ? !isSocioName(name) : /^\d{4}-\d{2}-\d{2}_\d+/.test(name)) continue;
+            socios.push({ name, dni: dniOf(name), handle: h, tanda: t.loose ? undefined : t.name });
+          }
+        }
+      }
+      socios.sort((a, b) => natural(a.name, b.name) || natural(a.tanda || "", b.tanda || ""));
     }
+    renderTandas();
     await refreshListos(okOut);
     renderSocios();
     const ready = okRoot && okOut;
@@ -635,16 +683,32 @@
     if (!HAS_FS) { $("noFs").hidden = false; $("fsControls").hidden = true; $("setupRoot").hidden = $("setupOut").hidden = true; showWork(null); }
     updateSaveLabels();
   }
+  function renderTandas() {
+    const row = $("tandaRow"), sel = $("tandaSel");
+    row.hidden = !tandas.length;
+    if (!tandas.length) return;
+    sel.innerHTML = tandas.map(t => `<option value="${t.name.replace(/"/g, "&quot;")}">${t.name}</option>`).join("") + `<option value="__all">Todas las fechas</option>`;
+    sel.value = tandaSel;
+  }
+  $("tandaSel").addEventListener("change", async () => {
+    tandaSel = $("tandaSel").value; await kvSet(pk("tanda"), tandaSel);
+    current = null; resetItems(); render();
+    $("work").hidden = true; $("footer").hidden = true;
+    await refreshAll(); renderEdits();
+  });
   async function refreshListos(ok) {
     listos = new Set(); listosMap = new Map();
     if (ok === undefined) ok = outDir && await hasPerm(outDir, false);
     if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
   }
 
+  function isListo(s) {
+    if (VAR_RE.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return true; return false; }
+    return listos.has(nameFor(s).toLowerCase());
+  }
   function statusOf(s) {
-    if (VAR_RE.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return "listo"; }
-    else if (listos.has(nameFor(s).toLowerCase())) return "listo";
-    if (flags[s.name] === "noapto") return "noapto";
+    if (isListo(s)) return "listo";
+    if (flags[flagKey(s)] === "noapto") return "noapto";
     return "pend";
   }
   const CHIP = { pend: "Pendiente", listo: "✓ Listo", noapto: "⚠ No apto" };
@@ -659,13 +723,13 @@
       const nom = usesTok("nombre") ? fieldVal(s, "nombre") : "";
       if (q && !(s.name + " " + nom).toLowerCase().includes(q)) continue;
       const row = document.createElement("div");
-      row.className = "socio" + (current && current.name === s.name ? " sel" : "");
+      row.className = "socio" + (current && sidOf(current) === sidOf(s) ? " sel" : "");
       row.innerHTML = `<span class="nb"><span class="n"></span><small></small></span><span class="chip ${st}">${CHIP[st]}</span>`;
       row.querySelector(".n").textContent = s.name + (nom && !s.name.toLowerCase().includes(nom.toLowerCase()) ? " · " + nom : "");
       row.querySelector(".n").title = row.querySelector(".n").textContent;
       const nt = noteOf(s);
       const ne = editsOf(s).reduce((a, e) => a + e.pages.length, 0);
-      row.querySelector("small").textContent = [nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
+      row.querySelector("small").textContent = [tandaSel === "__all" && s.tanda ? "📂 " + s.tanda : "", nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
       row.onclick = () => openSocio(s);
       box.appendChild(row);
     }
@@ -699,7 +763,7 @@
     if (!current) return;
     const st = statusOf(current);
     const chip = $("socioChip"); chip.className = "chip " + st; chip.textContent = CHIP[st];
-    $("toggleNoApto").textContent = flags[current.name] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
+    $("toggleNoApto").textContent = flags[flagKey(current)] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
     const nt = noteOf(current);
     if (document.activeElement !== $("fechaPlanilla")) $("fechaPlanilla").value = nt.fp || "";
     if (document.activeElement !== $("obs")) $("obs").value = nt.obs || "";
@@ -717,7 +781,7 @@
   }
 
   /* ================= Notas por socio (fecha de planilla) y listado ================= */
-  const noteKey = s => `${rootDir ? rootDir.name : ""}/${s.name}`;
+  const noteKey = s => `${scopeOf(s)}/${s.name}`;
   const noteOf = s => notes[noteKey(s)] || {};
   function fmtFecha(iso) { const m = (iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || ""); }
   async function setNote(field, val) {
@@ -786,7 +850,7 @@
     const q = v => { v = String(v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const csv = "\ufeff" + [COLS, ...rows].map(r => r.map(q).join(";")).join("\r\n");
     const d = new Date(), hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const name = cleanName(`listado ${rootDir ? rootDir.name : ""} ${hoy}`).replace(/\.pdf$/, ".csv");
+    const name = cleanName(`listado ${tandas.length && tandaSel !== "__all" ? tandaSel : (rootDir ? rootDir.name : "")} ${hoy}`).replace(/\.pdf$/, ".csv");
     try {
       if (outDir && await hasPerm(outDir, true)) { await writeFile(outDir, name, new Blob([csv], { type: "text/csv" })); listStatus(`✓ Listado guardado en "${outDir.name}": ${name}`, "ok"); }
       else { downloadBytes(new TextEncoder().encode(csv), name, "text/csv"); listStatus(`✓ Listado descargado: ${name}`, "ok"); }
@@ -895,13 +959,14 @@
   $("reloadSocio").onclick = () => current && openSocio(current);
   $("toggleNoApto").onclick = async () => {
     if (!current) return;
-    if (flags[current.name] === "noapto") delete flags[current.name]; else flags[current.name] = "noapto";
+    const fk = flagKey(current);
+    if (flags[fk] === "noapto") delete flags[fk]; else flags[fk] = "noapto";
     await kvSet(pk("flags"), flags); renderSocios();
   };
   function nextPending() {
-    const idx = current ? socios.findIndex(x => x.name === current.name) : -1;
+    const idx = current ? socios.findIndex(x => sidOf(x) === sidOf(current)) : -1;
     const order = [...socios.slice(idx + 1), ...socios.slice(0, idx + 1)];
-    return order.find(x => statusOf(x) === "pend" && (!current || x.name !== current.name));
+    return order.find(x => statusOf(x) === "pend" && (!current || sidOf(x) !== sidOf(current)));
   }
   $("nextPend").onclick = () => { const n = nextPending(); if (n) openSocio(n); else setStatus("No quedan pendientes. 🎉", "ok"); };
 
@@ -1387,7 +1452,7 @@
       logSave(names[i], pdfs.length > 1 ? i + 1 : 0);
       listos.add(names[i].toLowerCase()); listosMap.set(names[i].toLowerCase(), names[i]); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
     }
-    if (current && flags[current.name] && listos.has(nameFor(current).toLowerCase())) { delete flags[current.name]; kvSet(pk("flags"), flags); }
+    if (current && flags[flagKey(current)] && isListo(current)) { delete flags[flagKey(current)]; kvSet(pk("flags"), flags); }
     renderSocios();
     if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
     say(`✓ Guardado en "${outDir.name}": ${saved.join(", ")}`, "ok");
@@ -1920,8 +1985,9 @@
   // Cada pendiente: {id, root, socio, note, created, pages: [{file, page, label, group, thumb}]}
   let edits = [], lastHover = null, edTargets = [], ctrlSel = new Set();
   const rootName = () => rootDir ? rootDir.name : "";
-  const myEdits = () => edits.filter(e => e.root === rootName());
-  const editsOf = s => myEdits().filter(e => e.socio === s.name);
+  const scopesNow = () => new Set(tandas.length ? (tandaSel === "__all" ? tandas.map(t => t.loose ? rootName() : t.name) : [tandas.find(t => t.name === tandaSel)?.loose ? rootName() : tandaSel]) : [rootName()]);
+  const myEdits = () => { const sc = scopesNow(); return edits.filter(e => sc.has(e.root)); };
+  const editsOf = s => edits.filter(e => e.root === scopeOf(s) && e.socio === s.name);
   const editedNameFor = label => label.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2") + " editado.jpg";
   const samePage = (p, it) => p.file === it.origName && p.page === it.origPage;
   async function saveEdits() { await kvSet(pk("edits"), edits); renderEdits(); renderSocios(); }
@@ -1974,7 +2040,7 @@
     for (const e of editsOf(current)) e.pages = e.pages.filter(p => !picked.some(it => samePage(p, it)));
     edits = edits.filter(e => e.pages.length);
     edits.push({
-      id: "e" + Date.now() + Math.random().toString(36).slice(2, 6), root: rootName(), socio: current.name, note, created: Date.now(),
+      id: "e" + Date.now() + Math.random().toString(36).slice(2, 6), root: scopeOf(current), socio: current.name, note, created: Date.now(),
       pages: picked.map(it => ({ file: it.origName, page: it.origPage, label: it.name, group: it.groupKey || current.sel || "", thumb: thumbOf(it).toDataURL("image/jpeg", 0.7) }))
     });
     picked.forEach(it => ctrlSel.delete(it.id));
@@ -1989,7 +2055,7 @@
       items.find(it => it.name.toLowerCase() === editedNameFor(p.label).toLowerCase());
   }
   async function goToEntry(e, photopea) {
-    const s = socios.find(x => x.name === e.socio);
+    const s = socios.find(x => x.name === e.socio && scopeOf(x) === e.root) || socios.find(x => x.name === e.socio);
     if (!s) { toast("No encuentro la carpeta de ese socio en esta tanda."); return; }
     closeEdPanel();
     const groups = [...new Set(e.pages.map(p => p.group).filter(Boolean))];
@@ -2003,7 +2069,7 @@
   }
   async function removeEditedPages(socio, keys) {
     const before = JSON.stringify(edits);
-    for (const e of edits) if (e.root === rootName() && e.socio === socio) e.pages = e.pages.filter(p => !keys.some(k => k.file === p.file && k.page === p.page));
+    for (const e of edits) if (e.root === scopeOf(current) && e.socio === socio) e.pages = e.pages.filter(p => !keys.some(k => k.file === p.file && k.page === p.page));
     const removed = edits.filter(e => !e.pages.length);
     edits = edits.filter(e => e.pages.length);
     if (JSON.stringify(edits) === before) return;
@@ -2067,7 +2133,7 @@
   function logSave(file, part) {
     if (!current) return;
     const nt = noteOf(current), today = isoDay(new Date());
-    const rec = { ts: Date.now(), root: rootName(), socio: current.name, dni: current.dni, file, part,
+    const rec = { ts: Date.now(), root: scopeOf(current), socio: current.name, dni: current.dni, file, part,
       fp: nt.fp || "", nombre: usesTok("nombre") ? fieldVal(current, "nombre") : "", tipo: nt.tipo || "", periodo: nt.periodo || "", obs: nt.obs || "" };
     // Si ya lo guardaste hoy (mismo archivo), se actualiza en vez de repetirse
     dayLog = dayLog.filter(r => !(r.file.toLowerCase() === file.toLowerCase() && isoDay(new Date(r.ts)) === today));
@@ -2268,6 +2334,7 @@
     notes = (await kvGet(pk("notes"))) || {};
     if (tpl === "{dni} - {nombre} - {tipo} - {periodo}") { tpl = "{dni} - {nombre} - {tipo} {periodo}"; $("tpl").value = tpl; kvSet(pk("tpl"), tpl); }
     namesMap = (await kvGet(pk("names"))) || {};
+    tandaSel = (await kvGet(pk("tanda"))) || "";
     dayLog = (await kvGet(pk("daylog"))) || []; updateDayCount();
     edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
     rootDir = outDir = null;
