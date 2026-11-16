@@ -82,6 +82,13 @@
   /* Barra superior */
   .top{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
   .top h1{font-size:18px;margin:0 6px 0 0}
+  .profs{display:flex;gap:2px;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:3px;border-radius:10px}
+  .profs button{border:none;background:none;padding:6px 12px;border-radius:8px;font-weight:600;color:var(--muted)}
+  .profs button.on{background:var(--accent);color:var(--accent-ink)}
+  body[data-prof=hsextras]{--accent:#7a3fd1}
+  @media (prefers-color-scheme: dark){ body[data-prof=hsextras]{--accent:#a682ff} }
+  body[data-prof=hsextras] .top{box-shadow:inset 0 -3px 0 var(--accent)}
+  body[data-prof=diabetes] .top{box-shadow:inset 0 -3px 0 var(--accent)}
   .folder{display:flex;gap:6px;align-items:center;font-size:13.5px}
   .folder b{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
   .folder button{padding:4px 9px;font-size:13px}
@@ -209,6 +216,10 @@
 
 <div class="top">
   <h1>📄 Armador de PDF</h1>
+  <div class="profs" id="profs">
+    <button data-p="diabetes">🩸 Diabetes</button>
+    <button data-p="hsextras">⏱ Hs extras</button>
+  </div>
   <div class="folder" id="fsControls">
     <span>📁 Socios: <b id="rootName">—</b></span><button id="pickRoot">Elegir</button>
     <span style="margin-left:8px">✅ Listos: <b id="outName">—</b></span><button id="pickOut">Elegir</button>
@@ -243,7 +254,7 @@
 
   <main id="main">
     <div class="setup" id="setup">
-      <h2>Empecemos</h2>
+      <h2>Empecemos <span id="setupProf" class="label"></span></h2>
       <div class="warnbox" id="noFs" hidden>Este navegador no permite abrir carpetas. Usá <b>Chrome</b> o <b>Edge</b> en la PC. Mientras tanto podés arrastrar archivos abajo y descargar el PDF.</div>
       <p><b>1.</b> Elegí la <b>carpeta de socios</b>: la que tiene adentro una carpeta por cada DNI.<br>
          <b>2.</b> Elegí la <b>carpeta de listos</b>: ahí se guardan los PDFs finales, ya renombrados.<br>
@@ -445,6 +456,10 @@
 
   /* ================= Estado ================= */
   let rootDir = null, outDir = null;
+  // Apartados: cada uno con sus carpetas, formato de nombre, fechas, marcas y "Para editar"
+  const PROFS = { diabetes: "🩸 Diabetes", hsextras: "⏱ Hs extras" };
+  let prof = "diabetes";
+  const pk = k => prof === "diabetes" ? k : `${prof}:${k}`;   // Diabetes conserva las claves de antes
   let tpl = "{dni} gino";
   let flags = {};             // carpeta -> "noapto"
   let socios = [];            // {name, dni, handle}
@@ -489,7 +504,7 @@
   }
   function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); }
   $("tpl").addEventListener("input", () => {
-    tpl = $("tpl").value || "{dni}"; kvSet("tpl", tpl); updateTplPreview();
+    tpl = $("tpl").value || "{dni}"; kvSet(pk("tpl"), tpl); updateTplPreview();
     if (current) $("fname").value = nameFor(current);
     renderSocios();
   });
@@ -498,9 +513,9 @@
   async function pickDir(which) {
     if (!HAS_FS) return;
     try {
-      const h = await window.showDirectoryPicker({ id: which === "root" ? "socios" : "listos", mode: "readwrite" });
-      if (which === "root") { rootDir = h; await kvSet("rootDir", h); }
-      else { outDir = h; await kvSet("outDir", h); }
+      const h = await window.showDirectoryPicker({ id: (which === "root" ? "socios" : "listos") + (prof === "diabetes" ? "" : "-" + prof), mode: "readwrite" });
+      if (which === "root") { rootDir = h; await kvSet(pk("rootDir"), h); }
+      else { outDir = h; await kvSet(pk("outDir"), h); }
       await refreshAll();
     } catch (e) { if (e.name !== "AbortError") alertMsg("No pude abrir la carpeta: " + e.message); }
   }
@@ -620,7 +635,7 @@
     if (!current) return;
     const k = noteKey(current), n = { ...(notes[k] || {}) };
     n[field] = val; if (!n.fp && !n.obs) delete notes[k]; else notes[k] = n;
-    await kvSet("notes", notes);
+    await kvSet(pk("notes"), notes);
     renderSocios();
   }
   $("fechaPlanilla").addEventListener("change", () => setNote("fp", $("fechaPlanilla").value));
@@ -775,7 +790,7 @@
   $("toggleNoApto").onclick = async () => {
     if (!current) return;
     if (flags[current.name] === "noapto") delete flags[current.name]; else flags[current.name] = "noapto";
-    await kvSet("flags", flags); renderSocios();
+    await kvSet(pk("flags"), flags); renderSocios();
   };
   function nextPending() {
     const idx = current ? socios.findIndex(x => x.name === current.name) : -1;
@@ -1263,7 +1278,7 @@
       await writeFile(outDir, names[i], pdfs[i]);
       listos.add(names[i].toLowerCase()); listosMap.set(names[i].toLowerCase(), names[i]); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
     }
-    if (current && flags[current.name] && listos.has(nameFor(current).toLowerCase())) { delete flags[current.name]; kvSet("flags", flags); }
+    if (current && flags[current.name] && listos.has(nameFor(current).toLowerCase())) { delete flags[current.name]; kvSet(pk("flags"), flags); }
     renderSocios();
     if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
     say(`✓ Guardado en "${outDir.name}": ${saved.join(", ")}`, "ok");
@@ -1628,13 +1643,13 @@
     return null;
   }
 
-  async function getZones() { return (await kvGet("dateZones")) || []; }
+  async function getZones() { return (await kvGet(pk("dateZones"))) || []; }
   async function rememberZone(z) {
     const zones = (await getZones()).filter(o => {
       const ix = Math.max(0, Math.min(o.x + o.w, z.x + z.w) - Math.max(o.x, z.x)), iy = Math.max(0, Math.min(o.y + o.h, z.y + z.h) - Math.max(o.y, z.y));
       return ix * iy < 0.5 * Math.min(o.w * o.h, z.w * z.h);
     });
-    zones.unshift(z); await kvSet("dateZones", zones.slice(0, 6));
+    zones.unshift(z); await kvSet(pk("dateZones"), zones.slice(0, 6));
   }
 
   // Busca la palabra impresa "Fecha" y arma recortes al costado / abajo / arriba
@@ -1796,7 +1811,7 @@
   const editsOf = s => myEdits().filter(e => e.socio === s.name);
   const editedNameFor = label => label.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2") + " editado.jpg";
   const samePage = (p, it) => p.file === it.origName && p.page === it.origPage;
-  async function saveEdits() { await kvSet("edits", edits); renderEdits(); renderSocios(); }
+  async function saveEdits() { await kvSet(pk("edits"), edits); renderEdits(); renderSocios(); }
   function thumbOf(it, max = 160) {
     const th = document.createElement("canvas"), s = Math.min(1, max / Math.max(it.canvas.width, it.canvas.height));
     th.width = Math.max(1, Math.round(it.canvas.width * s)); th.height = Math.max(1, Math.round(it.canvas.height * s));
@@ -1991,22 +2006,43 @@
   kbWatch.forEach(el => kbObs.observe(el, { attributes: true, attributeFilter: ["class", "hidden"] }));
   window.addEventListener("resize", kbUpdate);
 
+  async function loadProfile() {
+    document.body.dataset.prof = prof;
+    $("setupProf").textContent = "· " + PROFS[prof];
+    document.title = `Armador de PDF · ${PROFS[prof].replace(/^\S+\s/, "")}`;
+    [...$("profs").children].forEach(b => b.classList.toggle("on", b.dataset.p === prof));
+    // Cerrar todo lo abierto del apartado anterior
+    modal.classList.remove("show"); closePreview(); closeEdPanel();
+    current = null; resetItems(); render();
+    $("work").hidden = true; $("footer").hidden = true; $("pickHint").hidden = true;
+    socios = []; listos = new Set(); listosMap = new Map();
+    tpl = (await kvGet(pk("tpl"))) || "{dni} gino"; $("tpl").value = tpl;
+    flags = (await kvGet(pk("flags"))) || {};
+    notes = (await kvGet(pk("notes"))) || {};
+    edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
+    rootDir = outDir = null;
+    if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; }
+    $("search").value = "";
+    updateTplPreview();
+    await refreshAll();
+    renderEdits();
+  }
+  $("profs").addEventListener("click", async e => {
+    const b = e.target.closest("button"); if (!b || b.dataset.p === prof) return;
+    prof = b.dataset.p; await kvSet("prof", prof);
+    await loadProfile();
+  });
+
   (async function init() {
     kbUpdate();
-    tpl = (await kvGet("tpl")) || tpl; $("tpl").value = tpl;
     const OPTS = ["pageSize", "quality", "pdfMode", "colorMode"];
     const saved = (await kvGet("opts")) || {};
     OPTS.forEach(k => {
       if (saved[k]) $(k).value = saved[k];
       $(k).addEventListener("change", () => kvSet("opts", Object.fromEntries(OPTS.map(x => [x, $(x).value]))));
     });
-    flags = (await kvGet("flags")) || {};
-    notes = (await kvGet("notes")) || {};
-    edits = ((await kvGet("edits")) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
-    if (HAS_FS) { rootDir = (await kvGet("rootDir")) || null; outDir = (await kvGet("outDir")) || null; }
-    updateTplPreview();
-    await refreshAll();
-    renderEdits();
+    const sp = await kvGet("prof"); if (sp && PROFS[sp]) prof = sp;
+    await loadProfile();
   })();
 })();
 </script>
