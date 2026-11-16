@@ -642,6 +642,14 @@
 <li><b>Lista de nombres:</b> acepta el resultado del Buscador Padrón o el export de SURGE pegado tal cual.</li>
 <li><b>Docs SGI:</b> descomprimir el ZIP dentro de la carpeta de la fecha.</li>
 </ul>
+<h3>Carga rápida (SURGE)</h3>
+<p>Marcador que abre un panel de teclado arriba de SURGE para dar de alta y completar requisitos de Diabetes. Se instala desde <a href="carga.html" target="_blank">esta página</a> arrastrando el botón a la barra de favoritos. No aprieta nada solo: Siguiente, Guardar, Guardar todo y Enviar a revisión los apretás vos.</p>
+<ul>
+<li><b>Alta:</b> fecha de planilla y CUIL → elige Diabetes y pone la fecha de alta (un año antes de la planilla, sin pasar el límite). Después de Siguiente: diagnóstico (solo el año = 01/01), matrícula, médico y tipo. Recuerda los médicos por matrícula.</li>
+<li><b>Requisitos:</b> modelo de planilla con Alt+1/2/3 (Certificado Swiss Jul 25, Planilla DBT, Anexo III) y los campos quedan en ese orden. Opciones con teclas; 0 = no presenta / ninguna. Cada fecha vacía toma la de planilla.</li>
+<li><b>Planilla firmada:</b> Enter en Resumen de Historia Clínica la busca por CUIL en Firmados.</li>
+<li><b>Ctrl+Enter</b> pasa todo a la página y avisa lo que esté fuera de rango. <b>Copiar registro de hoy</b>: solicitud, CUIL, fecha de planilla y hora.</li>
+</ul>
 <h3>Configuración</h3>
 <ul>
 <li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
@@ -730,7 +738,9 @@
 <ol>
 <li>Con los Listos en para_firmar, correr la autofirma.</li>
 <li>Volver al Armador: aparecen como <b>Firmado</b> (filtro Firmados).</li>
-<li>Cargar cada firmado en SURGE con su CUIL y adjuntar el PDF.</li>
+<li>Cargar cada firmado en SURGE con <b>⚡ Carga rápida</b>: Alta (fecha de planilla + CUIL → Siguiente → médico → Guardar), después los requisitos en el orden del modelo de planilla, Enter en Resumen de Historia Clínica para adjuntar el firmado, Ctrl+Enter, <b>Guardar todo</b> y Enviar a revisión.</li>
+<li>Reempadronamientos: reloj en el vencido → Carga rápida → mismos pasos.</li>
+<li>Al terminar: <b>Copiar registro de hoy</b> y pegarlo en el Excel (número de solicitud por CUIL).</li>
 </ol>
 <ul>
 <li><b>Fijarse:</b> los Firmados tienen que coincidir con los Listos del día.</li>
