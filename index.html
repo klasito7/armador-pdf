@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Armador de PDF</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#fff; --ink:#1d2330; --muted:#6b7280; --line:#e3e6eb;
+    --accent:#1f5fd1; --accent-ink:#fff; --danger:#c0362c; --ok:#1c7c4a; --warn:#b26a00; --pp:#18a497;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#14161b; --panel:#1d2027; --ink:#e8eaf0; --muted:#9aa1ad; --line:#2d313a; --accent:#5b8cff; --accent-ink:#0d1220; --danger:#ff6b5e; --ok:#4cc38a; --warn:#f0a83a; }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;display:flex;flex-direction:column}
+  button,select,input[type=text]{font:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 11px}
+  button{cursor:pointer;white-space:nowrap}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+  button.pp{background:var(--pp);color:#fff;border-color:var(--pp);font-weight:600}
+  button.danger{color:var(--danger)}
+  button:disabled{opacity:.5;cursor:default}
+  .label{color:var(--muted);font-size:13px}
+
+  /* Barra superior */
+  .top{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+  .top h1{font-size:18px;margin:0 6px 0 0}
+  .folder{display:flex;gap:6px;align-items:center;font-size:13.5px}
+  .folder b{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
+  .folder button{padding:4px 9px;font-size:13px}
+  #tpl{width:150px}
+  #tplPreview{font-size:12.5px;color:var(--muted)}
+
+  .layout{flex:1;display:flex;min-height:0}
+  aside{width:290px;flex-shrink:0;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+  aside .head{padding:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+  aside .head input{width:100%}
+  .filters{display:flex;gap:4px;flex-wrap:wrap}
+  .filters button{font-size:12px;padding:3px 8px;border-radius:999px}
+  .filters button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .counts{font-size:12px;color:var(--muted)}
+  #socios{overflow:auto;flex:1}
+  .socio{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .socio:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+  .socio.sel{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
+  .socio .n{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .chip.pend{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
+  .chip.listo{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .chip.noapto{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+
+  main{flex:1;overflow:auto;padding:14px 20px 110px;min-width:0}
+  .setup{max-width:680px;margin:30px auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .setup h2{margin:0 0 8px;font-size:19px}
+  .setup p{color:var(--muted);line-height:1.5;margin:6px 0 14px}
+  .setup .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .warnbox{background:color-mix(in srgb,var(--warn) 14%,var(--panel));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:13.5px;margin-bottom:12px}
+
+  .socio-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+  .socio-head h2{margin:0;font-size:20px}
+  .drop{border:2px dashed var(--line);border-radius:12px;background:var(--panel);padding:14px;text-align:center;cursor:pointer;transition:.15s;font-size:13.5px;color:var(--muted)}
+  .drop strong{color:var(--ink)}
+  .drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-top:10px}
+  .bar .sep{width:1px;height:24px;background:var(--line);margin:0 2px}
+  #range{width:130px}
+  .help{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .help b{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:12px}
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:8px;position:relative;user-select:none;cursor:pointer;transition:border-color .12s,opacity .12s}
+  .card.on{border-color:var(--accent)}
+  .card.off{opacity:.42}
+  .card.off .thumb::after{content:"Excluida";position:absolute;inset:auto 0 45% 0;text-align:center;font-weight:700;color:var(--danger);font-size:13px}
+  .card.dragging{opacity:.3}
+  .card.drop-before{box-shadow:-5px 0 0 var(--accent)}
+  .card.drop-after{box-shadow:5px 0 0 var(--accent)}
+  .card .edited{position:absolute;bottom:6px;left:6px;background:var(--pp);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;z-index:2}
+  .thumb{height:180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:color-mix(in srgb,var(--ink) 5%,transparent);border-radius:6px}
+  .thumb canvas{max-width:100%;max-height:100%;box-shadow:0 1px 4px rgba(0,0,0,.18);background:#fff;transition:transform .15s}
+  .num{position:absolute;top:6px;left:6px;background:var(--ink);color:var(--panel);font-size:12px;font-weight:700;border-radius:999px;padding:2px 8px;z-index:2}
+  .check{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:6px;border:2px solid var(--line);background:var(--panel);z-index:2;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--accent-ink)}
+  .card.on .check{background:var(--accent);border-color:var(--accent)}
+  .meta{font-size:11.5px;color:var(--muted);margin:6px 2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tools{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .tools button{padding:3px 0;font-size:12.5px;min-width:0}
+  .tools button.ppb{color:var(--pp);font-weight:700}
+  .empty{color:var(--muted);text-align:center;padding:40px 0}
+
+  footer{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;z-index:10}
+  footer .in{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #fname,#pvName{width:240px;font-weight:600}
+  #status,#pvInfo{font-size:13px;color:var(--muted);flex:1;min-width:180px}
+  .err{color:var(--danger)!important} .ok{color:var(--ok)!important}
+
+  .overlay{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;background:var(--bg)}
+  .overlay.show{display:flex}
+  .ov-top{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .ov-top h2{font-size:16px;margin:0 8px 0 0}
+  .pv-body{flex:1;overflow:auto;padding:20px 12px 40px}
+  .pv-page{max-width:860px;margin:0 auto 22px;text-align:center}
+  .pv-page canvas{width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  .pv-page .lbl{font-size:12px;color:var(--muted);margin-top:6px}
+  #ppWrap{flex:1;position:relative;background:#222}
+  #ppWrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  #ppLoading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ddd;font-size:15px;z-index:1;pointer-events:none}
+  #ppInfo{font-size:13px;color:var(--muted);flex:1;min-width:160px}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:40;padding:20px}
+  .modal.show{display:flex}
+  .modal .box{background:var(--panel);border-radius:10px;padding:10px;max-width:95vw;max-height:92vh;overflow:auto}
+  .modal canvas{display:block;max-width:100%;max-height:78vh;width:auto;height:auto;background:#fff;user-select:none;-webkit-user-drag:none}
+  .ztools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .ztools .sep{width:1px;height:22px;background:var(--line)}
+  #zAngle{width:160px}
+  .zwrap{position:relative;display:inline-block;cursor:crosshair;touch-action:none}
+  #zsel{position:absolute;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none}
+  .card.cut{box-shadow:-6px 0 0 var(--danger)}
+  .card .cutlbl{position:absolute;top:-11px;left:8px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 8px;z-index:3}
+  .tools button.cutb.active{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .pv-part{max-width:860px;margin:6px auto 14px;font-weight:700;font-size:15px;border-bottom:2px solid var(--line);padding-bottom:6px}
+
+  @media (max-width:800px){ .layout{flex-direction:column} aside{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid var(--line)} }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>📄 Armador de PDF</h1>
+  <div class="folder" id="fsControls">
+    <span>📁 Socios: <b id="rootName">—</b></span><button id="pickRoot">Elegir</button>
+    <span style="margin-left:8px">✅ Listos: <b id="outName">—</b></span><button id="pickOut">Elegir</button>
+    <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
+  </div>
+  <div class="folder">
+    <span class="label">Nombre:</span>
+    <input type="text" id="tpl" title="Usá {dni} y/o {carpeta}">
+    <span id="tplPreview"></span>
+  </div>
+</div>
+
+<div class="layout">
+  <aside id="aside">
+    <div class="head">
+      <input type="text" id="search" placeholder="🔍 Buscar DNI o nombre…">
+      <div class="filters" id="filters">
+        <button data-f="all" class="on">Todos</button>
+        <button data-f="pend">Pendientes</button>
+        <button data-f="noapto">No aptos</button>
+        <button data-f="listo">Listos</button>
+      </div>
+      <div class="counts" id="counts"></div>
+    </div>
+    <div id="socios"></div>
+  </aside>
+
+  <main id="main">
+    <div class="setup" id="setup">
+      <h2>Empecemos</h2>
+      <div class="warnbox" id="noFs" hidden>Este navegador no permite abrir carpetas. Usá <b>Chrome</b> o <b>Edge</b> en la PC. Mientras tanto podés arrastrar archivos abajo y descargar el PDF.</div>
+      <p><b>1.</b> Elegí la <b>carpeta de socios</b>: la que tiene adentro una carpeta por cada DNI.<br>
+         <b>2.</b> Elegí la <b>carpeta de listos</b>: ahí se guardan los PDFs finales, ya renombrados.<br>
+         El navegador te va a pedir permiso para ver y guardar archivos en esas carpetas. Nada se sube a internet.</p>
+      <div class="row">
+        <button class="primary" id="setupRoot">📁 Elegir carpeta de socios</button>
+        <button class="primary" id="setupOut">✅ Elegir carpeta de listos</button>
+      </div>
+      <p id="setupMsg"></p>
+    </div>
+
+    <div class="empty" id="pickHint" hidden>👈 Elegí un socio de la lista para ver sus archivos.<br><span style="font-size:13px">También podés arrastrar archivos sueltos acá.</span></div>
+
+    <div id="work" hidden>
+      <div class="socio-head">
+        <h2 id="socioTitle">Archivos sueltos</h2>
+        <span class="chip" id="socioChip" hidden></span>
+        <button id="toggleNoApto" hidden>⚠️ Marcar no apto</button>
+        <button id="reloadSocio" hidden title="Vuelve a leer la carpeta (ej. si agregaste archivos)">↻ Recargar carpeta</button>
+        <button id="nextPend" hidden>Siguiente pendiente ▶</button>
+      </div>
+
+      <div class="drop" id="drop">
+        <strong>Sumar más archivos:</strong> arrastrá PDFs o imágenes (JPG, PNG, JFIF) acá, o tocá para elegirlos.
+        <input type="file" id="file" multiple accept=".pdf,application/pdf,image/*,.jfif,.jpg,.jpeg,.png" hidden>
+      </div>
+
+      <div class="bar">
+        <span class="label">Páginas:</span>
+        <input type="text" id="range" placeholder="ej: 1-3, 5, 8">
+        <button id="keepRange">Dejar solo estas</button>
+        <button id="dropRange">Quitar estas</button>
+        <span class="sep"></span>
+        <button id="all">Todas</button>
+        <button id="none">Ninguna</button>
+        <button id="invert">Invertir</button>
+        <span class="sep"></span>
+        <button id="removeOff" class="danger">Borrar excluidas</button>
+        <span class="sep"></span>
+        <span class="label">Imágenes:</span>
+        <select id="pageSize">
+          <option value="a4">Hoja A4</option>
+          <option value="letter">Hoja Carta</option>
+          <option value="legal">Hoja Oficio</option>
+          <option value="fit">Tamaño de la imagen</option>
+        </select>
+        <select id="quality" title="Resolución de imágenes (y de PDFs si se comprimen)">
+          <option value="2600">Calidad alta</option>
+          <option value="1700" selected>Calidad media</option>
+          <option value="1150">Liviano</option>
+        </select>
+        <span class="sep"></span>
+        <span class="label">Peso:</span>
+        <select id="pdfMode" title="Comprimir convierte las páginas de PDF en imagen: baja mucho el peso de los escaneos">
+          <option value="orig">PDFs sin tocar</option>
+          <option value="compress">Comprimir PDFs</option>
+        </select>
+        <select id="colorMode" title="Escala de grises baja el peso">
+          <option value="color">Color</option>
+          <option value="gray">Escala de grises</option>
+        </select>
+      </div>
+      <div class="help">
+        <b>Clic</b> en una página para incluirla/excluirla (Shift+clic marca un tramo) · <b>arrastrala</b> o usá ◀ ▶ para ordenar · <b>⟳</b> rota · <b>🔍</b> la ve en grande y permite <b>recortar y enderezar</b> · <b>✏️</b> la abre en Photopea · <b>✂</b> corta el PDF ahí (desde esa página arranca otro archivo) · <b>✕</b> la saca de la lista.
+        Los archivos originales de la carpeta nunca se modifican.
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="empty" id="empty">No hay archivos.</div>
+    </div>
+  </main>
+</div>
+
+<footer id="footer" hidden>
+  <div class="in">
+    <span class="label">Guardar como:</span>
+    <input type="text" id="fname" value="documento.pdf">
+    <button id="preview">👁 Vista previa</button>
+    <button class="primary" id="saveBtn">💾 Guardar en Listos</button>
+    <button id="dlBtn">⬇ Descargar</button>
+    <span id="status"></span>
+  </div>
+</footer>
+
+<!-- Vista previa -->
+<div class="overlay" id="pv">
+  <div class="ov-top">
+    <h2>Vista previa</h2>
+    <span class="label">Nombre:</span>
+    <input type="text" id="pvName">
+    <button class="primary" id="pvSave">💾 Guardar en Listos</button>
+    <button id="pvDl">⬇ Descargar</button>
+    <button id="pvBack">◀ Volver a editar</button>
+    <span id="pvInfo"></span>
+  </div>
+  <div class="pv-body" id="pvBody"></div>
+</div>
+
+<!-- Photopea -->
+<div class="overlay" id="ppOv">
+  <div class="ov-top">
+    <h2>✏️ Photopea</h2>
+    <button class="pp" id="ppUse">✓ Usar versión editada</button>
+    <button id="ppCancel">✕ Cancelar</button>
+    <span id="ppInfo">Editá la página y cuando termines tocá "Usar versión editada". No hace falta guardar ni exportar desde Photopea.</span>
+  </div>
+  <div id="ppWrap"><div id="ppLoading">Cargando Photopea…</div></div>
+</div>
+
+<div class="modal" id="modal"><div class="box">
+  <div class="ztools">
+    <span class="label">Enderezar:</span>
+    <input type="range" id="zAngle" min="-15" max="15" step="0.5" value="0">
+    <span id="zAngleVal" class="label">0°</span>
+    <span class="sep"></span>
+    <span class="label">Recortar: arrastrá sobre la página</span>
+    <button id="zClearCrop">Quitar recorte</button>
+    <button class="primary" id="zApply">✓ Aplicar</button>
+    <button id="mclose">Cerrar ✕</button>
+  </div>
+  <div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div>
+</div></div>
+
+<script>
+(() => {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const { PDFDocument, degrees } = PDFLib;
+  const $ = id => document.getElementById(id);
+  const HAS_FS = "showDirectoryPicker" in window;
+  const natural = (a, b) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" });
+
+  /* ================= Almacenamiento local (IndexedDB) ================= */
+  let idb = null;
+  function openDb() {
+    if (idb) return Promise.resolve(idb);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("armador-pdf", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => { idb = r.result; res(idb); };
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function kvGet(k) {
+    try { const db = await openDb(); return await new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+    catch (e) { return undefined; }
+  }
+  async function kvSet(k, v) {
+    try { const db = await openDb(); await new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+    catch (e) { console.warn("No se pudo guardar", k, e); }
+  }
+
+  /* ================= Estado ================= */
+  let rootDir = null, outDir = null;
+  let tpl = "{dni} gino";
+  let flags = {};             // carpeta -> "noapto"
+  let socios = [];            // {name, dni, handle}
+  let listos = new Set();     // nombres de archivo en carpeta de listos (minúsculas)
+  let current = null;         // socio abierto
+  let filter = "all";
+
+  let items = [];             // páginas: {id, kind, src, page, rot, on, canvas, name, edited}
+  const sources = {};         // id -> {kind, name, bytes, pdfjs, bitmap, file}
+  let uid = 0, renderQueue = Promise.resolve(), lastClicked = null;
+
+  function setStatus(msg, cls = "") { const s = $("status"); s.textContent = msg; s.className = cls; }
+
+  /* ================= Plantilla de nombre ================= */
+  function dniOf(folder) { const m = folder.match(/\d{7,9}/); return m ? m[0] : folder; }
+  function cleanName(raw) {
+    let n = (raw.trim() || "documento").replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ");
+    if (!/\.pdf$/i.test(n)) n += ".pdf";
+    return n;
+  }
+  function nameFor(s) { return cleanName(tpl.replace(/\{dni\}/gi, s.dni).replace(/\{carpeta\}/gi, s.name)); }
+  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { dni: "30123456", name: "30123456" }); }
+  $("tpl").addEventListener("input", () => {
+    tpl = $("tpl").value || "{dni}"; kvSet("tpl", tpl); updateTplPreview();
+    if (current) $("fname").value = nameFor(current);
+    renderSocios();
+  });
+
+  /* ================= Carpetas ================= */
+  async function pickDir(which) {
+    if (!HAS_FS) return;
+    try {
+      const h = await window.showDirectoryPicker({ id: which === "root" ? "socios" : "listos", mode: "readwrite" });
+      if (which === "root") { rootDir = h; await kvSet("rootDir", h); }
+      else { outDir = h; await kvSet("outDir", h); }
+      await refreshAll();
+    } catch (e) { if (e.name !== "AbortError") alertMsg("No pude abrir la carpeta: " + e.message); }
+  }
+  $("pickRoot").onclick = $("setupRoot").onclick = () => pickDir("root");
+  $("pickOut").onclick = $("setupOut").onclick = () => pickDir("out");
+
+  async function hasPerm(h, ask) {
+    if (!h) return false;
+    const opts = { mode: "readwrite" };
+    if ((await h.queryPermission(opts)) === "granted") return true;
+    if (ask) return (await h.requestPermission(opts)) === "granted";
+    return false;
+  }
+  $("reconnect").onclick = async () => {
+    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); } catch (e) {}
+    await refreshAll();
+  };
+
+  async function refreshAll() {
+    $("rootName").textContent = rootDir ? rootDir.name : "—";
+    $("outName").textContent = outDir ? outDir.name : "—";
+    const okRoot = rootDir && await hasPerm(rootDir, false);
+    const okOut = outDir && await hasPerm(outDir, false);
+    $("reconnect").hidden = !((rootDir && !okRoot) || (outDir && !okOut));
+    socios = [];
+    if (okRoot) {
+      for await (const [name, h] of rootDir.entries()) if (h.kind === "directory" && !name.startsWith(".")) socios.push({ name, dni: dniOf(name), handle: h });
+      socios.sort((a, b) => natural(a.name, b.name));
+    }
+    await refreshListos(okOut);
+    renderSocios();
+    const ready = okRoot && okOut;
+    $("setup").hidden = ready || !!current;
+    $("pickHint").hidden = !ready || !!current;
+    $("aside").style.display = (HAS_FS && rootDir) ? "" : "none";
+    $("setupRoot").textContent = okRoot ? `✓ Socios: ${rootDir.name}` : "📁 Elegir carpeta de socios";
+    $("setupOut").textContent = okOut ? `✓ Listos: ${outDir.name}` : "✅ Elegir carpeta de listos";
+    if (!ready && !current) {
+      $("setupMsg").textContent = (rootDir && !okRoot) || (outDir && !okOut) ? "Tocá \"Reconectar carpetas\" arriba para volver a dar permiso." : "";
+    }
+    if (!HAS_FS) { $("noFs").hidden = false; $("fsControls").hidden = true; $("setupRoot").hidden = $("setupOut").hidden = true; showWork(null); }
+    updateSaveLabels();
+  }
+  async function refreshListos(ok) {
+    listos = new Set();
+    if (ok === undefined) ok = outDir && await hasPerm(outDir, false);
+    if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") listos.add(name.toLowerCase());
+  }
+
+  function statusOf(s) {
+    if (listos.has(nameFor(s).toLowerCase())) return "listo";
+    if (flags[s.name] === "noapto") return "noapto";
+    return "pend";
+  }
+  const CHIP = { pend: "Pendiente", listo: "✓ Listo", noapto: "⚠ No apto" };
+
+  function renderSocios() {
+    const q = $("search").value.trim().toLowerCase();
+    const box = $("socios"); box.innerHTML = "";
+    const c = { pend: 0, listo: 0, noapto: 0 };
+    for (const s of socios) {
+      const st = statusOf(s); c[st]++;
+      if (filter !== "all" && st !== filter) continue;
+      if (q && !s.name.toLowerCase().includes(q)) continue;
+      const row = document.createElement("div");
+      row.className = "socio" + (current && current.name === s.name ? " sel" : "");
+      row.innerHTML = `<span class="n"></span><span class="chip ${st}">${CHIP[st]}</span>`;
+      row.querySelector(".n").textContent = s.name;
+      row.onclick = () => openSocio(s);
+      box.appendChild(row);
+    }
+    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos · ${c.listo} listos` : "";
+    if (current) updateSocioHead();
+  }
+  $("search").addEventListener("input", renderSocios);
+  $("filters").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    filter = b.dataset.f;
+    [...$("filters").children].forEach(x => x.classList.toggle("on", x === b));
+    renderSocios();
+  });
+
+  /* ================= Abrir socio ================= */
+  function resetItems() { items = []; for (const k in sources) delete sources[k]; renderQueue = Promise.resolve(); lastClicked = null; }
+
+  function showWork(s) {
+    $("setup").hidden = true; $("pickHint").hidden = true; $("work").hidden = false; $("footer").hidden = false;
+    current = s;
+    const isSocio = !!s;
+    $("toggleNoApto").hidden = $("reloadSocio").hidden = $("nextPend").hidden = !isSocio;
+    $("socioChip").hidden = !isSocio;
+    $("socioTitle").textContent = isSocio ? s.name : "Archivos sueltos";
+    $("fname").value = isSocio ? nameFor(s) : "documento.pdf";
+    updateTplPreview();
+  }
+  function updateSocioHead() {
+    if (!current) return;
+    const st = statusOf(current);
+    const chip = $("socioChip"); chip.className = "chip " + st; chip.textContent = CHIP[st];
+    $("toggleNoApto").textContent = flags[current.name] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
+  }
+
+  async function openSocio(s) {
+    showWork(s);
+    resetItems(); render();
+    setStatus("Leyendo carpeta…");
+    try {
+      if (!(await hasPerm(rootDir, true))) { setStatus("No tengo permiso para leer la carpeta. Tocá Reconectar.", "err"); return; }
+      const files = [];
+      for await (const [name, h] of s.handle.entries()) {
+        if (h.kind !== "file" || name.startsWith(".") || name.startsWith("~$")) continue;
+        const f = await h.getFile();
+        if (isPdf(f) || isImg(f)) files.push(f);
+      }
+      files.sort((a, b) => natural(a.name, b.name));
+      if (!files.length) { setStatus("Esta carpeta no tiene PDFs ni imágenes.", "err"); }
+      await addFiles(files, true);
+    } catch (e) { console.error(e); setStatus("Error leyendo la carpeta: " + e.message, "err"); }
+    renderSocios();
+    $("main").scrollTop = 0;
+  }
+  $("reloadSocio").onclick = () => current && openSocio(current);
+  $("toggleNoApto").onclick = async () => {
+    if (!current) return;
+    if (flags[current.name] === "noapto") delete flags[current.name]; else flags[current.name] = "noapto";
+    await kvSet("flags", flags); renderSocios();
+  };
+  function nextPending() {
+    const idx = current ? socios.findIndex(x => x.name === current.name) : -1;
+    const order = [...socios.slice(idx + 1), ...socios.slice(0, idx + 1)];
+    return order.find(x => statusOf(x) === "pend" && (!current || x.name !== current.name));
+  }
+  $("nextPend").onclick = () => { const n = nextPending(); if (n) openSocio(n); else setStatus("No quedan pendientes. 🎉", "ok"); };
+
+  /* ================= Carga de archivos ================= */
+  const drop = $("drop"), fileInput = $("file");
+  drop.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", e => { addFiles([...e.target.files]); fileInput.value = ""; });
+  let dragId = null;
+  ["dragenter","dragover"].forEach(ev => document.addEventListener(ev, e => {
+    if (!dragId && e.dataTransfer && [...e.dataTransfer.types].includes("Files")) { e.preventDefault(); drop.classList.add("over"); }
+  }));
+  ["dragleave","drop"].forEach(ev => document.addEventListener(ev, e => { if (ev === "dragleave" && e.relatedTarget) return; drop.classList.remove("over"); }));
+  document.addEventListener("drop", e => {
+    if (dragId) return;
+    if (e.dataTransfer && e.dataTransfer.files.length) {
+      e.preventDefault();
+      if ($("work").hidden) showWork(null);
+      addFiles([...e.dataTransfer.files]);
+    }
+  });
+
+  function isPdf(f) { return f.type === "application/pdf" || /\.pdf$/i.test(f.name); }
+  function isImg(f) { return (f.type || "").startsWith("image/") || /\.(jfif|jpe?g|png|gif|webp|bmp)$/i.test(f.name); }
+
+  async function addFiles(files, quiet) {
+    const skipped = [];
+    for (const f of files) {
+      try {
+        if (isPdf(f)) await addPdf(f);
+        else if (isImg(f)) await addImg(f, f.name, f);
+        else skipped.push(f.name);
+      } catch (err) {
+        console.error(err);
+        skipped.push(f.name + (isPdf(f) ? " (PDF dañado o protegido)" : " (formato no soportado, ej. HEIC)"));
+      }
+    }
+    render();
+    if (skipped.length) setStatus("No pude abrir: " + skipped.join(", "), "err");
+    else setStatus(`${items.length} página(s) en la lista.`);
+  }
+
+  async function addPdf(f) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const pdfjs = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+    const sid = "s" + (++uid);
+    sources[sid] = { kind: "pdf", name: f.name, bytes, pdfjs };
+    for (let i = 0; i < pdfjs.numPages; i++) {
+      const it = { id: "p" + (++uid), kind: "pdf", src: sid, page: i, rot: 0, on: true, name: pdfjs.numPages > 1 ? `${f.name} · pág. ${i + 1}` : f.name, canvas: document.createElement("canvas") };
+      items.push(it); queueThumb(it);
+    }
+  }
+
+  async function newImgSource(blob, name, file) {
+    const bitmap = await createImageBitmap(blob);
+    const sid = "s" + (++uid);
+    sources[sid] = { kind: "img", name, bitmap, file };
+    return sid;
+  }
+  function drawImgThumb(it) {
+    const b = sources[it.src].bitmap, c = document.createElement("canvas");
+    const s = Math.min(1, 320 / Math.max(b.width, b.height));
+    c.width = Math.round(b.width * s); c.height = Math.round(b.height * s);
+    c.getContext("2d").drawImage(b, 0, 0, c.width, c.height);
+    it.canvas = c;
+  }
+  async function addImg(blob, name, file) {
+    const sid = await newImgSource(blob, name, file);
+    const it = { id: "p" + (++uid), kind: "img", src: sid, page: 0, rot: 0, on: true, name };
+    drawImgThumb(it); items.push(it);
+  }
+
+  function queueThumb(it) {
+    renderQueue = renderQueue.then(async () => {
+      try {
+        const page = await sources[it.src].pdfjs.getPage(it.page + 1);
+        const vp0 = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: 320 / Math.max(vp0.width, vp0.height) });
+        it.canvas.width = Math.round(vp.width); it.canvas.height = Math.round(vp.height);
+        await page.render({ canvasContext: it.canvas.getContext("2d"), viewport: vp }).promise;
+      } catch (e) { console.error(e); }
+    });
+  }
+
+  /* ================= Grilla ================= */
+  const grid = $("grid");
+  function render() {
+    grid.innerHTML = "";
+    $("empty").style.display = items.length ? "none" : "block";
+    items.forEach((it, idx) => {
+      const card = document.createElement("div");
+      const isCut = it.cut && idx > 0;
+      card.className = "card " + (it.on ? "on" : "off") + (isCut ? " cut" : "");
+      card.draggable = true;
+      card.innerHTML = `
+        ${isCut ? '<span class="cutlbl">✂ Nuevo archivo</span>' : ""}
+        <div class="thumb"><span class="num">${idx + 1}</span><span class="check">${it.on ? "✓" : ""}</span>${it.edited ? `<span class="edited">${it.edited === true ? "editada" : it.edited}</span>` : ""}</div>
+        <div class="meta"></div>
+        <div class="tools">
+          <button data-a="left" title="Mover antes">◀</button>
+          <button data-a="rot" title="Rotar 90°">⟳</button>
+          <button data-a="zoom" title="Ver en grande / recortar / enderezar">🔍</button>
+          <button data-a="pp" class="ppb" title="Editar en Photopea">✏️</button>
+          <button data-a="cut" class="cutb${isCut ? " active" : ""}" title="Cortar acá: desde esta página arranca otro archivo">✂</button>
+          <button data-a="del" title="Sacar de la lista">✕</button>
+          <button data-a="right" title="Mover después">▶</button>
+        </div>`;
+      const meta = card.querySelector(".meta"); meta.textContent = it.name; meta.title = it.name;
+      it.canvas.style.transform = `rotate(${it.rot}deg)` + (it.rot % 180 ? " scale(.75)" : "");
+      card.querySelector(".thumb").appendChild(it.canvas);
+
+      card.addEventListener("click", e => {
+        const b = e.target.closest("button");
+        if (b) { e.stopPropagation(); act(b.dataset.a, it); return; }
+        if (e.shiftKey && lastClicked) {
+          const a = items.indexOf(lastClicked), z = items.indexOf(it);
+          if (a >= 0) { const val = !it.on; for (let k = Math.min(a, z); k <= Math.max(a, z); k++) items[k].on = val; }
+        } else it.on = !it.on;
+        lastClicked = it; render();
+      });
+      card.addEventListener("dragstart", e => { dragId = it.id; card.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", it.id); });
+      card.addEventListener("dragend", () => { dragId = null; render(); });
+      card.addEventListener("dragover", e => {
+        if (!dragId || dragId === it.id) return;
+        e.preventDefault();
+        const r = card.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+        card.classList.toggle("drop-after", after); card.classList.toggle("drop-before", !after);
+      });
+      card.addEventListener("dragleave", () => card.classList.remove("drop-before", "drop-after"));
+      card.addEventListener("drop", e => {
+        if (!dragId || dragId === it.id) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = card.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+        const [moved] = items.splice(items.findIndex(x => x.id === dragId), 1);
+        items.splice(items.findIndex(x => x.id === it.id) + (after ? 1 : 0), 0, moved);
+        dragId = null; render();
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  function act(a, it) {
+    const i = items.indexOf(it);
+    if (a === "left" && i > 0) [items[i - 1], items[i]] = [items[i], items[i - 1]];
+    else if (a === "right" && i < items.length - 1) [items[i + 1], items[i]] = [items[i], items[i + 1]];
+    else if (a === "rot") it.rot = (it.rot + 90) % 360;
+    else if (a === "del") items.splice(i, 1);
+    else if (a === "zoom") { zoom(it); return; }
+    else if (a === "pp") { openPhotopea(it); return; }
+    else if (a === "cut") {
+      if (i === 0) { setStatus("La primera página ya es el comienzo del archivo; el corte va en la página donde empieza el segundo.", "err"); return; }
+      it.cut = !it.cut;
+      const n = splitParts().length;
+      setStatus(n > 1 ? `Se van a guardar ${n} archivos.` : "Un solo archivo.");
+    }
+    render();
+  }
+
+  /* ================= Rango ================= */
+  function parseRange(str) {
+    const set = new Set(), n = items.length;
+    for (const part of str.split(/[,;\s]+/).filter(Boolean)) {
+      const m = part.match(/^(\d+)?-(\d+)?$/);
+      if (m) {
+        let a = m[1] ? +m[1] : 1, b = m[2] ? +m[2] : n;
+        if (a > b) [a, b] = [b, a];
+        for (let k = a; k <= b; k++) if (k >= 1 && k <= n) set.add(k - 1);
+      } else if (/^\d+$/.test(part)) { const k = +part; if (k >= 1 && k <= n) set.add(k - 1); }
+      else return null;
+    }
+    return set;
+  }
+  function applyRange(keep) {
+    const set = parseRange($("range").value.replace(/\s*-\s*/g, "-"));
+    if (!set || !set.size) { setStatus("Escribí un rango válido, por ejemplo: 1-3, 5, 8-", "err"); return; }
+    items.forEach((it, i) => { it.on = keep ? set.has(i) : (set.has(i) ? false : it.on); });
+    render(); setStatus(`${items.filter(x => x.on).length} de ${items.length} páginas incluidas.`);
+  }
+  $("keepRange").onclick = () => applyRange(true);
+  $("dropRange").onclick = () => applyRange(false);
+  $("range").addEventListener("keydown", e => { if (e.key === "Enter") applyRange(true); });
+  $("all").onclick = () => { items.forEach(x => x.on = true); render(); };
+  $("none").onclick = () => { items.forEach(x => x.on = false); render(); };
+  $("invert").onclick = () => { items.forEach(x => x.on = !x.on); render(); };
+  $("removeOff").onclick = () => { items = items.filter(x => x.on); render(); setStatus(`${items.length} página(s) en la lista.`); };
+
+  /* ================= Render de páginas a imagen ================= */
+  function drawRotated(src, rot, out, w = src.width, h = src.height) {
+    const swap = rot % 180 !== 0;
+    out.width = swap ? h : w; out.height = swap ? w : h;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, out.width, out.height);
+    ctx.translate(out.width / 2, out.height / 2); ctx.rotate(rot * Math.PI / 180);
+    ctx.drawImage(src, -w / 2, -h / 2, w, h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    return out;
+  }
+  async function pageToCanvas(it, longSide) {
+    const src = sources[it.src], tmp = document.createElement("canvas");
+    if (it.kind === "pdf") {
+      const page = await src.pdfjs.getPage(it.page + 1);
+      const vp0 = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: longSide / Math.max(vp0.width, vp0.height) });
+      tmp.width = Math.round(vp.width); tmp.height = Math.round(vp.height);
+      await page.render({ canvasContext: tmp.getContext("2d"), viewport: vp }).promise;
+    } else {
+      const b = src.bitmap, s = Math.min(1, longSide / Math.max(b.width, b.height));
+      tmp.width = Math.round(b.width * s); tmp.height = Math.round(b.height * s);
+      tmp.getContext("2d").drawImage(b, 0, 0, tmp.width, tmp.height);
+    }
+    return it.rot ? drawRotated(tmp, it.rot, document.createElement("canvas")) : tmp;
+  }
+
+  /* ================= Zoom ================= */
+  const modal = $("modal");
+  $("mclose").onclick = () => modal.classList.remove("show");
+  modal.addEventListener("pointerdown", e => { if (e.target === modal) modal.classList.remove("show"); });
+  /* Zoom + recortar + enderezar */
+  let zItem = null, zBase = null, zAng = 0, zRect = null, zStart = null;
+  function straighten(src, deg, out = document.createElement("canvas")) {
+    out.width = src.width; out.height = src.height;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, out.width, out.height);
+    if (deg) {
+      // Agranda un poco para que no queden esquinas blancas
+      const r = Math.abs(deg) * Math.PI / 180, w = src.width, h = src.height;
+      const k = Math.max((w * Math.cos(r) + h * Math.sin(r)) / w, (w * Math.sin(r) + h * Math.cos(r)) / h);
+      ctx.translate(w / 2, h / 2); ctx.rotate(deg * Math.PI / 180); ctx.scale(k, k);
+      ctx.drawImage(src, -w / 2, -h / 2);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    } else ctx.drawImage(src, 0, 0);
+    return out;
+  }
+  function zDraw() { straighten(zBase, zAng, $("mcanvas")); zShowSel(); }
+  function zShowSel() {
+    const sel = $("zsel"), m = $("mcanvas");
+    if (!zRect) { sel.hidden = true; return; }
+    const W = m.clientWidth, H = m.clientHeight;
+    Object.assign(sel.style, { left: zRect.x * W + "px", top: zRect.y * H + "px", width: zRect.w * W + "px", height: zRect.h * H + "px" });
+    sel.hidden = false;
+  }
+  async function zoom(it) {
+    zItem = it; zAng = 0; zRect = null;
+    $("zAngle").value = 0; $("zAngleVal").textContent = "0°";
+    zBase = await pageToCanvas(it, Math.min(1600, Math.max(window.innerWidth, 800) * (window.devicePixelRatio || 1)));
+    modal.classList.add("show");
+    zDraw();
+  }
+  $("zAngle").addEventListener("input", () => { zAng = +$("zAngle").value; $("zAngleVal").textContent = zAng + "°"; zDraw(); });
+  $("zClearCrop").onclick = () => { zRect = null; zShowSel(); };
+  const zwrap = $("zwrap");
+  function zPos(e) {
+    const r = $("mcanvas").getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+  }
+  zwrap.addEventListener("pointerdown", e => { e.preventDefault(); zStart = zPos(e); zwrap.setPointerCapture(e.pointerId); });
+  zwrap.addEventListener("pointermove", e => {
+    if (!zStart) return;
+    const p = zPos(e);
+    zRect = { x: Math.min(zStart.x, p.x), y: Math.min(zStart.y, p.y), w: Math.abs(p.x - zStart.x), h: Math.abs(p.y - zStart.y) };
+    zShowSel();
+  });
+  zwrap.addEventListener("pointerup", () => { zStart = null; if (zRect && (zRect.w < 0.02 || zRect.h < 0.02)) { zRect = null; zShowSel(); } });
+  window.addEventListener("resize", () => { if (modal.classList.contains("show")) zShowSel(); });
+
+  $("zApply").onclick = async () => {
+    if (!zItem) return;
+    if (!zAng && !zRect) { modal.classList.remove("show"); return; }
+    const btn = $("zApply"); btn.disabled = true;
+    try {
+      const hi = straighten(await pageToCanvas(zItem, 2600), zAng);
+      let out = hi;
+      if (zRect) {
+        out = document.createElement("canvas");
+        const sx = Math.round(zRect.x * hi.width), sy = Math.round(zRect.y * hi.height);
+        out.width = Math.max(1, Math.round(zRect.w * hi.width)); out.height = Math.max(1, Math.round(zRect.h * hi.height));
+        out.getContext("2d").drawImage(hi, sx, sy, out.width, out.height, 0, 0, out.width, out.height);
+      }
+      const blob = await new Promise(r => out.toBlob(r, "image/jpeg", 0.92));
+      const it = zItem;
+      const label = zRect && zAng ? "ajustada" : zRect ? "recortada" : "enderezada";
+      const nm = it.name.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2") + ` ${label}.jpg`;
+      it.src = await newImgSource(blob, nm, new File([blob], nm, { type: "image/jpeg" }));
+      it.kind = "img"; it.page = 0; it.rot = 0; it.edited = label; it.name = nm;
+      drawImgThumb(it); render();
+      modal.classList.remove("show");
+      setStatus(`✓ Página ${label}.`, "ok");
+    } catch (e) { console.error(e); setStatus("No pude aplicar el cambio: " + e.message, "err"); }
+    btn.disabled = false;
+  };
+
+  /* ================= Armar PDF ================= */
+  const SIZES = { a4: [595.28, 841.89], letter: [612, 792], legal: [612, 1008] };
+  const isGray = () => $("colorMode").value === "gray";
+  async function canvasToJpeg(c, q = 0.85) {
+    let src = c;
+    if (isGray()) {
+      src = document.createElement("canvas"); src.width = c.width; src.height = c.height;
+      const ctx = src.getContext("2d"); ctx.filter = "grayscale(1)"; ctx.drawImage(c, 0, 0);
+    }
+    const blob = await new Promise(r => src.toBlob(r, "image/jpeg", q));
+    return { bytes: await blob.arrayBuffer(), w: src.width, h: src.height };
+  }
+  async function imageToJpeg(it) {
+    const b = sources[it.src].bitmap, maxPx = +$("quality").value;
+    const s = Math.min(1, maxPx / Math.max(b.width, b.height));
+    return canvasToJpeg(drawRotated(b, it.rot, document.createElement("canvas"), Math.round(b.width * s), Math.round(b.height * s)));
+  }
+  // Partes según los cortes ✂ (solo páginas incluidas)
+  function splitParts() {
+    const parts = [];
+    let cur = [];
+    items.forEach((it, i) => {
+      if (it.cut && i > 0 && cur.length) { parts.push(cur); cur = []; }
+      if (it.on) cur.push(it);
+    });
+    if (cur.length) parts.push(cur);
+    return parts;
+  }
+  function partNames(base, n) {
+    base = cleanName(base);
+    const stem = base.replace(/\.pdf$/i, "");
+    return Array.from({ length: n }, (_, i) => i === 0 ? base : `${stem} (${i + 1}).pdf`);
+  }
+  async function buildPdf(chosen, say = setStatus, label = "") {
+    const out = await PDFDocument.create();
+    const libDocs = {}, sizeMode = $("pageSize").value;
+    const compress = $("pdfMode").value === "compress";
+    let n = 0;
+    for (const it of chosen) {
+      say(`${label}Armando página ${++n} de ${chosen.length}…`);
+      if (it.kind === "pdf" && !compress && !isGray()) {
+        if (!libDocs[it.src]) libDocs[it.src] = await PDFDocument.load(sources[it.src].bytes, { ignoreEncryption: true });
+        const [p] = await out.copyPages(libDocs[it.src], [it.page]);
+        if (it.rot) p.setRotation(degrees((p.getRotation().angle + it.rot) % 360));
+        out.addPage(p);
+      } else if (it.kind === "pdf") {
+        // Página de PDF convertida a imagen (comprimida y/o en grises), mismo tamaño de hoja
+        const page = await sources[it.src].pdfjs.getPage(it.page + 1);
+        const vp0 = page.getViewport({ scale: 1 });
+        let pw = vp0.width, ph = vp0.height;
+        if (it.rot % 180) [pw, ph] = [ph, pw];
+        const img = await canvasToJpeg(await pageToCanvas(it, +$("quality").value), 0.8);
+        const emb = await out.embedJpg(img.bytes);
+        out.addPage([pw, ph]).drawImage(emb, { x: 0, y: 0, width: pw, height: ph });
+      } else {
+        const img = await imageToJpeg(it), emb = await out.embedJpg(img.bytes);
+        if (sizeMode === "fit") {
+          const s = Math.min(1, 842 / Math.max(img.w, img.h)), pw = img.w * s, ph = img.h * s;
+          out.addPage([pw, ph]).drawImage(emb, { x: 0, y: 0, width: pw, height: ph });
+        } else {
+          let [pw, ph] = SIZES[sizeMode];
+          if (img.w > img.h) [pw, ph] = [ph, pw];
+          const m = 18, s = Math.min((pw - 2 * m) / img.w, (ph - 2 * m) / img.h), dw = img.w * s, dh = img.h * s;
+          out.addPage([pw, ph]).drawImage(emb, { x: (pw - dw) / 2, y: (ph - dh) / 2, width: dw, height: dh });
+        }
+      }
+    }
+    out.setProducer("Armador de PDF"); out.setCreator("Armador de PDF");
+    return out.save();
+  }
+  async function buildAll(say) {
+    const parts = splitParts(), res = [];
+    for (let i = 0; i < parts.length; i++) res.push(await buildPdf(parts[i], say, parts.length > 1 ? `Archivo ${i + 1}/${parts.length} · ` : ""));
+    return res;
+  }
+  function fmtSize(n) { const kb = n / 1024; return kb > 1024 ? (kb / 1024).toFixed(1) + " MB" : Math.round(kb) + " KB"; }
+
+  function downloadBytes(bytes, name, type = "application/pdf") {
+    const url = URL.createObjectURL(new Blob([bytes], { type }));
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  async function fileExists(dir, name) {
+    try { await dir.getFileHandle(name); return true; } catch (e) { return false; }
+  }
+  async function writeFile(dir, name, data) {
+    const fh = await dir.getFileHandle(name, { create: true });
+    const w = await fh.createWritable(); await w.write(data); await w.close();
+  }
+
+  async function saveAllToListos(pdfs, base, say) {
+    if (!outDir) { say("Primero elegí la carpeta de listos (arriba).", "err"); return false; }
+    if (!(await hasPerm(outDir, true))) { say("Sin permiso para guardar en la carpeta de listos.", "err"); return false; }
+    const names = partNames(base, pdfs.length), saved = [];
+    for (let i = 0; i < pdfs.length; i++) {
+      if (await fileExists(outDir, names[i]) && !confirm(`Ya existe "${names[i]}" en la carpeta de listos.\n¿Lo reemplazo?`)) continue;
+      await writeFile(outDir, names[i], pdfs[i]);
+      listos.add(names[i].toLowerCase()); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
+    }
+    if (current && flags[current.name] && listos.has(nameFor(current).toLowerCase())) { delete flags[current.name]; kvSet("flags", flags); }
+    renderSocios();
+    if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
+    say(`✓ Guardado en "${outDir.name}": ${saved.join(", ")}`, "ok");
+    return true;
+  }
+  function downloadAll(pdfs, base, say) {
+    const names = partNames(base, pdfs.length);
+    pdfs.forEach((b, i) => setTimeout(() => downloadBytes(b, names[i]), i * 400));
+    say(`✓ Descargado: ${names.join(", ")}`, "ok");
+  }
+
+  function updateSaveLabels() {
+    const canSave = HAS_FS && !!outDir;
+    $("saveBtn").hidden = $("pvSave").hidden = !canSave;
+    $("dlBtn").classList.toggle("primary", !canSave); $("pvDl").classList.toggle("primary", !canSave);
+  }
+
+  async function withBuild(btn, say, fn) {
+    if (!items.some(x => x.on)) { say("No hay páginas incluidas.", "err"); return; }
+    btn.disabled = true;
+    try { await fn(); } catch (e) { console.error(e); say("Error: " + (e.message || e), "err"); }
+    finally { btn.disabled = false; }
+  }
+  $("saveBtn").onclick = () => withBuild($("saveBtn"), setStatus, async () => {
+    $("fname").value = cleanName($("fname").value);
+    await saveAllToListos(await buildAll(setStatus), $("fname").value, setStatus);
+  });
+  $("dlBtn").onclick = () => withBuild($("dlBtn"), setStatus, async () => {
+    $("fname").value = cleanName($("fname").value);
+    downloadAll(await buildAll(setStatus), $("fname").value, setStatus);
+  });
+
+  /* ================= Vista previa ================= */
+  const pv = $("pv"), pvBody = $("pvBody");
+  let pvPdfs = [], pvToken = 0;
+  function pvSay(msg, cls = "") { const s = $("pvInfo"); s.textContent = msg; s.className = cls; }
+  function pvLabels() {
+    const names = partNames($("pvName").value, pvPdfs.length);
+    pvBody.querySelectorAll(".pv-part").forEach((h, i) => h.textContent = `📄 Archivo ${i + 1} de ${pvPdfs.length}: ${names[i]} · ${fmtSize(pvPdfs[i].length)}`);
+  }
+  $("preview").onclick = () => withBuild($("preview"), setStatus, async () => {
+    pvPdfs = await buildAll(setStatus); setStatus("");
+    $("pvName").value = cleanName($("fname").value);
+    pvBody.innerHTML = ""; pv.classList.add("show");
+    const token = ++pvToken;
+    const total = pvPdfs.reduce((a, b) => a + b.length, 0);
+    const summary = `${items.filter(x => x.on).length} página(s)${pvPdfs.length > 1 ? ` en ${pvPdfs.length} archivos` : ""} · ${fmtSize(total)}`;
+    pvSay(summary + " · cargando…");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), targetW = Math.min(860, pvBody.clientWidth - 24) * dpr;
+    for (let k = 0; k < pvPdfs.length; k++) {
+      if (pvPdfs.length > 1) { const h = document.createElement("div"); h.className = "pv-part"; pvBody.appendChild(h); }
+      pvLabels();
+      const doc = await pdfjsLib.getDocument({ data: pvPdfs[k].slice() }).promise;
+      for (let i = 1; i <= doc.numPages; i++) {
+        if (token !== pvToken) return;
+        const wrap = document.createElement("div"); wrap.className = "pv-page";
+        const c = document.createElement("canvas"), lbl = document.createElement("div");
+        lbl.className = "lbl"; lbl.textContent = `Página ${i} de ${doc.numPages}`;
+        wrap.append(c, lbl); pvBody.appendChild(wrap);
+        const page = await doc.getPage(i), vp0 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: targetW / vp0.width });
+        c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+      }
+    }
+    if (token === pvToken) pvSay(summary);
+  });
+  function closePreview() { pvToken++; pv.classList.remove("show"); pvBody.innerHTML = ""; }
+  $("pvBack").onclick = closePreview;
+  $("pvName").addEventListener("input", () => { $("fname").value = $("pvName").value; pvLabels(); });
+  $("pvSave").onclick = async () => {
+    $("pvName").value = $("fname").value = cleanName($("pvName").value); pvLabels();
+    $("pvSave").disabled = true;
+    try { if (await saveAllToListos(pvPdfs, $("pvName").value, pvSay)) setStatus($("pvInfo").textContent, "ok"); }
+    catch (e) { pvSay("Error al guardar: " + e.message, "err"); }
+    $("pvSave").disabled = false;
+  };
+  $("pvDl").onclick = () => {
+    $("pvName").value = $("fname").value = cleanName($("pvName").value); pvLabels();
+    downloadAll(pvPdfs, $("pvName").value, pvSay);
+  };
+  /* ================= Photopea integrado ================= */
+  let ppFrame = null, ppReadyResolve = null, ppReady = null, ppQueue = [], ppItem = null, ppBusy = false;
+  function ensurePhotopea() {
+    if (ppFrame) return ppReady;
+    ppReady = new Promise(res => { ppReadyResolve = res; });
+    ppFrame = document.createElement("iframe");
+    ppFrame.src = "https://www.photopea.com#" + encodeURIComponent(JSON.stringify({ environment: { lang: "es" } }));
+    ppFrame.allow = "clipboard-read; clipboard-write";
+    $("ppWrap").appendChild(ppFrame);
+    return ppReady;
+  }
+  window.addEventListener("message", e => {
+    if (!ppFrame || e.source !== ppFrame.contentWindow) return;
+    if (e.data === "done") {
+      if (ppReadyResolve) { const r = ppReadyResolve; ppReadyResolve = null; r(); return; }
+      const w = ppQueue.shift(); if (w) w.resolve(w.out);
+    } else if (e.data instanceof ArrayBuffer) {
+      if (ppQueue[0]) ppQueue[0].out.push(e.data);
+    }
+  });
+  function ppSend(data) {
+    return new Promise((resolve, reject) => {
+      const w = { resolve, out: [] }; ppQueue.push(w);
+      ppFrame.contentWindow.postMessage(data, "*");
+      setTimeout(() => { const i = ppQueue.indexOf(w); if (i >= 0) { ppQueue.splice(i, 1); reject(new Error("Photopea no respondió")); } }, 120000);
+    });
+  }
+  function ppSay(msg, cls = "") { const s = $("ppInfo"); s.textContent = msg; s.className = cls; }
+
+  async function openPhotopea(it) {
+    ppItem = it;
+    $("ppOv").classList.add("show");
+    $("ppUse").disabled = true;
+    ppSay("Cargando Photopea… (la primera vez tarda unos segundos)");
+    try {
+      const firstLoad = !ppFrame;
+      const ready = ensurePhotopea();
+      if (firstLoad) await Promise.race([ready, new Promise((_, rej) => setTimeout(() => rej(new Error("Photopea tardó demasiado en cargar. Revisá la conexión.")), 60000))]);
+      $("ppLoading").style.display = "none";
+      ppSay("Abriendo la página en Photopea…");
+      let buf;
+      const src = sources[it.src];
+      if (it.kind === "img" && src.file && !it.rot) buf = await src.file.arrayBuffer();
+      else {
+        const c = await pageToCanvas(it, 2400);
+        buf = await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer();
+      }
+      await ppSend(buf);
+      $("ppUse").disabled = false;
+      ppSay("Editá la página y cuando termines tocá \"✓ Usar versión editada\". No hace falta guardar desde Photopea.");
+    } catch (e) { console.error(e); ppSay(e.message, "err"); }
+  }
+
+  async function ppCloseDoc() {
+    try { await ppSend("if (app.documents.length) app.activeDocument.close(SaveOptions.DONOTSAVECHANGES);"); } catch (e) {}
+  }
+
+  $("ppCancel").onclick = async () => {
+    $("ppOv").classList.remove("show");
+    if (ppFrame && !ppReadyResolve) await ppCloseDoc();
+    ppItem = null;
+  };
+
+  $("ppUse").onclick = async () => {
+    if (!ppItem || ppBusy) return;
+    ppBusy = true; $("ppUse").disabled = true;
+    ppSay("Trayendo la versión editada…");
+    try {
+      const out = await ppSend('app.activeDocument.saveToOE("jpg:0.92");');
+      const buf = out[out.length - 1];
+      if (!buf) throw new Error("Photopea no devolvió la imagen. ¿Hay un documento abierto?");
+      const blob = new Blob([buf], { type: "image/jpeg" });
+      const it = ppItem;
+      const baseName = it.name.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2");
+      const editedName = `${baseName} editado.jpg`;
+      it.src = await newImgSource(blob, editedName, new File([blob], editedName, { type: "image/jpeg" }));
+      it.kind = "img"; it.page = 0; it.rot = 0; it.edited = true; it.name = editedName;
+      drawImgThumb(it); render();
+      await ppCloseDoc();
+      let extra = "";
+      if (current && rootDir && await hasPerm(rootDir, false)) {
+        try { await writeFile(current.handle, editedName, blob); extra = ` Copia guardada en la carpeta ${current.name}.`; }
+        catch (e) { console.warn(e); }
+      }
+      $("ppOv").classList.remove("show");
+      setStatus(`✓ Página reemplazada por la versión editada.${extra}`, "ok");
+      ppItem = null;
+    } catch (e) { console.error(e); ppSay("Error: " + e.message, "err"); $("ppUse").disabled = false; }
+    ppBusy = false;
+  };
+
+  /* ================= Varios ================= */
+  function alertMsg(m) { setStatus(m, "err"); $("setupMsg").textContent = m; }
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (modal.classList.contains("show")) modal.classList.remove("show");
+    else if (pv.classList.contains("show")) closePreview();
+  });
+
+  (async function init() {
+    tpl = (await kvGet("tpl")) || tpl; $("tpl").value = tpl;
+    const OPTS = ["pageSize", "quality", "pdfMode", "colorMode"];
+    const saved = (await kvGet("opts")) || {};
+    OPTS.forEach(k => {
+      if (saved[k]) $(k).value = saved[k];
+      $(k).addEventListener("change", () => kvSet("opts", Object.fromEntries(OPTS.map(x => [x, $(x).value]))));
+    });
+    flags = (await kvGet("flags")) || {};
+    if (HAS_FS) { rootDir = (await kvGet("rootDir")) || null; outDir = (await kvGet("outDir")) || null; }
+    updateTplPreview();
+    await refreshAll();
+  })();
+})();
+</script>
+</body>
+</html>
