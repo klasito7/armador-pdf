@@ -67,6 +67,22 @@
   .edthumbs{display:flex;gap:3px;align-items:center;flex-shrink:0}
   .edthumbs img{width:48px;height:64px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px}
   .edthumbs span{font-size:12px;color:var(--muted)}
+  #infoPanel{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:57;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
+  #infoPanel.show{transform:none}
+  .infotabs{display:flex;gap:6px;padding:8px 16px 0;border-bottom:1px solid var(--line)}
+  .infotabs button{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;font-weight:600;color:var(--muted);padding:8px 10px}
+  .infotabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+  .infobody{overflow:auto;padding:6px 20px 30px;font-size:14px;line-height:1.5}
+  .infobody h3{font-size:16px;margin:20px 0 6px;color:var(--accent)}
+  .infobody p{margin:6px 0}
+  .infobody ul,.infobody ol{margin:6px 0;padding-left:22px}
+  .infobody li{margin:3px 0}
+  .infobody ul.chk{list-style:none;padding-left:4px}
+  .infobody table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px}
+  .infobody th,.infobody td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+  .infobody th{background:color-mix(in srgb,var(--ink) 5%,transparent)}
+  .infobody code{font-size:12.5px;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:4px}
+  .infolink{font-size:12.5px;color:var(--muted)}
   #cfgPanel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:56;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
   #cfgPanel.show{transform:none}
   .cfgbody{overflow:auto;padding:4px 16px 24px}
@@ -256,7 +272,8 @@
   .fld input.missing{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--panel))}
   .socio .nb{display:flex;flex-direction:column;min-width:0}
   .socio small{font-size:11.5px;color:var(--muted)}
-  .exportbar{display:flex;gap:6px}
+  .exportbar{display:flex;gap:6px;flex-wrap:wrap}
+  .exportbar button{min-width:0}
   .exportbar[hidden]{display:none}
   .exportbar button{flex:1;font-size:12.5px;padding:5px 6px}
   .modal canvas{display:block;background:#fff;user-select:none;-webkit-user-drag:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
@@ -288,6 +305,7 @@
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
     <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
     <button id="cfgOpen" title="Configuración: atajos de teclado">⚙</button>
+    <button id="infoOpen" title="Manual de uso y guía de trabajo">ℹ Info</button>
     <button id="edOpen" title="Planillas que mandaste a editar">📝 Para editar <span class="badge" id="edCount" hidden>0</span></button>
   </div>
   <div class="folder">
@@ -537,6 +555,220 @@
     <button id="edCancel">Cancelar</button>
   </div>
 </div></div>
+<div id="infoPanel" class="sidepanel">
+  <div class="edhead"><h3>ℹ Info</h3><button id="infoClose">✕</button></div>
+  <div class="infotabs"><button data-t="manual" class="on">Manual de uso</button><button data-t="guia">Guía diaria</button></div>
+  <div class="infobody">
+    <div id="info_manual">
+      <p class="infolink">Versión editable: <a href="https://claude.ai/artifact/17VFdqduucTfAmdrAvHyvq" target="_blank" rel="noopener">Armador de PDF — Manual de uso</a></p>
+<h3>Qué es y cómo se abre</h3>
+<p>El Armador de PDF arma el PDF de cada socio a partir de su carpeta (planilla, laboratorio, consentimiento, fotos) y lo guarda renombrado en la carpeta de listos.</p>
+<ul>
+<li><b>Dirección:</b> klasito7.github.io/armador-pdf. Se abre en <b>Chrome</b> (o Edge) en la PC del trabajo.</li>
+<li><b>Nada se sube a internet:</b> la página lee y escribe en tus carpetas. Los originales nunca se modifican.</li>
+<li><b>Lo que cargás queda en ese Chrome de esa PC:</b> fechas, observaciones, listas, pendientes, cierres. Para pasarlo a otra PC se usa la copia de seguridad (ver Configuración).</li>
+<li><b>Dos apartados:</b> Diabetes y Hs extras, cada uno con sus carpetas, formato de nombre, listas y métricas (azul = Diabetes, violeta = Hs extras).</li>
+<li><b>Después de una actualización:</b> recargá con <b>Ctrl + F5</b>.</li>
+</ul>
+<h3>Primera configuración (una vez por apartado)</h3>
+<p>Se hace una sola vez. Si Chrome pide permiso al volver, tocá <b>Reconectar carpetas</b> y elegí "Permitir en cada visita".</p>
+<ol>
+<li>Elegí el apartado arriba: <b>Diabetes</b> o <b>Hs extras</b>.</li>
+<li><b>Socios: Elegir</b> → la carpeta principal, con las carpetas de fecha (16-11-26) y adentro una carpeta por DNI.</li>
+<li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
+<li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
+<li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
+<li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
+<li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual.</li>
+</ol>
+<table><tr><th>Dato</th><th>Qué pone</th></tr><tr><td><code>{dni}</code></td><td>DNI de la carpeta</td></tr><tr><td><code>{cuil}</code></td><td>CUIL de la lista de nombres</td></tr><tr><td><code>{nombre}</code></td><td>Apellido y nombre</td></tr><tr><td><code>{tipo}</code></td><td>Tipo de documentación (Hs extras)</td></tr><tr><td><code>{periodo}</code></td><td>Período, ej. 9-26 (Hs extras)</td></tr><tr><td><code>{tramite}</code> / <code>{fecha}</code></td><td>Número y fecha del trámite</td></tr><tr><td><code>{carpeta}</code></td><td>Nombre completo de la carpeta</td></tr></table>
+<h3>La pantalla principal</h3>
+<p>A la izquierda está la tanda: el selector de fecha, el buscador y la lista de socios con su estado.</p>
+<ul>
+<li><b>Selector de fecha:</b> la más nueva primero (abre en la de hoy si existe). <b>Todas las fechas</b> junta todos los DNI. <b>Marcar lista</b> marca la fecha como terminada.</li>
+<li><b>Buscador:</b> por DNI o por apellido. <b>Filtros:</b> Todos, Pendientes, No aptos, Listos, Firmados.</li>
+<li><b>Botones:</b> Lista de nombres, Importar clasificador, Copiar listado, Guardar listado, Cierre del día.</li>
+</ul>
+<table><tr><th>Estado</th><th>Cuándo aparece</th></tr><tr><td>Pendiente</td><td>Sin fecha de planilla y sin PDF guardado</td></tr><tr><td>Listo</td><td>Tiene fecha de planilla cargada, o su PDF está en Listos</td></tr><tr><td>No apto</td><td>Lo marcaste con Marcar no apto</td></tr><tr><td>Firmado</td><td>PDF con su DNI o CUIL en Firmados, firmado después de dejarlo Listo (sin registro: últimos 30 días)</td></tr></table>
+<h3>Trabajar con un socio</h3>
+<p>Al tocar un DNI se cargan sus hojas y arriba aparece el cartel con DNI o CUIL y nombre, para chequear que la documentación no sea de un pariente.</p>
+<ul>
+<li><b>Trámite:</b> abre el más reciente; tocá otro para cambiar, o <b>Todos</b>.</li>
+<li><b>Campos:</b> Fecha planilla, Observación y, en Hs extras, Nombre, Tipo y Período.</li>
+<li><b>Clic</b> en una hoja: la abre en grande. <b>Ctrl + clic:</b> incluir/excluir. <b>Shift + clic:</b> un tramo.</li>
+<li><b>Arrastrar</b> (o ◀ ▶) cambia el orden. <b>⟳</b> rota. <b>✕</b> la saca. <b>Tijera:</b> desde esa hoja empieza otro archivo.</li>
+<li><b>Rango:</b> <code>1-3, 5</code> y <b>Dejar solo estas</b> o <b>Quitar estas</b>.</li>
+<li><b>Peso:</b> Comprimir PDFs y Escala de grises bajan el tamaño.</li>
+<li><b>Marcar no apto</b>, <b>Siguiente pendiente</b> y <b>Recargar carpeta</b> están al lado del DNI.</li>
+</ul>
+<h3>Hoja en grande</h3>
+<p>Se abre con un clic sobre la hoja y se cierra con <b>Enter</b>, <b>Esc</b> o un clic a los costados.</p>
+<ul>
+<li><b>Ruedita:</b> zoom. <b>Arrastrar:</b> mover. <b>← →:</b> hoja anterior/siguiente. <b>Espacio:</b> incluir/excluir.</li>
+<li><b>Recortar:</b> activá el botón y arrastrá un recuadro. <b>Enderezar:</b> hasta 15° por lado. <b>Aplicar</b> reemplaza la hoja.</li>
+<li><b>Photopea:</b> abre esa hoja en Photopea.</li>
+</ul>
+<h3>Fecha de planilla</h3>
+<p>Cargar la fecha de planilla marca al socio como <b>Listo</b> y lo suma al cierre del día.</p>
+<ul>
+<li><b>Q (a mano):</b> <code>261026</code> y Enter → 26/10/2026. También <code>26102026</code>, <code>2610</code> o <code>26/10/26</code>.</li>
+<li><b>F (automática):</b> lee la fecha escrita a mano abajo a la derecha. La primera vez descarga el lector (unos 100 MB).</li>
+<li><b>Si F no la entiende:</b> escribila o tocá <b>Marcar dónde está la fecha</b>. Aprende el lugar, no la letra.</li>
+<li><b>Hs extras:</b> el Período se completa con el mes de la fecha de planilla.</li>
+</ul>
+<h3>Photopea y Para editar</h3>
+<ul>
+<li><b>E</b> (o el botón naranja): manda la hoja abierta o bajo el mouse, más las elegidas con Ctrl + clic, a Para editar con una nota.</li>
+<li><b>Panel Para editar:</b> Abrir, Photopea, Hecho y ✕ para descartar (con Deshacer).</li>
+<li><b>Photopea:</b> abre las hojas en pestañas; <b>Usar versión editada</b> las devuelve a su lugar y las quita de Para editar.</li>
+<li>La copia <code>... editado.jpg</code> queda en la carpeta del trámite y se usa al volver a abrir el socio.</li>
+</ul>
+<h3>Vista previa y guardar</h3>
+<p><b>Ctrl + S</b> guarda en Listos con el nombre armado; si falta un dato (CUIL, tipo, período) avisa qué falta.</p>
+<ul>
+<li><b>Vista previa (P):</b> zoom con <b>Ctrl + ruedita</b>; se cierra con Enter, Esc o clic a los costados.</li>
+<li><b>Hs extras:</b> Tipo y Período en la vista previa: <code>RHC</code>, Tab, <code>9-26</code>, Enter.</li>
+<li><b>Uno tras otro:</b> después de guardar abre el siguiente pendiente.</li>
+</ul>
+<h3>Cierre del día, listado y métricas</h3>
+<ul>
+<li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
+<li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
+<li><b>Métricas:</b> listos y editadas hoy, avance de la tanda, objetivo y cuántos por día hábil.</li>
+</ul>
+<h3>Conexión con los bots</h3>
+<ul>
+<li><b>Importar clasificador:</b> el <code>clasificacion_FECHA.csv</code> del Bot Planillas. Sin Revisar → Listo con fecha. Con Revisar → Pendiente con el motivo en la observación.</li>
+<li><b>Lista de nombres:</b> acepta el resultado del Buscador Padrón o el export de SURGE pegado tal cual.</li>
+<li><b>Docs SGI:</b> descomprimir el ZIP dentro de la carpeta de la fecha.</li>
+</ul>
+<h3>Configuración</h3>
+<ul>
+<li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
+<li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
+<li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
+<li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
+</ul>
+<h3>Atajos de teclado</h3>
+<table><tr><th>Tecla</th><th>Qué hace</th></tr><tr><td>Clic / Ctrl + clic / Shift + clic</td><td>Ver en grande / incluir-excluir / tramo</td></tr><tr><td>N / T / I</td><td>Ninguna / Todas / Invertir</td></tr><tr><td>Q</td><td>Fecha de planilla a mano</td></tr><tr><td>F</td><td>Leer la fecha manuscrita</td></tr><tr><td>E</td><td>Mandar a Para editar</td></tr><tr><td>P</td><td>Vista previa</td></tr><tr><td>Ctrl + S</td><td>Guardar en Listos</td></tr><tr><td>Enter / Esc</td><td>Cerrar hoja en grande o vista previa</td></tr><tr><td>Ruedita / Ctrl + ruedita</td><td>Zoom en hoja en grande / en vista previa</td></tr><tr><td>← → / Espacio</td><td>Hoja anterior-siguiente / incluir-excluir</td></tr></table>
+<h3>Problemas frecuentes</h3>
+<table><tr><th>Qué pasa</th><th>Qué hacer</th></tr><tr><td>No veo los cambios nuevos</td><td>Recargar con Ctrl + F5</td></tr><tr><td>Aparece Reconectar carpetas</td><td>Tocarlo y elegir "Permitir en cada visita"</td></tr><tr><td>La lista muestra fechas como socios</td><td>Elegir como Socios la carpeta que contiene las fechas</td></tr><tr><td>No guarda: falta CUIL</td><td>Pegar el CUIL en la Lista de nombres o pasar a Guardar con DNI</td></tr><tr><td>Un firmado no aparece</td><td>La firma tiene que conservar el DNI o CUIL en el nombre</td></tr><tr><td>La F tarda o falla</td><td>Usar Q; marcar la zona de la fecha</td></tr><tr><td>Las fotos HEIC no cargan</td><td>Exportarlas como JPG</td></tr><tr><td>Cambié de PC</td><td>Importar configuración</td></tr></table>
+
+    </div>
+    <div id="info_guia" hidden>
+      <p class="infolink">Versión editable: <a href="https://claude.ai/artifact/7RryX33VaWuo59NQzG96qq" target="_blank" rel="noopener">Guía de trabajo diaria</a> · Los tildes de esta pestaña se borran al recargar la página.</p>
+<h3>El circuito en orden</h3>
+<p>Los bots hacen el trabajo pesado y el Armador queda para revisar a ojo lo que el bot marcó.</p>
+<ol>
+<li><b>SURGE + cruce:</b> exportar SURGE y cruzar con el Excel.</li>
+<li><b>Docs SGI:</b> bajar la documentación de esos DNI.</li>
+<li><b>Bot Planillas:</b> arma un PDF por socio y el reporte.</li>
+<li><b>Armador:</b> importar el reporte y revisar los marcados.</li>
+<li><b>Firma y carga:</b> para_firmar → firmados → SURGE.</li>
+<li><b>Cierre del día:</b> listado al Excel y copia de seguridad.</li>
+</ol>
+<h3>Antes de empezar (una sola vez)</h3>
+<ul class='chk'>
+<li><label><input type='checkbox'> Favoritos <b>Exportar SURGE</b> y <b>Docs SGI</b> en la barra de Chrome.</label></li>
+<li><label><input type='checkbox'> Bots en una carpeta fija: cruce_surge, clasificador (el nuevo), bot_padron.</label></li>
+<li><label><input type='checkbox'> Clasificador: <code>ANALISTA = "gino"</code> y <code>NUMERO_EN_NOMBRE = "cuil"</code>.</label></li>
+<li><label><input type='checkbox'> Carpeta de socios con una carpeta por fecha adentro.</label></li>
+<li><label><input type='checkbox'> Armador Diabetes: Socios, Listos (= para_firmar), Firmados, <b>Guardar con: CUIL</b>.</label></li>
+<li><label><input type='checkbox'> Armador Hs extras: sus carpetas y su formato de nombre.</label></li>
+<li><label><input type='checkbox'> Objetivo del mes en Métricas.</label></li>
+</ul>
+<h3>Paso 1: SURGE y cruce con el Excel</h3>
+<ol>
+<li>Entrar a surge.sssalud.gob.ar y loguearse.</li>
+<li>Favorito <b>Exportar SURGE</b> → baja <code>export_surge_completo_FECHA.csv</code>.</li>
+<li><b>No abrir el CSV con Excel.</b></li>
+<li>Doble clic en <code>ejecutar_cruce.bat</code> → reporte <code>cruce_surge_FECHA.xlsx</code>.</li>
+</ol>
+<ul>
+<li><b>Fijarse:</b> Vencimientos (a quién reempadronar), Diferencias (qué corregir en el Excel), Seguimiento (borradores, pendientes, rechazados), Nros sin anotar / Solo en SURGE.</li>
+</ul>
+<h3>Paso 2: bajar la documentación de SGI</h3>
+<ol>
+<li>Entrar a SGI (red o VPN) y loguearse.</li>
+<li>Favorito <b>Docs SGI</b> y pegar los DNI del Paso 1.</li>
+<li>Esperar <code>docs_sgi_FECHA.zip</code> en Descargas.</li>
+<li>Crear la carpeta del día (ej. <code>16-11-26</code>) y descomprimir el ZIP ahí.</li>
+</ol>
+<ul>
+<li><b>Fijarse:</b> <code>resumen.csv</code> dentro del ZIP: "Sin archivos" o "DNI no encontrado" se anotan aparte.</li>
+</ul>
+<h3>Paso 3: Bot Planillas</h3>
+<ol>
+<li>Doble clic en <code>ejecutar_clasificador.bat</code>.</li>
+<li>Confirmar la fecha de cada socio en la ventanita (Enter).</li>
+<li>Queda el PDF en para_firmar y el reporte (.xlsx y .csv) en reportes.</li>
+</ol>
+<ul>
+<li>Pone la planilla; consentimiento solo si falta DNI o fecha; laboratorio solo si faltan valores.</li>
+<li>Validez: reempadronamiento hasta 3 meses; empadronamiento hasta 1 año para atrás.</li>
+</ul>
+<h3>Paso 4: revisar en el Armador</h3>
+<ol>
+<li>Abrir Diabetes y elegir la fecha del día.</li>
+<li><b>Importar clasificador</b> → el <code>clasificacion_*.csv</code> más nuevo.</li>
+<li>Filtro <b>Pendientes</b>; abrir el primero (uno tras otro pasa solo).</li>
+<li>Leer la observación del bot y corregir.</li>
+<li><b>Q</b> para la fecha si falta, y <b>Ctrl + S</b>.</li>
+</ol>
+<ul class='chk'>
+<li><label><input type='checkbox'> El nombre del cartel coincide con el de la planilla (no es un pariente).</label></li>
+<li><label><input type='checkbox'> Están la página 1 y 2 de la planilla, derechas y legibles.</label></li>
+<li><label><input type='checkbox'> La planilla tiene DNI y fecha; si no, va el consentimiento.</label></li>
+<li><label><input type='checkbox'> Si faltan valores de laboratorio, va el laboratorio.</label></li>
+<li><label><input type='checkbox'> La fecha está dentro del plazo (3 meses reemp., 1 año emp.).</label></li>
+<li><label><input type='checkbox'> Nada de más: orden, sensor o recetas fuera.</label></li>
+<li><label><input type='checkbox'> Algo para corregir → <b>E</b> con una nota.</label></li>
+<li><label><input type='checkbox'> No se puede presentar → <b>Marcar no apto</b> + motivo.</label></li>
+</ul>
+<h3>Paso 5: firma y carga en SURGE</h3>
+<ol>
+<li>Con los Listos en para_firmar, correr la autofirma.</li>
+<li>Volver al Armador: aparecen como <b>Firmado</b> (filtro Firmados).</li>
+<li>Cargar cada firmado en SURGE con su CUIL y adjuntar el PDF.</li>
+</ol>
+<ul>
+<li><b>Fijarse:</b> los Firmados tienen que coincidir con los Listos del día.</li>
+</ul>
+<h3>Fin del día (últimos 20 minutos)</h3>
+<ol>
+<li><b>Cierre del día</b> → Sumar pendientes → <b>Copiar para Excel</b> → pegar en el Excel compartido.</li>
+<li><b>Guardar .txt</b> del cierre.</li>
+<li>Revisar <b>Para editar</b> y anotar lo pendiente.</li>
+<li>Si la tanda quedó completa, <b>Marcar lista</b> la fecha.</li>
+<li>Mirar <b>Métricas</b>.</li>
+<li>Repetir en el otro apartado si trabajaste los dos.</li>
+<li>Viernes: <b>Exportar configuración</b>.</li>
+</ol>
+<h3>Hs extras: qué cambia</h3>
+<ul>
+<li>Carpetas propias y su propia <b>Lista de nombres</b> (pegarla al empezar la tanda).</li>
+<li>Nombre: <code>DNI - APELLIDO, NOMBRE - TIPO PERÍODO</code>, ej. <code>16749332 - GALEAZZI, SILVINA SANDRA - RHC 9-26.pdf</code>.</li>
+<li>En la vista previa completar Tipo y Período; no guarda si faltan.</li>
+</ul>
+<h3>Checklist rápida del día</h3>
+<ul class='chk'>
+<li><label><input type='checkbox'> Exportar SURGE y correr el cruce</label></li>
+<li><label><input type='checkbox'> Lista de DNI del día</label></li>
+<li><label><input type='checkbox'> Docs SGI → descomprimir en la carpeta de la fecha</label></li>
+<li><label><input type='checkbox'> Bot Planillas → confirmar fechas</label></li>
+<li><label><input type='checkbox'> Armador → Importar clasificador</label></li>
+<li><label><input type='checkbox'> Revisar los Pendientes</label></li>
+<li><label><input type='checkbox'> Resolver Para editar con Photopea</label></li>
+<li><label><input type='checkbox'> Firma → chequear Firmados</label></li>
+<li><label><input type='checkbox'> Cargar en SURGE</label></li>
+<li><label><input type='checkbox'> Cierre del día → pegar en el Excel</label></li>
+<li><label><input type='checkbox'> Marcar la fecha como lista</label></li>
+<li><label><input type='checkbox'> Viernes: exportar configuración</label></li>
+</ul>
+
+    </div>
+  </div>
+</div>
 <div id="cfgPanel" class="sidepanel">
   <div class="edhead"><h3>⚙ Configuración</h3><button id="cfgClose">✕</button></div>
   <div class="cfgbody">
@@ -1923,6 +2155,7 @@
     if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
     if ($("mtPanel").classList.contains("show")) { closeMetrics(); return; }
     if ($("cfgPanel").classList.contains("show")) { closeCfg(); return; }
+    if ($("infoPanel").classList.contains("show")) { closeInfo(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
     else if (pv.classList.contains("show")) closePreview();
@@ -2839,6 +3072,16 @@
     kvSet("settings", settings); renderSocios();
   });
   $("cfgReset").onclick = () => { keymap = { ...KEY_DEFAULTS }; kvSet("keymap", keymap); renderCfg(); applyKeyLabels(); toast("Atajos restablecidos."); };
+  function openInfo() { closeEdPanel(); closeMetrics(); closeCfg(); $("infoPanel").classList.add("show"); }
+  function closeInfo() { $("infoPanel").classList.remove("show"); }
+  $("infoOpen").onclick = () => $("infoPanel").classList.contains("show") ? closeInfo() : openInfo();
+  $("infoClose").onclick = closeInfo;
+  document.querySelector(".infotabs").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.querySelectorAll(".infotabs button").forEach(x => x.classList.toggle("on", x === b));
+    $("info_manual").hidden = b.dataset.t !== "manual"; $("info_guia").hidden = b.dataset.t !== "guia";
+    document.querySelector(".infobody").scrollTop = 0;
+  });
   function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); $("cfgPanel").classList.add("show"); }
   function closeCfg() { capturing = null; $("cfgPanel").classList.remove("show"); }
   $("cfgOpen").onclick = () => $("cfgPanel").classList.contains("show") ? closeCfg() : openCfg();
