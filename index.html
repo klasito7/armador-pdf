@@ -35,6 +35,11 @@
   .fbox img{display:block;max-width:100%;max-height:120px;margin:0 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
   #fdDate{font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:12px}
   .frow{display:flex;flex-wrap:wrap;gap:8px}
+  #nmText{width:100%;font:13px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel);color:var(--ink);resize:vertical;margin-bottom:6px}
+  #nmInfo{font-size:13px;margin:0 0 10px}
+  .pvfields{display:flex;gap:6px;align-items:center}
+  .pvfields[hidden]{display:none}
+  .pvfields input{width:130px}
   #toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:10px;font-size:14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:90vw}
   #toast[hidden]{display:none}
   #toast button{padding:4px 10px;font-size:13px}
@@ -157,7 +162,7 @@
 
   footer{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;z-index:10}
   footer .in{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  #fname,#pvName{width:240px;font-weight:600}
+  #fname,#pvName{width:340px;font-weight:600}
   #status,#pvInfo{font-size:13px;color:var(--muted);flex:1;min-width:180px}
   .err{color:var(--danger)!important} .ok{color:var(--ok)!important}
 
@@ -248,6 +253,9 @@
         <button data-f="listo">Listos</button>
       </div>
       <div class="counts" id="counts"></div>
+      <div class="exportbar" id="namesBar" hidden>
+        <button id="namesBtn" title="Pegá DNI y nombre desde tu Excel: cada carpeta toma su nombre sola">👥 Lista de nombres <span class="badge" id="namesCount" hidden>0</span></button>
+      </div>
       <div class="exportbar">
         <button id="copyList" title="Copia el listado para pegarlo directo en Excel">📋 Copiar listado</button>
         <button id="saveList" title="Guarda el listado como .csv (se abre con Excel)">💾 Guardar listado</button>
@@ -359,6 +367,10 @@
     <h2>Vista previa</h2>
     <span class="label">Nombre:</span>
     <input type="text" id="pvName">
+    <span class="pvfields" id="pvFields" hidden>
+      <input type="text" id="pv_tipo" list="tiposList" placeholder="Tipo (ej: RHC)">
+      <input type="text" id="pv_periodo" placeholder="Período (ej: 9-26)">
+    </span>
     <button class="primary" id="pvSave" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd>Ctrl+S</kbd></button>
     <button id="pvDl">⬇ Descargar</button>
     <button id="pvBack">◀ Volver a editar</button>
@@ -415,6 +427,17 @@
   </div>
 </div></div>
 <div id="toast" hidden></div>
+<div class="fdlg" id="nmlg" hidden><div class="fbox">
+  <h3>👥 Lista de nombres</h3>
+  <p>Copiá de tu Excel las dos columnas <b>DNI</b> y <b>Apellido, Nombre</b> y pegalas acá (Ctrl+V). Cada carpeta busca su DNI y toma el nombre solo. Lo que pegues se suma a la lista que ya tenías.</p>
+  <textarea id="nmText" rows="9" placeholder="16749332&#9;GALEAZZI, SILVINA SANDRA&#10;17523969&#9;GARCIA SANCHEZ, MARINA NOEMI"></textarea>
+  <p id="nmInfo"></p>
+  <div class="frow">
+    <button class="primary" id="nmOk">Guardar</button>
+    <button id="nmCancel">Cancelar</button>
+    <button class="danger" id="nmClear" style="margin-left:auto">Borrar lista</button>
+  </div>
+</div></div>
 <div class="fdlg" id="edlg" hidden><div class="fbox">
   <h3>📝 Mandar a "Para editar"</h3>
   <p id="edWhat"></p>
@@ -468,6 +491,8 @@
   const PROFS = { diabetes: "🩸 Diabetes", hsextras: "⏱ Hs extras" };
   let prof = "diabetes";
   const pk = k => prof === "diabetes" ? k : `${prof}:${k}`;   // Diabetes conserva las claves de antes
+  let namesMap = {};          // DNI -> "APELLIDO, NOMBRE" (pegado desde Excel)
+  const usesNamesList = () => Object.keys(namesMap).length > 0;
   let tpl = "{dni} gino";
   let flags = {};             // carpeta -> "noapto"
   let socios = [];            // {name, dni, handle}
@@ -505,7 +530,7 @@
   function fieldVal(s, f) {
     const n = (s && s.name && !s.__sample) ? noteOf(s) : {};
     if (s && s.__sample) return s.__sample[f];
-    if (f === "nombre") return n.nombre || nombreDeCarpeta(s);
+    if (f === "nombre") return n.nombre || namesMap[s.dni] || nombreDeCarpeta(s);
     return n[f] || "";
   }
   function fillTpl(s, tramite, fecha, wild) {
@@ -527,7 +552,7 @@
     const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\u0001/g, ".*");
     return new RegExp("^" + esc + "$");
   }
-  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { __sample: { nombre: "Juan Pérez", tipo: "Planilla", periodo: "9-26" }, dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); updateFieldInputs(); }
+  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { __sample: { nombre: "Juan Pérez", tipo: "Planilla", periodo: "9-26" }, dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); updateFieldInputs(); updateNamesUi(); }
   $("tpl").addEventListener("input", () => {
     tpl = $("tpl").value || "{dni}"; kvSet(pk("tpl"), tpl); updateTplPreview();
     if (current) $("fname").value = nameFor(current);
@@ -609,11 +634,13 @@
     for (const s of socios) {
       const st = statusOf(s); c[st]++;
       if (filter !== "all" && st !== filter) continue;
-      if (q && !s.name.toLowerCase().includes(q)) continue;
+      const nom = usesTok("nombre") ? fieldVal(s, "nombre") : "";
+      if (q && !(s.name + " " + nom).toLowerCase().includes(q)) continue;
       const row = document.createElement("div");
       row.className = "socio" + (current && current.name === s.name ? " sel" : "");
       row.innerHTML = `<span class="nb"><span class="n"></span><small></small></span><span class="chip ${st}">${CHIP[st]}</span>`;
-      row.querySelector(".n").textContent = s.name;
+      row.querySelector(".n").textContent = s.name + (nom && !s.name.toLowerCase().includes(nom.toLowerCase()) ? " · " + nom : "");
+      row.querySelector(".n").title = row.querySelector(".n").textContent;
       const nt = noteOf(s);
       const ne = editsOf(s).reduce((a, e) => a + e.pages.length, 0);
       row.querySelector("small").textContent = [nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
@@ -1449,7 +1476,9 @@
   $("preview").onclick = () => withBuild($("preview"), setStatus, async () => {
     pvPdfs = await buildAll(setStatus); setStatus("");
     $("pvName").value = cleanName($("fname").value);
+    syncPvFields();
     pvBody.innerHTML = ""; pvEntries = []; pv.classList.add("show");
+    setTimeout(() => { const f = ["pv_tipo", "pv_periodo"].map($).find(el => !el.hidden && !$("pvFields").hidden && !el.value); if (f) f.focus(); }, 60);
     pvZoom = 1; pvBody.style.setProperty("--pvw", pvCurW() + "px"); $("pvZoomVal").textContent = "100%";
     const token = ++pvToken; ++pvRenderToken;
     const total = pvPdfs.reduce((a, b) => a + b.length, 0);
@@ -1474,7 +1503,7 @@
   });
   function closePreview() { pvToken++; pvRenderToken++; pvEntries = []; pv.classList.remove("show"); pvBody.innerHTML = ""; }
   $("pvBack").onclick = closePreview;
-  $("pvName").addEventListener("input", () => { $("fname").value = $("pvName").value; pvLabels(); });
+  $("pvName").addEventListener("input", () => { $("fname").value = $("pvName").value; $("fname").dataset.manual = "1"; pvLabels(); });
   $("pvSave").onclick = async () => {
     $("pvName").value = $("fname").value = cleanName($("pvName").value); pvLabels();
     $("pvSave").disabled = true;
@@ -1613,6 +1642,7 @@
     if (e.key !== "Escape") return;
     if (!$("fdlg").hidden) { fdClose(); return; }
     if (!$("edlg").hidden) { edClose(); return; }
+    if (!$("nmlg").hidden) { $("nmlg").hidden = true; return; }
     if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
@@ -2007,6 +2037,65 @@
     edAsk(edTargetItems());
   });
 
+  /* ================= Lista de nombres (DNI -> Apellido, Nombre) ================= */
+  function parseNames(txt) {
+    const out = {};
+    for (const line of txt.split(/\r?\n/)) {
+      const m = line.trim().match(/^"?([\d.\s]{7,12})"?\s*(?:\t|;|\s{2,}|\s-\s|,(?=\s*[A-ZÁÉÍÓÚÑ])|\s)\s*"?(.+?)"?\s*$/);
+      if (!m) continue;
+      const dni = m[1].replace(/\D/g, "");
+      const nom = m[2].replace(/\t+/g, " ").replace(/\s+/g, " ").trim();
+      if (dni.length >= 7 && dni.length <= 9 && nom && /[a-záéíóúñ]/i.test(nom)) out[dni] = nom;
+    }
+    return out;
+  }
+  function updateNamesUi() {
+    const n = Object.keys(namesMap).length;
+    $("namesBar").hidden = !usesTok("nombre");
+    $("namesCount").textContent = n; $("namesCount").hidden = !n;
+  }
+  $("namesBtn").onclick = () => { $("nmText").value = ""; $("nmInfo").textContent = `Ahora hay ${Object.keys(namesMap).length} nombres cargados.`; $("nmlg").hidden = false; setTimeout(() => $("nmText").focus(), 30); };
+  $("nmText").addEventListener("input", () => {
+    const got = parseNames($("nmText").value), n = Object.keys(got).length;
+    const match = socios.filter(s => got[s.dni]).length;
+    $("nmInfo").textContent = n ? `Reconocí ${n} renglones · ${match} coinciden con carpetas de esta tanda.` : "Pegá las filas copiadas de Excel.";
+  });
+  $("nmCancel").onclick = () => { $("nmlg").hidden = true; };
+  $("nmlg").addEventListener("pointerdown", e => { if (e.target === $("nmlg")) $("nmlg").hidden = true; });
+  $("nmOk").onclick = async () => {
+    const got = parseNames($("nmText").value);
+    Object.assign(namesMap, got);
+    await kvSet(pk("names"), namesMap);
+    $("nmlg").hidden = true; updateNamesUi(); renderSocios();
+    if (current) { $("fname").dataset.manual = ""; updateSocioHead(); }
+    toast(`👥 ${Object.keys(got).length} nombres cargados · ${socios.filter(s => namesMap[s.dni]).length} carpetas con nombre.`);
+  };
+  $("nmClear").onclick = async () => {
+    if (!confirm("¿Borrar toda la lista de nombres de este apartado?")) return;
+    namesMap = {}; await kvSet(pk("names"), namesMap);
+    $("nmlg").hidden = true; updateNamesUi(); renderSocios(); if (current) updateSocioHead();
+  };
+
+  /* Campos de nombre también en la vista previa */
+  function syncPvFields() {
+    const show = !!current && (usesTok("tipo") || usesTok("periodo"));
+    $("pvFields").hidden = !show;
+    if (!show) return;
+    for (const f of ["tipo", "periodo"]) {
+      const el = $("pv_" + f); el.hidden = !usesTok(f);
+      if (document.activeElement !== el) el.value = fieldVal(current, f);
+      el.classList.toggle("missing", usesTok(f) && !fieldVal(current, f));
+    }
+  }
+  for (const f of ["tipo", "periodo"]) {
+    const el = $("pv_" + f);
+    el.addEventListener("change", () => {
+      const main = $("f_" + f); main.value = el.value; main.dispatchEvent(new Event("change"));
+      setTimeout(() => { $("pvName").value = $("fname").value = nameFor(current); $("fname").dataset.manual = ""; syncPvFields(); pvLabels(); }, 50);
+    });
+    el.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
+  }
+
   /* ================= Atajos de teclado ================= */
   document.addEventListener("keydown", e => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
@@ -2075,9 +2164,11 @@
     current = null; resetItems(); render();
     $("work").hidden = true; $("footer").hidden = true; $("pickHint").hidden = true;
     socios = []; listos = new Set(); listosMap = new Map();
-    tpl = (await kvGet(pk("tpl"))) || (prof === "hsextras" ? "{dni} - {nombre} - {tipo} - {periodo}" : "{dni} gino"); $("tpl").value = tpl;
+    tpl = (await kvGet(pk("tpl"))) || (prof === "hsextras" ? "{dni} - {nombre} - {tipo} {periodo}" : "{dni} gino"); $("tpl").value = tpl;
     flags = (await kvGet(pk("flags"))) || {};
     notes = (await kvGet(pk("notes"))) || {};
+    if (tpl === "{dni} - {nombre} - {tipo} - {periodo}") { tpl = "{dni} - {nombre} - {tipo} {periodo}"; $("tpl").value = tpl; kvSet(pk("tpl"), tpl); }
+    namesMap = (await kvGet(pk("names"))) || {};
     edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
     rootDir = outDir = null;
     if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; }
