@@ -646,6 +646,7 @@
 <ul>
 <li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
 <li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
+<li><b>Fecha de planilla:</b> si está prendido (viene así), no deja guardar en Listos un socio sin fecha de planilla.</li>
 <li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
 <li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
 </ul>
@@ -780,6 +781,8 @@
     <label class="cfgchk"><input type="checkbox" id="set_autoNext"> Al guardar, pasar solo al siguiente pendiente</label>
     <label class="cfgchk"><input type="checkbox" id="set_autoNextQ"> Al cargar la fecha con la tecla de fecha a mano, pasar al siguiente</label>
     <label class="cfgchk"><input type="checkbox" id="set_openFirst"> Abrir la primera hoja en grande al pasar al siguiente</label>
+    <h4>📅 Fecha de planilla</h4>
+    <label class="cfgchk"><input type="checkbox" id="set_requireFp"> No dejar guardar sin fecha de planilla</label>
     <h4>✍ Firmados</h4>
     <p class="edhint">Un PDF firmado cuenta solo si se firmó después de que dejaste listo a ese socio en el Armador (así no se confunden con los del año pasado). Si el Armador no tiene registro de ese socio, se toman los firmados de los últimos:</p>
     <label class="cfgchk"><input type="number" id="set_signDays" min="1" max="365" style="width:70px"> días</label>
@@ -1910,6 +1913,12 @@
     if (falta.length) {
       say("Completá antes de guardar: " + falta.map(f => f === "cuil" ? "CUIL (no está en la 👥 lista de nombres: pegalo ahí o cambiá a Guardar con DNI)" : FIELD_TOKENS[f]).join(", ") + ".", "err");
       const el = $("f_" + falta.find(f => f !== "cuil")); if (el) { el.focus(); el.classList.add("missing"); }
+      return false;
+    }
+    if (settings.requireFp && current && !noteOf(current).fp) {
+      say(`Falta la fecha de planilla: cargala con ${KL("quickDate")} (o ${KL("readDate")} para leerla) y volvé a guardar.`, "err");
+      toast(`📅 Falta la fecha de planilla — apretá ${KL("quickDate")} para cargarla.`);
+      $("fechaPlanilla").classList.add("missing");
       return false;
     }
     if (!(await hasPerm(outDir, true))) { say("Sin permiso para guardar en la carpeta de listos.", "err"); return false; }
@@ -3117,7 +3126,7 @@
   });
 
   /* Opciones generales */
-  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30 };
+  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true };
   async function goNextAuto() {
     const n = nextPending();
     if (!n) { toast("🎉 No quedan pendientes en esta fecha."); return; }
@@ -3131,7 +3140,7 @@
   function renderSettings() {
     for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) { if (el.type === "checkbox") el.checked = !!settings[k]; else el.value = settings[k]; } }
   }
-  for (const k of ["autoNext", "autoNextQ", "openFirst"]) {
+  for (const k of ["autoNext", "autoNextQ", "openFirst", "requireFp"]) {
     $("set_" + k).addEventListener("change", () => { settings[k] = $("set_" + k).checked; kvSet("settings", settings); });
   }
   $("set_signDays").addEventListener("change", () => {
