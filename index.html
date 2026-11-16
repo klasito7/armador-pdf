@@ -92,7 +92,7 @@
   .folder{display:flex;gap:6px;align-items:center;font-size:13.5px}
   .folder b{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
   .folder button{padding:4px 9px;font-size:13px}
-  #tpl{width:150px}
+  #tpl{width:250px}
   #tplPreview{font-size:12.5px;color:var(--muted)}
 
   .layout{flex:1;display:flex;min-height:0}
@@ -194,6 +194,10 @@
   .socio-notes input[type=date]{font:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:5px 8px}
   .socio-notes input[type=date].missing{border-color:var(--warn)}
   #obs{flex:1;min-width:200px}
+  .fld{display:flex;align-items:center;gap:4px}
+  .fld[hidden]{display:none}
+  #f_nombre{width:200px} #f_tipo{width:190px} #f_periodo{width:110px}
+  .fld input.missing{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--panel))}
   .socio .nb{display:flex;flex-direction:column;min-width:0}
   .socio small{font-size:11.5px;color:var(--muted)}
   .exportbar{display:flex;gap:6px}
@@ -228,7 +232,7 @@
   </div>
   <div class="folder">
     <span class="label">Nombre:</span>
-    <input type="text" id="tpl" title="Podés usar {dni}, {carpeta}, {tramite} y {fecha}">
+    <input type="text" id="tpl" title="Podés usar {dni}, {carpeta}, {tramite}, {fecha}, {nombre}, {tipo} y {periodo}">
     <span id="tplPreview"></span>
   </div>
 </div>
@@ -279,6 +283,10 @@
 
       <div class="socio-notes" id="socioNotes" hidden>
         <label>📅 Fecha planilla <input type="date" id="fechaPlanilla"></label>
+        <label class="fld" hidden>👤 <input type="text" id="f_nombre" placeholder="Nombre y apellido"></label>
+        <label class="fld" hidden>📄 <input type="text" id="f_tipo" list="tiposList" placeholder="Tipo de documentación"></label>
+        <label class="fld" hidden>🗓 <input type="text" id="f_periodo" placeholder="Período (ej: 9-26)" size="9"></label>
+        <datalist id="tiposList"></datalist>
         <input type="text" id="obs" placeholder="Observación (opcional)…">
       </div>
 
@@ -488,26 +496,47 @@
     const sel = s.groups.find(g => g.key === s.sel && g.nro);
     return sel || s.groups.find(g => g.nro) || null;
   }
-  function fillTpl(s, tramite, fecha) {
-    return tpl.replace(/\{dni\}/gi, s.dni).replace(/\{carpeta\}/gi, s.name)
-      .replace(/\{tramite\}/gi, tramite).replace(/\{fecha\}/gi, fecha);
+  // Campos que se completan por socio (Hs extras): {nombre} {tipo} {periodo}
+  const FIELD_TOKENS = { nombre: "Nombre y apellido", tipo: "Tipo de documentación", periodo: "Período" };
+  const usesTok = t => new RegExp("\\{" + t + "\\}", "i").test(tpl);
+  const VAR_RE = /\{(tramite|fecha|nombre|tipo|periodo)\}/i;
+  // Nombre sugerido desde la carpeta: "30123456 PEREZ JUAN" -> "PEREZ JUAN"
+  const nombreDeCarpeta = s => s.name.replace(/\d{7,9}/, "").replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
+  function fieldVal(s, f) {
+    const n = (s && s.name && !s.__sample) ? noteOf(s) : {};
+    if (s && s.__sample) return s.__sample[f];
+    if (f === "nombre") return n.nombre || nombreDeCarpeta(s);
+    return n[f] || "";
   }
+  function fillTpl(s, tramite, fecha, wild) {
+    let out = tpl.replace(/\{dni\}/gi, s.dni).replace(/\{carpeta\}/gi, s.name)
+      .replace(/\{tramite\}/gi, tramite).replace(/\{fecha\}/gi, fecha);
+    for (const f of Object.keys(FIELD_TOKENS)) out = out.replace(new RegExp("\\{" + f + "\\}", "gi"), wild ? "\u0001" : fieldVal(s, f));
+    return out;
+  }
+  // Saca separadores que quedan colgando cuando falta algún dato ("a -  - b" -> "a - b")
+  const tidy = n => n.replace(/(\s*-\s*){2,}/g, " - ").replace(/^\s*-\s*/, "").replace(/\s*-\s*(\.pdf)?$/i, "$1");
   function nameFor(s) {
     const t = tramiteOf(s);
-    return cleanName(fillTpl(s, t ? t.nro : "", t ? t.iso : "").replace(/[\s_-]+(\.pdf)?$/i, "$1"));
+    return cleanName(tidy(fillTpl(s, t ? t.nro : "", t ? t.iso : "")).replace(/[\s_-]+(\.pdf)?$/i, "$1"));
   }
-  // Para el estado "listo" sin haber abierto la carpeta: {tramite}/{fecha} valen cualquier cosa
+  function missingFields(s) { return Object.keys(FIELD_TOKENS).filter(f => usesTok(f) && !fieldVal(s, f)); }
+  // Para el estado "listo" sin haber abierto la carpeta: los datos variables valen cualquier cosa
   function listoRegex(s) {
-    const raw = cleanName(fillTpl(s, "\u0001", "\u0001")).toLowerCase();
+    const raw = cleanName(fillTpl(s, "\u0001", "\u0001", true)).toLowerCase();
     const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\u0001/g, ".*");
     return new RegExp("^" + esc + "$");
   }
-  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); }
+  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { __sample: { nombre: "Juan Pérez", tipo: "Planilla", periodo: "9-26" }, dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); updateFieldInputs(); }
   $("tpl").addEventListener("input", () => {
     tpl = $("tpl").value || "{dni}"; kvSet(pk("tpl"), tpl); updateTplPreview();
     if (current) $("fname").value = nameFor(current);
     renderSocios();
   });
+  // Muestra solo los campos que usa el formato de nombre
+  function updateFieldInputs() {
+    for (const f of Object.keys(FIELD_TOKENS)) { const el = $("f_" + f); if (el) el.parentElement.hidden = !usesTok(f); }
+  }
 
   /* ================= Carpetas ================= */
   async function pickDir(which) {
@@ -566,7 +595,7 @@
   }
 
   function statusOf(s) {
-    if (/\{(tramite|fecha)\}/i.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return "listo"; }
+    if (VAR_RE.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return "listo"; }
     else if (listos.has(nameFor(s).toLowerCase())) return "listo";
     if (flags[s.name] === "noapto") return "noapto";
     return "pend";
@@ -613,6 +642,7 @@
     $("socioChip").hidden = !isSocio;
     $("socioNotes").hidden = !isSocio;
     $("socioTitle").textContent = isSocio ? s.name : "Archivos sueltos";
+    $("fname").dataset.manual = "";
     $("fname").value = isSocio ? nameFor(s) : "documento.pdf";
     updateTplPreview();
   }
@@ -625,6 +655,16 @@
     if (document.activeElement !== $("fechaPlanilla")) $("fechaPlanilla").value = nt.fp || "";
     if (document.activeElement !== $("obs")) $("obs").value = nt.obs || "";
     $("fechaPlanilla").classList.toggle("missing", !nt.fp);
+    for (const f of Object.keys(FIELD_TOKENS)) {
+      const el = $("f_" + f);
+      if (document.activeElement !== el) el.value = fieldVal(current, f);
+      el.classList.toggle("missing", usesTok(f) && !fieldVal(current, f));
+    }
+    // Tipos usados antes, como sugerencias
+    const tipos = [...new Set(Object.values(notes).map(n => n.tipo).filter(Boolean))].sort();
+    const dl = $("tiposList"); if (dl.childElementCount !== tipos.length) dl.innerHTML = tipos.map(t => `<option value="${t.replace(/"/g, "&quot;")}">`).join("");
+    const nm = nameFor(current); if (document.activeElement !== $("fname") && !$("fname").dataset.manual) $("fname").value = nm;
+    $("tplPreview").textContent = "→ " + nm;
   }
 
   /* ================= Notas por socio (fecha de planilla) y listado ================= */
@@ -634,13 +674,27 @@
   async function setNote(field, val) {
     if (!current) return;
     const k = noteKey(current), n = { ...(notes[k] || {}) };
-    n[field] = val; if (!n.fp && !n.obs) delete notes[k]; else notes[k] = n;
+    n[field] = val; if (!Object.values(n).some(Boolean)) delete notes[k]; else notes[k] = n;
+    // El período se sugiere a partir de la fecha de la planilla (mes-año), si está vacío
+    if (field === "fp" && val && usesTok("periodo") && !n.periodo) { const m = val.match(/^\d{2}(\d{2})-(\d{2})/); if (m) { n.periodo = `${+m[2]}-${m[1]}`; notes[k] = n; } }
     await kvSet(pk("notes"), notes);
     renderSocios();
   }
   $("fechaPlanilla").addEventListener("change", () => setNote("fp", $("fechaPlanilla").value));
+  $("fname").addEventListener("input", () => { $("fname").dataset.manual = "1"; });
   $("obs").addEventListener("change", () => setNote("obs", $("obs").value.trim()));
   $("obs").addEventListener("keydown", e => { if (e.key === "Enter") $("obs").blur(); });
+  for (const f of Object.keys(FIELD_TOKENS)) {
+    const el = $("f_" + f);
+    el.addEventListener("change", async () => {
+      let v = el.value.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+      if (f === "periodo") { const m = v.match(/^(\d{1,2})\D+(\d{2,4})$/); if (m) v = `${+m[1]}-${m[2].slice(-2)}`; }
+      el.value = v;
+      await setNote(f, v);
+      $("fname").dataset.manual = ""; updateSocioHead();
+    });
+    el.addEventListener("keydown", e => { if (e.key === "Enter") el.blur(); });
+  }
 
   async function tramiteInfo(s) {
     let best = null;
@@ -657,12 +711,15 @@
     const re = listoRegex(s), stem = nameFor(s).toLowerCase().replace(/\.pdf$/, "");
     return [...listos].filter(n => re.test(n) || n.startsWith(stem + " (")).map(n => listosMap.get(n) || n);
   }
-  const COLS = ["DNI", "Carpeta", "Último trámite", "Fecha trámite", "Fecha planilla", "Estado", "Archivo en listos", "Observación", "Para editar"];
+  const BASE_COLS = ["DNI", "Carpeta", "Último trámite", "Fecha trámite", "Fecha planilla", "Estado", "Archivo en listos", "Observación", "Para editar"];
+  let COLS = BASE_COLS;
   async function buildRows() {
+    COLS = ["DNI", ...Object.keys(FIELD_TOKENS).filter(usesTok).map(f => FIELD_TOKENS[f]), ...BASE_COLS.slice(1)];
     const rows = [];
     for (const s of socios) {
       const t = await tramiteInfo(s), nt = noteOf(s);
-      rows.push([s.dni, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.pages.map(p => p.label).join(", ")}: ${e.note || "(sin nota)"}`).join(" | ")]);
+      const extra = Object.keys(FIELD_TOKENS).filter(usesTok).map(f => fieldVal(s, f));
+      rows.push([s.dni, ...extra, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.pages.map(p => p.label).join(", ")}: ${e.note || "(sin nota)"}`).join(" | ")]);
     }
     return rows;
   }
@@ -1271,6 +1328,8 @@
 
   async function saveAllToListos(pdfs, base, say) {
     if (!outDir) { say("Primero elegí la carpeta de listos (arriba).", "err"); return false; }
+    const falta = current && !$("fname").dataset.manual ? missingFields(current) : [];
+    if (falta.length) { say("Completá antes de guardar: " + falta.map(f => FIELD_TOKENS[f]).join(", ") + ".", "err"); const el = $("f_" + falta[0]); el.focus(); el.classList.add("missing"); return false; }
     if (!(await hasPerm(outDir, true))) { say("Sin permiso para guardar en la carpeta de listos.", "err"); return false; }
     const names = partNames(base, pdfs.length), saved = [];
     for (let i = 0; i < pdfs.length; i++) {
@@ -2016,7 +2075,7 @@
     current = null; resetItems(); render();
     $("work").hidden = true; $("footer").hidden = true; $("pickHint").hidden = true;
     socios = []; listos = new Set(); listosMap = new Map();
-    tpl = (await kvGet(pk("tpl"))) || "{dni} gino"; $("tpl").value = tpl;
+    tpl = (await kvGet(pk("tpl"))) || (prof === "hsextras" ? "{dni} - {nombre} - {tipo} - {periodo}" : "{dni} gino"); $("tpl").value = tpl;
     flags = (await kvGet(pk("flags"))) || {};
     notes = (await kvGet(pk("notes"))) || {};
     edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
