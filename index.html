@@ -122,12 +122,29 @@
 
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:40;padding:20px}
   .modal.show{display:flex}
-  .modal .box{background:var(--panel);border-radius:10px;padding:10px;max-width:95vw;max-height:92vh;overflow:auto}
-  .modal canvas{display:block;max-width:100%;max-height:78vh;width:auto;height:auto;background:#fff;user-select:none;-webkit-user-drag:none}
+  .modal .box{background:var(--panel);border-radius:10px;padding:10px;width:96vw;height:94vh;display:flex;flex-direction:column}
+  #zview{flex:1;overflow:auto;text-align:center;background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:8px;padding:10px;cursor:grab}
+  #zview.panning{cursor:grabbing}
+  #zview.cropping .zwrap{cursor:crosshair}
+  .zwrap{cursor:inherit}
+  #zIncl.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  #zIncl.off{color:var(--danger);border-color:var(--danger)}
+  #zCrop.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  #zPageLbl{font-size:13px;min-width:90px;text-align:center}
+  #zZoomVal{min-width:48px;text-align:center;font-size:13px}
+  .socio-notes{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-2px 0 10px;font-size:13.5px}
+  .socio-notes input[type=date]{font:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:5px 8px}
+  .socio-notes input[type=date].missing{border-color:var(--warn)}
+  #obs{flex:1;min-width:200px}
+  .socio .nb{display:flex;flex-direction:column;min-width:0}
+  .socio small{font-size:11.5px;color:var(--muted)}
+  .exportbar{display:flex;gap:6px}
+  .exportbar button{flex:1;font-size:12.5px;padding:5px 6px}
+  .modal canvas{display:block;background:#fff;user-select:none;-webkit-user-drag:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .ztools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
   .ztools .sep{width:1px;height:22px;background:var(--line)}
   #zAngle{width:160px}
-  .zwrap{position:relative;display:inline-block;cursor:crosshair;touch-action:none}
+  .zwrap{position:relative;display:inline-block;touch-action:none;vertical-align:top}
   #zsel{position:absolute;border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none}
   .card.cut{box-shadow:-6px 0 0 var(--danger)}
   .card .cutlbl{position:absolute;top:-11px;left:8px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 8px;z-index:3}
@@ -164,6 +181,10 @@
         <button data-f="listo">Listos</button>
       </div>
       <div class="counts" id="counts"></div>
+      <div class="exportbar">
+        <button id="copyList" title="Copia el listado para pegarlo directo en Excel">📋 Copiar listado</button>
+        <button id="saveList" title="Guarda el listado como .csv (se abre con Excel)">💾 Guardar listado</button>
+      </div>
     </div>
     <div id="socios"></div>
   </aside>
@@ -191,6 +212,11 @@
         <button id="toggleNoApto" hidden>⚠️ Marcar no apto</button>
         <button id="reloadSocio" hidden title="Vuelve a leer la carpeta (ej. si agregaste archivos)">↻ Recargar carpeta</button>
         <button id="nextPend" hidden>Siguiente pendiente ▶</button>
+      </div>
+
+      <div class="socio-notes" id="socioNotes" hidden>
+        <label>📅 Fecha planilla <input type="date" id="fechaPlanilla"></label>
+        <input type="text" id="obs" placeholder="Observación (opcional)…">
       </div>
 
       <div class="tramites" id="tramites" hidden></div>
@@ -236,7 +262,7 @@
         </select>
       </div>
       <div class="help">
-        <b>Clic</b> en una página para incluirla/excluirla (Shift+clic marca un tramo) · <b>arrastrala</b> o usá ◀ ▶ para ordenar · <b>⟳</b> rota · <b>🔍</b> la ve en grande y permite <b>recortar y enderezar</b> · <b>✏️</b> la abre en Photopea · <b>✂</b> corta el PDF ahí (desde esa página arranca otro archivo) · <b>✕</b> la saca de la lista.
+        <b>Clic</b> en una página para verla en grande (ruedita = zoom) · <b>Ctrl+clic</b> para incluirla/excluirla (Shift+clic marca un tramo) · <b>arrastrala</b> o usá ◀ ▶ para ordenar · <b>⟳</b> rota · <b>🔍</b> la ve en grande y permite <b>recortar y enderezar</b> · <b>✏️</b> la abre en Photopea · <b>✂</b> corta el PDF ahí (desde esa página arranca otro archivo) · <b>✕</b> la saca de la lista.
         Los archivos originales de la carpeta nunca se modifican.
       </div>
       <div class="grid" id="grid"></div>
@@ -265,7 +291,7 @@
     <button class="primary" id="pvSave">💾 Guardar en Listos</button>
     <button id="pvDl">⬇ Descargar</button>
     <button id="pvBack">◀ Volver a editar</button>
-    <span class="pvzoom" title="Zoom: mantené apretado el clic sobre el PDF y girá la ruedita (o Ctrl + ruedita)">
+    <span class="pvzoom" title="Zoom: Ctrl + ruedita. Para ver una página suelta con zoom de ruedita, hacé clic en ella en la lista.">
       <button id="pvZoomOut">−</button><span id="pvZoomVal">100%</span><button id="pvZoomIn">+</button><button id="pvZoomFit">Ajustar</button>
     </span>
     <span id="pvInfo"></span>
@@ -286,16 +312,23 @@
 
 <div class="modal" id="modal"><div class="box">
   <div class="ztools">
+    <button id="zPrev" title="Página anterior (←)">◀</button>
+    <span id="zPageLbl"></span>
+    <button id="zNext" title="Página siguiente (→)">▶</button>
+    <button id="zIncl" title="Incluir / excluir esta página (Espacio)"></button>
+    <span class="sep"></span>
+    <button id="zOut" title="Alejar">−</button><span id="zZoomVal">100%</span><button id="zIn" title="Acercar">+</button><button id="zFitBtn">Ajustar</button>
+    <span class="label">· ruedita = zoom</span>
+    <span class="sep"></span>
     <span class="label">Enderezar:</span>
     <input type="range" id="zAngle" min="-15" max="15" step="0.5" value="0">
     <span id="zAngleVal" class="label">0°</span>
-    <span class="sep"></span>
-    <span class="label">Recortar: arrastrá sobre la página</span>
+    <button id="zCrop" title="Activá y arrastrá sobre la página para recortar">✂ Recortar</button>
     <button id="zClearCrop">Quitar recorte</button>
     <button class="primary" id="zApply">✓ Aplicar</button>
     <button id="mclose">Cerrar ✕</button>
   </div>
-  <div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div>
+  <div id="zview"><div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div></div>
 </div></div>
 
 <script>
@@ -332,6 +365,8 @@
   let flags = {};             // carpeta -> "noapto"
   let socios = [];            // {name, dni, handle}
   let listos = new Set();     // nombres de archivo en carpeta de listos (minúsculas)
+  let listosMap = new Map();  // minúsculas -> nombre real
+  let notes = {};             // "carpetaRaíz/carpetaDNI" -> {fp: "2026-10-07", obs: ""}
   let current = null;         // socio abierto
   let filter = "all";
 
@@ -426,9 +461,9 @@
     updateSaveLabels();
   }
   async function refreshListos(ok) {
-    listos = new Set();
+    listos = new Set(); listosMap = new Map();
     if (ok === undefined) ok = outDir && await hasPerm(outDir, false);
-    if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") listos.add(name.toLowerCase());
+    if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
   }
 
   function statusOf(s) {
@@ -449,8 +484,10 @@
       if (q && !s.name.toLowerCase().includes(q)) continue;
       const row = document.createElement("div");
       row.className = "socio" + (current && current.name === s.name ? " sel" : "");
-      row.innerHTML = `<span class="n"></span><span class="chip ${st}">${CHIP[st]}</span>`;
+      row.innerHTML = `<span class="nb"><span class="n"></span><small></small></span><span class="chip ${st}">${CHIP[st]}</span>`;
       row.querySelector(".n").textContent = s.name;
+      const nt = noteOf(s);
+      row.querySelector("small").textContent = nt.fp ? "📅 " + fmtFecha(nt.fp) : "";
       row.onclick = () => openSocio(s);
       box.appendChild(row);
     }
@@ -474,6 +511,7 @@
     const isSocio = !!s;
     $("toggleNoApto").hidden = $("reloadSocio").hidden = $("nextPend").hidden = !isSocio;
     $("socioChip").hidden = !isSocio;
+    $("socioNotes").hidden = !isSocio;
     $("socioTitle").textContent = isSocio ? s.name : "Archivos sueltos";
     $("fname").value = isSocio ? nameFor(s) : "documento.pdf";
     updateTplPreview();
@@ -483,7 +521,71 @@
     const st = statusOf(current);
     const chip = $("socioChip"); chip.className = "chip " + st; chip.textContent = CHIP[st];
     $("toggleNoApto").textContent = flags[current.name] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
+    const nt = noteOf(current);
+    if (document.activeElement !== $("fechaPlanilla")) $("fechaPlanilla").value = nt.fp || "";
+    if (document.activeElement !== $("obs")) $("obs").value = nt.obs || "";
+    $("fechaPlanilla").classList.toggle("missing", !nt.fp);
   }
+
+  /* ================= Notas por socio (fecha de planilla) y listado ================= */
+  const noteKey = s => `${rootDir ? rootDir.name : ""}/${s.name}`;
+  const noteOf = s => notes[noteKey(s)] || {};
+  function fmtFecha(iso) { const m = (iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || ""); }
+  async function setNote(field, val) {
+    if (!current) return;
+    const k = noteKey(current), n = { ...(notes[k] || {}) };
+    n[field] = val; if (!n.fp && !n.obs) delete notes[k]; else notes[k] = n;
+    await kvSet("notes", notes);
+    renderSocios();
+  }
+  $("fechaPlanilla").addEventListener("change", () => setNote("fp", $("fechaPlanilla").value));
+  $("obs").addEventListener("change", () => setNote("obs", $("obs").value.trim()));
+  $("obs").addEventListener("keydown", e => { if (e.key === "Enter") $("obs").blur(); });
+
+  async function tramiteInfo(s) {
+    let best = null;
+    try {
+      for await (const [name, h] of s.handle.entries()) {
+        if (h.kind !== "directory") continue;
+        const m = name.match(/^(\d{4})-(\d{2})-(\d{2})_(\d+)/);
+        if (m && (!best || name > best.key)) best = { key: name, nro: m[4], fecha: `${m[3]}/${m[2]}/${m[1]}` };
+      }
+    } catch (e) {}
+    return best;
+  }
+  function listosDe(s) {
+    const re = listoRegex(s), stem = nameFor(s).toLowerCase().replace(/\.pdf$/, "");
+    return [...listos].filter(n => re.test(n) || n.startsWith(stem + " (")).map(n => listosMap.get(n) || n);
+  }
+  const COLS = ["DNI", "Carpeta", "Último trámite", "Fecha trámite", "Fecha planilla", "Estado", "Archivo en listos", "Observación"];
+  async function buildRows() {
+    const rows = [];
+    for (const s of socios) {
+      const t = await tramiteInfo(s), nt = noteOf(s);
+      rows.push([s.dni, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || ""]);
+    }
+    return rows;
+  }
+  function listStatus(msg, cls) { setStatus(msg, cls); $("counts").title = msg; }
+  $("copyList").onclick = async () => {
+    if (!socios.length) return;
+    const rows = await buildRows();
+    const tsv = [COLS, ...rows].map(r => r.map(v => String(v).replace(/[\t\n]/g, " ")).join("\t")).join("\n");
+    try { await navigator.clipboard.writeText(tsv); listStatus(`✓ Listado de ${rows.length} socios copiado. Pegalo en Excel con Ctrl+V.`, "ok"); }
+    catch (e) { listStatus("No pude copiar al portapapeles: " + e.message, "err"); }
+  };
+  $("saveList").onclick = async () => {
+    if (!socios.length) return;
+    const rows = await buildRows();
+    const q = v => { v = String(v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const csv = "\ufeff" + [COLS, ...rows].map(r => r.map(q).join(";")).join("\r\n");
+    const d = new Date(), hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const name = cleanName(`listado ${rootDir ? rootDir.name : ""} ${hoy}`).replace(/\.pdf$/, ".csv");
+    try {
+      if (outDir && await hasPerm(outDir, true)) { await writeFile(outDir, name, new Blob([csv], { type: "text/csv" })); listStatus(`✓ Listado guardado en "${outDir.name}": ${name}`, "ok"); }
+      else { downloadBytes(new TextEncoder().encode(csv), name, "text/csv"); listStatus(`✓ Listado descargado: ${name}`, "ok"); }
+    } catch (e) { listStatus("No pude guardar el listado: " + e.message, "err"); }
+  };
 
   const TRAM_RE = /^(\d{4})-(\d{2})-(\d{2})_(\d+)/;
   const fileDir = new WeakMap();   // File -> carpeta donde está
@@ -710,7 +812,8 @@
         if (e.shiftKey && lastClicked) {
           const a = items.indexOf(lastClicked), z = items.indexOf(it);
           if (a >= 0) { const val = !it.on; for (let k = Math.min(a, z); k <= Math.max(a, z); k++) items[k].on = val; }
-        } else it.on = !it.on;
+        } else if (e.ctrlKey || e.metaKey) it.on = !it.on;
+        else { lastClicked = it; zoom(it); return; }
         lastClicked = it; render();
       });
       card.addEventListener("dragstart", e => { dragId = it.id; card.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", it.id); });
@@ -826,7 +929,7 @@
     } else ctx.drawImage(src, 0, 0);
     return out;
   }
-  function zDraw() { straighten(zBase, zAng, $("mcanvas")); zShowSel(); }
+  function zDraw() { straighten(zBase, zAng, $("mcanvas")); if ($("mcanvas").style.width) zShowSel(); }
   function zShowSel() {
     const sel = $("zsel"), m = $("mcanvas");
     if (!zRect) { sel.hidden = true; return; }
@@ -834,13 +937,86 @@
     Object.assign(sel.style, { left: zRect.x * W + "px", top: zRect.y * H + "px", width: zRect.w * W + "px", height: zRect.h * H + "px" });
     sel.hidden = false;
   }
-  async function zoom(it) {
-    zItem = it; zAng = 0; zRect = null;
-    $("zAngle").value = 0; $("zAngleVal").textContent = "0°";
-    zBase = await pageToCanvas(it, Math.min(1600, Math.max(window.innerWidth, 800) * (window.devicePixelRatio || 1)));
-    modal.classList.add("show");
-    zDraw();
+  let zZoom = 1, zCropMode = false, zHiT = null, zTok = 0;
+  const zview = $("zview");
+  const zDpr = () => Math.min(window.devicePixelRatio || 1, 2);
+  function zFitW() {
+    const cw = zview.clientWidth - 24, ch = zview.clientHeight - 24, ratio = zBase.width / zBase.height;
+    return Math.max(100, Math.min(cw, ch * ratio));
   }
+  function zSize() {
+    const ratio = zBase.width / zBase.height, w = zFitW() * zZoom;
+    const c = $("mcanvas"); c.style.width = Math.round(w) + "px"; c.style.height = Math.round(w / ratio) + "px";
+    $("zZoomVal").textContent = Math.round(zZoom * 100) + "%";
+    zShowSel();
+  }
+  function setZoom(z, cx, cy) {
+    z = Math.min(8, Math.max(0.3, z));
+    const r = zview.getBoundingClientRect();
+    if (cx === undefined) { cx = r.left + r.width / 2; cy = r.top + r.height / 2; }
+    const ox = cx - r.left, oy = cy - r.top;
+    const fx = (zview.scrollLeft + ox) / zview.scrollWidth, fy = (zview.scrollTop + oy) / zview.scrollHeight;
+    zZoom = z; zSize();
+    zview.scrollLeft = fx * zview.scrollWidth - ox; zview.scrollTop = fy * zview.scrollHeight - oy;
+    clearTimeout(zHiT); zHiT = setTimeout(zHiRes, 250);
+  }
+  async function zHiRes() {
+    if (!zItem) return;
+    const c = $("mcanvas"), need = Math.min(4200, Math.max(c.clientWidth, c.clientHeight) * zDpr());
+    if (need <= Math.max(zBase.width, zBase.height) * 1.1) return;
+    const tok = ++zTok, it = zItem;
+    const nb = await pageToCanvas(it, need);
+    if (tok !== zTok || it !== zItem) return;
+    zBase = nb; zDraw();
+  }
+  function zUpdateBar() {
+    const i = items.indexOf(zItem);
+    $("zPageLbl").textContent = `Página ${i + 1} de ${items.length}`;
+    $("zPrev").disabled = i <= 0; $("zNext").disabled = i >= items.length - 1;
+    const b = $("zIncl"); b.className = zItem.on ? "on" : "off"; b.textContent = zItem.on ? "✓ Incluida" : "✗ Excluida";
+  }
+  async function zoom(it) {
+    const tok = ++zTok;
+    zItem = it; zAng = 0; zRect = null; zZoom = 1; setCropMode(false);
+    $("zAngle").value = 0; $("zAngleVal").textContent = "0°";
+    modal.classList.add("show");
+    zUpdateBar();
+    const nb = await pageToCanvas(it, Math.min(2000, Math.max(zview.clientWidth, zview.clientHeight, 800) * zDpr()));
+    if (tok !== zTok) return;
+    zBase = nb; zDraw(); zSize(); zview.scrollTop = 0; zview.scrollLeft = 0;
+  }
+  function zGo(d) { const i = items.indexOf(zItem) + d; if (i >= 0 && i < items.length) zoom(items[i]); }
+  $("zPrev").onclick = () => zGo(-1);
+  $("zNext").onclick = () => zGo(1);
+  $("zIncl").onclick = () => { zItem.on = !zItem.on; zUpdateBar(); render(); };
+  $("zIn").onclick = () => setZoom(zZoom * 1.25);
+  $("zOut").onclick = () => setZoom(zZoom / 1.25);
+  $("zFitBtn").onclick = () => setZoom(1);
+  zview.addEventListener("wheel", e => {
+    if (!zBase) return;
+    e.preventDefault();
+    const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    setZoom(zZoom * Math.exp(-delta * 0.0018), e.clientX, e.clientY);
+  }, { passive: false });
+  function setCropMode(on) { zCropMode = on; $("zCrop").classList.toggle("active", on); zview.classList.toggle("cropping", on); }
+  $("zCrop").onclick = () => setCropMode(!zCropMode);
+  // Arrastrar para mover (cuando no se está recortando)
+  let zPan = null;
+  zview.addEventListener("pointerdown", e => {
+    if (zCropMode || e.button !== 0) return;
+    zPan = { x: e.clientX, y: e.clientY }; zview.classList.add("panning"); zview.setPointerCapture(e.pointerId);
+  });
+  zview.addEventListener("pointermove", e => {
+    if (!zPan) return;
+    zview.scrollLeft -= e.clientX - zPan.x; zview.scrollTop -= e.clientY - zPan.y; zPan = { x: e.clientX, y: e.clientY };
+  });
+  zview.addEventListener("pointerup", () => { zPan = null; zview.classList.remove("panning"); });
+  document.addEventListener("keydown", e => {
+    if (!modal.classList.contains("show") || e.target.tagName === "INPUT") return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); zGo(-1); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); zGo(1); }
+    else if (e.key === " ") { e.preventDefault(); $("zIncl").click(); }
+  });
   $("zAngle").addEventListener("input", () => { zAng = +$("zAngle").value; $("zAngleVal").textContent = zAng + "°"; zDraw(); });
   $("zClearCrop").onclick = () => { zRect = null; zShowSel(); };
   const zwrap = $("zwrap");
@@ -848,7 +1024,7 @@
     const r = $("mcanvas").getBoundingClientRect();
     return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
   }
-  zwrap.addEventListener("pointerdown", e => { e.preventDefault(); zStart = zPos(e); zwrap.setPointerCapture(e.pointerId); });
+  zwrap.addEventListener("pointerdown", e => { if (!zCropMode) return; e.preventDefault(); e.stopPropagation(); zStart = zPos(e); zwrap.setPointerCapture(e.pointerId); });
   zwrap.addEventListener("pointermove", e => {
     if (!zStart) return;
     const p = zPos(e);
@@ -856,7 +1032,7 @@
     zShowSel();
   });
   zwrap.addEventListener("pointerup", () => { zStart = null; if (zRect && (zRect.w < 0.02 || zRect.h < 0.02)) { zRect = null; zShowSel(); } });
-  window.addEventListener("resize", () => { if (modal.classList.contains("show")) zShowSel(); });
+  window.addEventListener("resize", () => { if (modal.classList.contains("show") && zBase) zSize(); });
 
   $("zApply").onclick = async () => {
     if (!zItem) return;
@@ -983,7 +1159,7 @@
     for (let i = 0; i < pdfs.length; i++) {
       if (await fileExists(outDir, names[i]) && !confirm(`Ya existe "${names[i]}" en la carpeta de listos.\n¿Lo reemplazo?`)) continue;
       await writeFile(outDir, names[i], pdfs[i]);
-      listos.add(names[i].toLowerCase()); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
+      listos.add(names[i].toLowerCase()); listosMap.set(names[i].toLowerCase(), names[i]); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
     }
     if (current && flags[current.name] && listos.has(nameFor(current).toLowerCase())) { delete flags[current.name]; kvSet("flags", flags); }
     renderSocios();
@@ -1078,7 +1254,7 @@
   window.addEventListener("pointerup", pvRelease);
   window.addEventListener("blur", pvRelease);
   pvBody.addEventListener("wheel", e => {
-    if (!pvPressed && !e.ctrlKey) return;      // ruedita sola = scroll normal
+    if (!e.ctrlKey) return;      // ruedita sola = bajar por las páginas
     e.preventDefault();
     const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
     setPvZoom(pvZoom * Math.exp(-delta * 0.0015), e.clientX, e.clientY);
@@ -1112,7 +1288,7 @@
         await pvRenderEntry(e, pvRenderToken);
       }
     }
-    if (token === pvToken) pvSay(summary + " · Zoom: clic apretado + ruedita");
+    if (token === pvToken) pvSay(summary + " · Zoom: Ctrl + ruedita");
   });
   function closePreview() { pvToken++; pvRenderToken++; pvEntries = []; pv.classList.remove("show"); pvBody.innerHTML = ""; }
   $("pvBack").onclick = closePreview;
@@ -1237,6 +1413,7 @@
       $(k).addEventListener("change", () => kvSet("opts", Object.fromEntries(OPTS.map(x => [x, $(x).value]))));
     });
     flags = (await kvGet("flags")) || {};
+    notes = (await kvGet("notes")) || {};
     if (HAS_FS) { rootDir = (await kvGet("rootDir")) || null; outDir = (await kvGet("outDir")) || null; }
     updateTplPreview();
     await refreshAll();
