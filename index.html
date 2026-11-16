@@ -753,7 +753,7 @@
     return listos.has(nameFor(s).toLowerCase());
   }
   function statusOf(s) {
-    if (isListo(s)) return "listo";
+    if (isListo(s) || noteOf(s).fp) return "listo";   // con fecha de planilla cargada, cuenta como listo
     if (flags[flagKey(s)] === "noapto") return "noapto";
     return "pend";
   }
@@ -834,11 +834,18 @@
   async function setNote(field, val) {
     if (!current) return;
     const k = noteKey(current), n = { ...(notes[k] || {}) };
-    n[field] = val; if (!Object.values(n).some(Boolean)) delete notes[k]; else notes[k] = n;
+    n[field] = val;
+    if (field === "fp") {
+      if (val) { if (val !== (notes[k] || {}).fp || !n.fpTs) n.fpTs = Date.now(); n.socio = current.name; n.dni = current.dni; n.scope = scopeOf(current); }
+      else delete n.fpTs;
+    }
+    const keep = ["fp", "obs", "nombre", "tipo", "periodo"].some(f => n[f]);
+    if (!keep) delete notes[k]; else notes[k] = n;
     // El período se sugiere a partir de la fecha de la planilla (mes-año), si está vacío
     if (field === "fp" && val && usesTok("periodo") && !n.periodo) { const m = val.match(/^\d{2}(\d{2})-(\d{2})/); if (m) { n.periodo = `${+m[2]}-${m[1]}`; notes[k] = n; } }
     await kvSet(pk("notes"), notes);
     renderSocios();
+    if (field === "fp" && typeof updateDayCount === "function") updateDayCount();
   }
   $("fechaPlanilla").addEventListener("change", () => { setNote("fp", $("fechaPlanilla").value); if (typeof learnFromManual === "function") learnFromManual($("fechaPlanilla").value); });
   $("fname").addEventListener("input", () => { $("fname").dataset.manual = "1"; });
@@ -2275,10 +2282,27 @@
     const d = new Date(), y = d.getFullYear(), m = d.getMonth();
     return { total: 0, desde: isoDay(new Date(y, m, 1)), hasta: isoDay(new Date(y, m + 1, 0)) };
   }
-  // Un guardado cuenta una vez por socio y día (si lo guardaste en partes o lo re-guardaste, no suma doble)
+  // "Hecho" = PDF guardado o fecha de planilla cargada. Un socio cuenta una vez por día.
+  function fpEvents() {
+    const out = [];
+    for (const [k, n] of Object.entries(notes)) {
+      if (!n.fp || !n.fpTs) continue;
+      const scope = n.scope || k.slice(0, k.lastIndexOf("/")), socio = n.socio || k.slice(k.lastIndexOf("/") + 1);
+      const ps = { name: socio, dni: n.dni || dniOf(socio), tanda: scope };
+      out.push({ ts: n.fpTs, root: scope, socio, dni: ps.dni, file: "", fp: n.fp, nombre: usesTok("nombre") ? fieldVal(ps, "nombre") : "", tipo: n.tipo || "", periodo: n.periodo || "", obs: n.obs || "", viaFecha: true });
+    }
+    return out;
+  }
   function savesIn(from, to) {
-    const seen = new Set();
-    return dayLog.filter(r => { const d = isoDay(new Date(r.ts)); if (d < from || d > to) return false; const k = d + "|" + r.root + "|" + r.socio; if (seen.has(k)) return false; seen.add(k); return true; });
+    const seen = new Map();
+    // primero los guardados (tienen archivo); después las fechas de planilla que no tengan guardado ese día
+    for (const r of [...dayLog, ...fpEvents()]) {
+      const d = isoDay(new Date(r.ts)); if (d < from || d > to) continue;
+      const k = d + "|" + r.root + "|" + r.socio;
+      if (!seen.has(k)) seen.set(k, r);
+      else if (seen.get(k).viaFecha === undefined && r.viaFecha && !seen.get(k).fp) seen.get(k).fp = r.fp;
+    }
+    return [...seen.values()];
   }
   const editsIn = (from, to) => editLog.filter(r => { const d = isoDay(new Date(r.ts)); return d >= from && d <= to; }).reduce((a, r) => a + r.n, 0);
 
@@ -2305,7 +2329,7 @@
     const counts = days.map(x => savesIn(x, x).length), max = Math.max(1, ...counts);
     box.innerHTML = `
       <div class="mtgrid">
-        <div class="mt"><b>${hoyG}</b><span>guardados hoy</span></div>
+        <div class="mt"><b>${hoyG}</b><span>listos hoy</span></div>
         <div class="mt"><b>${hoyE}</b><span>hojas editadas hoy</span></div>
         <div class="mt"><b>${pendEd}</b><span>para editar</span></div>
       </div>
@@ -2353,7 +2377,7 @@
     updateDayCount();
   }
   function updateDayCount() {
-    const n = dayLog.filter(r => isoDay(new Date(r.ts)) === isoDay(new Date())).length;
+    const t = isoDay(new Date()), n = savesIn(t, t).length;
     $("dayCount").textContent = n; $("dayCount").hidden = !n;
   }
   function dayColumns() {
@@ -2366,7 +2390,7 @@
   }
   function dayRows() {
     const day = $("dayDate").value;
-    let rows = dayLog.filter(r => isoDay(new Date(r.ts)) === day).sort((a, b) => a.ts - b.ts);
+    let rows = savesIn(day, day).sort((a, b) => a.ts - b.ts);
     if ($("dayPend").checked) {
       const hechos = new Set(rows.map(r => r.socio));
       for (const s of socios) {
@@ -2388,7 +2412,7 @@
     if ($("dayHead").checked) lines.unshift(cols.map(([h]) => h).join("\t"));
     $("dayText").value = lines.join("\r\n");
     const nOk = rows.filter(r => !r.estado).length, pend = rows.length - nOk;
-    $("dayInfo").textContent = `${fmtFecha($("dayDate").value)} · ${nOk} guardado${nOk === 1 ? "" : "s"}` + (pend ? ` · ${pend} pendiente${pend === 1 ? "" : "s"}` : "") + (rows.length ? "" : " · No hay nada guardado ese día en este apartado.");
+    $("dayInfo").textContent = `${fmtFecha($("dayDate").value)} · ${nOk} listo${nOk === 1 ? "" : "s"}` + (pend ? ` · ${pend} pendiente${pend === 1 ? "" : "s"}` : "") + (rows.length ? "" : " · No hay nada guardado ese día en este apartado.");
   }
   $("dayBtn").onclick = () => {
     $("dayProf").textContent = "· " + PROFS[prof];
