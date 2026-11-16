@@ -38,6 +38,27 @@
   #toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:10px;font-size:14px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:90vw}
   #toast[hidden]{display:none}
   #toast button{padding:4px 10px;font-size:13px}
+  .badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:999px;background:var(--warn);color:#fff;font-size:12px;font-weight:700;text-align:center}
+  .badge[hidden]{display:none}
+  .edtop{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+  #edThumb{width:90px;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff;flex-shrink:0}
+  .edtop>div{flex:1}
+  #edNote{width:100%;font-size:15px;padding:9px 10px}
+  #edPanel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
+  #edPanel.show{transform:none}
+  .edhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .edhead h3{margin:0;font-size:17px}
+  .edhint{margin:8px 14px;color:var(--muted);font-size:12.5px}
+  #edList{overflow:auto;flex:1;padding:0 10px 20px}
+  .edrow{display:flex;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+  .edrow img{width:64px;height:84px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px;flex-shrink:0}
+  .edinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .edinfo small{color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .edinfo input{font-size:13.5px;padding:5px 8px}
+  .edbtns{display:flex;gap:4px;flex-wrap:wrap}
+  .edbtns button{font-size:12.5px;padding:4px 8px}
+  #edBtn{position:fixed;right:16px;z-index:46;border-radius:999px;padding:8px 14px;font-weight:600;background:var(--warn);color:#fff;border-color:var(--warn);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  #edBtn kbd{opacity:.9}
   #kbar{position:fixed;right:16px;bottom:70px;z-index:45;background:color-mix(in srgb,var(--ink) 88%,transparent);color:var(--panel);border-radius:12px;padding:8px 10px 8px 12px;font-size:12.5px;display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;max-width:min(760px,calc(100vw - 32px));box-shadow:0 6px 24px rgba(0,0,0,.25);backdrop-filter:blur(6px)}
   #kbar .k{white-space:nowrap}
   #kbar kbd{opacity:1;border-color:color-mix(in srgb,var(--panel) 60%,transparent);margin:0 3px 0 0}
@@ -181,6 +202,7 @@
     <span>📁 Socios: <b id="rootName">—</b></span><button id="pickRoot">Elegir</button>
     <span style="margin-left:8px">✅ Listos: <b id="outName">—</b></span><button id="pickOut">Elegir</button>
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
+    <button id="edOpen" title="Planillas que mandaste a editar">📝 Para editar <span class="badge" id="edCount" hidden>0</span></button>
   </div>
   <div class="folder">
     <span class="label">Nombre:</span>
@@ -345,6 +367,7 @@
     <button id="zCrop" title="Activá y arrastrá sobre la página para recortar">✂ Recortar</button>
     <button id="zClearCrop">Quitar recorte</button>
     <button class="primary" id="zApply">✓ Aplicar</button>
+    <button class="pp" id="zPP" title="Abrir esta hoja en Photopea">✏️ Photopea</button>
     <button id="mclose">Cerrar ✕</button>
   </div>
   <div id="zview"><div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div></div>
@@ -362,6 +385,22 @@
   </div>
 </div></div>
 <div id="toast" hidden></div>
+<div class="fdlg" id="edlg" hidden><div class="fbox">
+  <h3>📝 Mandar a "Para editar"</h3>
+  <div class="edtop"><canvas id="edThumb"></canvas><div><p id="edWhat"></p>
+    <input type="text" id="edNote" placeholder="¿Qué hay que editarle? (ej: tapar dato, enderezar, falta firma)"></div></div>
+  <div class="frow">
+    <button class="primary" id="edOk">Guardar <kbd>Enter</kbd></button>
+    <button id="edCancel">Cancelar</button>
+  </div>
+</div></div>
+<div id="edPanel">
+  <div class="edhead"><h3>📝 Para editar</h3><button id="edPanelClose">✕</button></div>
+  <p class="edhint">Planillas que marcaste para corregir en esta tanda. Al usar la versión editada de Photopea se quitan solas.</p>
+  <div id="edList"></div>
+  <div class="empty" id="edEmpty">No hay planillas para editar.</div>
+</div>
+<button id="edBtn" hidden title="Mandar esta planilla a Para editar (E)">📝 Para editar <kbd>E</kbd></button>
 <div id="kbar" hidden></div>
 <button id="kbarBtn" title="Mostrar atajos" hidden>⌨ Atajos</button>
 
@@ -521,7 +560,8 @@
       row.innerHTML = `<span class="nb"><span class="n"></span><small></small></span><span class="chip ${st}">${CHIP[st]}</span>`;
       row.querySelector(".n").textContent = s.name;
       const nt = noteOf(s);
-      row.querySelector("small").textContent = nt.fp ? "📅 " + fmtFecha(nt.fp) : "";
+      const ne = editsOf(s).length;
+      row.querySelector("small").textContent = [nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
       row.onclick = () => openSocio(s);
       box.appendChild(row);
     }
@@ -591,12 +631,12 @@
     const re = listoRegex(s), stem = nameFor(s).toLowerCase().replace(/\.pdf$/, "");
     return [...listos].filter(n => re.test(n) || n.startsWith(stem + " (")).map(n => listosMap.get(n) || n);
   }
-  const COLS = ["DNI", "Carpeta", "Último trámite", "Fecha trámite", "Fecha planilla", "Estado", "Archivo en listos", "Observación"];
+  const COLS = ["DNI", "Carpeta", "Último trámite", "Fecha trámite", "Fecha planilla", "Estado", "Archivo en listos", "Observación", "Para editar"];
   async function buildRows() {
     const rows = [];
     for (const s of socios) {
       const t = await tramiteInfo(s), nt = noteOf(s);
-      rows.push([s.dni, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || ""]);
+      rows.push([s.dni, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.label}: ${e.note || "(sin nota)"}`).join(" | ")]);
     }
     return rows;
   }
@@ -693,7 +733,7 @@
     for (const g of groups) {
       const before = items.length;
       await addFiles(g.files, true);
-      if (s.sel === "__all") items.slice(before).forEach(it => it.tram = g.nro ? "#" + g.nro : g.label);
+      items.slice(before).forEach(it => { it.groupKey = g.key; if (s.sel === "__all") it.tram = g.nro ? "#" + g.nro : g.label; });
     }
     const n = applyEditedCopies();
     render();
@@ -777,7 +817,7 @@
     const sid = "s" + (++uid);
     sources[sid] = { kind: "pdf", name: f.name, bytes, pdfjs };
     for (let i = 0; i < pdfjs.numPages; i++) {
-      const it = { id: "p" + (++uid), kind: "pdf", src: sid, page: i, rot: 0, on: true, dir: fileDir.get(f) || null, name: pdfjs.numPages > 1 ? `${f.name} · pág. ${i + 1}` : f.name, canvas: document.createElement("canvas") };
+      const it = { id: "p" + (++uid), kind: "pdf", src: sid, page: i, rot: 0, on: true, dir: fileDir.get(f) || null, origName: f.name, origPage: i, name: pdfjs.numPages > 1 ? `${f.name} · pág. ${i + 1}` : f.name, canvas: document.createElement("canvas") };
       items.push(it); queueThumb(it);
     }
   }
@@ -797,7 +837,7 @@
   }
   async function addImg(blob, name, file) {
     const sid = await newImgSource(blob, name, file);
-    const it = { id: "p" + (++uid), kind: "img", src: sid, page: 0, rot: 0, on: true, dir: (file && fileDir.get(file)) || null, name };
+    const it = { id: "p" + (++uid), kind: "img", src: sid, page: 0, rot: 0, on: true, dir: (file && fileDir.get(file)) || null, origName: name, origPage: 0, name };
     drawImgThumb(it); items.push(it);
   }
 
@@ -850,7 +890,7 @@
         else { lastClicked = it; zoom(it); return; }
         lastClicked = it; render();
       });
-      card.addEventListener("mouseenter", () => { hoverItem = it; });
+      card.addEventListener("mouseenter", () => { hoverItem = it; lastHover = it; });
       card.addEventListener("mouseleave", () => { if (hoverItem === it) hoverItem = null; });
       card.addEventListener("dragstart", e => { dragId = it.id; card.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", it.id); });
       card.addEventListener("dragend", () => { dragId = null; render(); });
@@ -1448,6 +1488,11 @@
       }
       $("ppOv").classList.remove("show");
       setStatus(`✓ Página reemplazada por la versión editada.${extra}`, "ok");
+      const pend = current ? edits.filter(x => x.root === rootName() && x.socio === current.name && x.file === it.origName && x.page === it.origPage) : [];
+      if (pend.length) {
+        edits = edits.filter(x => !pend.includes(x)); await saveEdits();
+        toast("✓ Editada y quitada de \"Para editar\"", { actions: [{ label: "Deshacer", fn: async () => { edits.push(...pend); await saveEdits(); } }] });
+      }
       ppItem = null;
     } catch (e) { console.error(e); ppSay("Error: " + e.message, "err"); $("ppUse").disabled = false; }
     ppBusy = false;
@@ -1458,6 +1503,8 @@
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
     if (!$("fdlg").hidden) { fdClose(); return; }
+    if (!$("edlg").hidden) { edClose(); return; }
+    if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
     else if (pv.classList.contains("show")) closePreview();
@@ -1706,6 +1753,112 @@
     readDate(modal.classList.contains("show") ? zItem : (hoverItem || lastClicked));
   });
 
+  /* ================= Para editar (planillas a corregir, con nota) ================= */
+  let edits = [], lastHover = null, edTarget = null;
+  const rootName = () => rootDir ? rootDir.name : "";
+  const myEdits = () => edits.filter(e => e.root === rootName());
+  const editsOf = s => myEdits().filter(e => e.socio === s.name);
+  const pageLabel = it => it.name;
+  const editedNameFor = label => label.replace(/\s·\spág\.\s(\d+)$/, " pág $1").replace(/\.(pdf|jpe?g|jfif|png|gif|webp|bmp)( pág \d+)?$/i, "$2") + " editado.jpg";
+  async function saveEdits() { await kvSet("edits", edits); renderEdits(); renderSocios(); }
+
+  function edTargetItem() { return modal.classList.contains("show") ? zItem : (hoverItem || lastHover || lastClicked); }
+  function edAsk(it) {
+    if (!it) { toast("Pasá el mouse por la planilla (o abrila en grande) y tocá 📝."); return; }
+    if (!current) { toast("Abrí un socio para mandar planillas a editar."); return; }
+    edTarget = it;
+    const th = $("edThumb"); th.width = it.canvas.width; th.height = it.canvas.height; th.getContext("2d").drawImage(it.canvas, 0, 0);
+    $("edWhat").textContent = `${current.name} · ${pageLabel(it)}`;
+    const prev = editsOf(current).find(e => e.file === it.origName && e.page === it.origPage);
+    $("edNote").value = prev ? prev.note : "";
+    $("edlg").hidden = false;
+    setTimeout(() => $("edNote").focus(), 30);
+  }
+  function edClose() { $("edlg").hidden = true; edTarget = null; }
+  $("edCancel").onclick = edClose;
+  $("edlg").addEventListener("pointerdown", e => { if (e.target === $("edlg")) edClose(); });
+  $("edNote").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); $("edOk").click(); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); edClose(); }
+  });
+  $("edOk").onclick = async () => {
+    const it = edTarget; if (!it || !current) return edClose();
+    const note = $("edNote").value.trim();
+    const prev = edits.find(e => e.root === rootName() && e.socio === current.name && e.file === it.origName && e.page === it.origPage);
+    const th = document.createElement("canvas"), s = Math.min(1, 160 / Math.max(it.canvas.width, it.canvas.height));
+    th.width = Math.max(1, it.canvas.width * s); th.height = Math.max(1, it.canvas.height * s);
+    th.getContext("2d").drawImage(it.canvas, 0, 0, th.width, th.height);
+    const data = { note, thumb: th.toDataURL("image/jpeg", 0.7), label: pageLabel(it), group: it.groupKey || current.sel || "" };
+    if (prev) Object.assign(prev, data);
+    else edits.push({ id: "e" + Date.now() + Math.random().toString(36).slice(2, 6), root: rootName(), socio: current.name, file: it.origName, page: it.origPage, created: Date.now(), ...data });
+    edClose();
+    await saveEdits();
+    toast(`📝 Enviada a "Para editar"${note ? ": " + note : ""}`, { actions: [{ label: "Ver lista", fn: openEdPanel }] });
+  };
+
+  function locateEntry(e) {
+    const same = it => it.origName === e.file && it.origPage === e.page;
+    return items.find(it => same(it) && it.groupKey === e.group) || items.find(same) ||
+      items.find(it => it.name.toLowerCase() === editedNameFor(e.label).toLowerCase());
+  }
+  async function goToEntry(e, photopea) {
+    const s = socios.find(x => x.name === e.socio);
+    if (!s) { toast("No encuentro la carpeta de ese socio en esta tanda.", {}); return; }
+    closeEdPanel();
+    if (e.group) s.sel = e.group;
+    await openSocio(s);
+    const it = locateEntry(e);
+    if (!it) { toast("No encontré esa hoja en la carpeta (¿se movió o se renombró?).", {}); return; }
+    lastClicked = it;
+    if (photopea) openPhotopea(it); else zoom(it);
+  }
+  async function markDone(e, silent) {
+    edits = edits.filter(x => x !== e);
+    await saveEdits();
+    if (!silent) toast("✓ Marcada como editada", { actions: [{ label: "Deshacer", fn: async () => { edits.push(e); await saveEdits(); } }] });
+  }
+
+  function renderEdits() {
+    const list = myEdits().sort((a, b) => natural(a.socio, b.socio) || a.created - b.created);
+    $("edCount").textContent = list.length;
+    $("edCount").hidden = !list.length;
+    const box = $("edList"); if (!box) return;
+    box.innerHTML = "";
+    $("edEmpty").hidden = !!list.length;
+    for (const e of list) {
+      const row = document.createElement("div"); row.className = "edrow";
+      row.innerHTML = `<img alt=""><div class="edinfo"><b></b><small></small><input type="text" placeholder="¿Qué hay que editarle?"><div class="edbtns">
+        <button data-a="open">🔍 Abrir</button><button data-a="pp" class="pp">✏️ Photopea</button><button data-a="done">✓ Hecho</button></div></div>`;
+      row.querySelector("img").src = e.thumb || "";
+      row.querySelector("b").textContent = e.socio;
+      row.querySelector("small").textContent = `${e.label}${e.group && e.group !== "__all" && e.group !== "__loose" ? " · " + e.group : ""}`;
+      const inp = row.querySelector("input"); inp.value = e.note || "";
+      inp.addEventListener("change", async () => { e.note = inp.value.trim(); await saveEdits(); });
+      inp.addEventListener("keydown", ev => { if (ev.key === "Enter") inp.blur(); });
+      row.querySelector(".edbtns").onclick = ev => {
+        const b = ev.target.closest("button"); if (!b) return;
+        if (b.dataset.a === "open") goToEntry(e, false);
+        else if (b.dataset.a === "pp") goToEntry(e, true);
+        else markDone(e);
+      };
+      box.appendChild(row);
+    }
+  }
+  function openEdPanel() { renderEdits(); $("edPanel").classList.add("show"); }
+  function closeEdPanel() { $("edPanel").classList.remove("show"); }
+  $("edOpen").onclick = () => $("edPanel").classList.contains("show") ? closeEdPanel() : openEdPanel();
+  $("edPanelClose").onclick = closeEdPanel;
+  $("edBtn").onclick = () => edAsk(edTargetItem());
+  $("zPP").onclick = () => { const it = zItem; modal.classList.remove("show"); if (it) openPhotopea(it); };
+
+  // Tecla E: mandar a "Para editar"
+  document.addEventListener("keydown", e => {
+    if (e.key.toLowerCase() !== "e" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("edlg").hidden || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
+    e.preventDefault();
+    edAsk(edTargetItem());
+  });
+
   /* ================= Atajos de teclado ================= */
   document.addEventListener("keydown", e => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
@@ -1729,8 +1882,8 @@
 
   /* Barrita flotante de atajos (cambia según la pantalla) */
   const KB = {
-    lista: [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["F", "leer fecha"], ["P", "vista previa"], ["Ctrl+S", "guardar"]],
-    visor: [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["F", "leer fecha"], ["Esc", "cerrar"]],
+    lista: [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["F", "leer fecha"], ["E", "para editar"], ["P", "vista previa"], ["Ctrl+S", "guardar"]],
+    visor: [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["F", "leer fecha"], ["E", "para editar"], ["Esc", "cerrar"]],
     previa: [["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Esc", "volver"]]
   };
   let kbHidden = false, kbMode = "";
@@ -1750,6 +1903,14 @@
     // con el pie de página visible, la barra va arriba de él
     const up = mode === "lista" ? ($("footer").offsetHeight + 12) + "px" : "16px";
     if ($("kbar").style.bottom !== up) $("kbar").style.bottom = $("kbarBtn").style.bottom = up;
+    // botón flotante "Para editar", encima de la barrita de atajos
+    const eb = $("edBtn"), showEb = mode === "lista" || mode === "visor";
+    if (eb.hidden !== !showEb) eb.hidden = !showEb;
+    if (showEb) {
+      const ref = !$("kbar").hidden ? $("kbar") : $("kbarBtn");
+      const b = (parseInt(up) + (ref.offsetHeight || 34) + 8) + "px";
+      if (eb.style.bottom !== b) eb.style.bottom = b;
+    }
   }
   $("kbarBtn").onclick = () => { kbHidden = false; kvSet("kbHidden", false); kbUpdate(); };
   const kbWatch = ["modal", "pv", "ppOv", "work", "footer"].map(id => $(id));
@@ -1768,9 +1929,11 @@
     });
     flags = (await kvGet("flags")) || {};
     notes = (await kvGet("notes")) || {};
+    edits = (await kvGet("edits")) || [];
     if (HAS_FS) { rootDir = (await kvGet("rootDir")) || null; outDir = (await kvGet("outDir")) || null; }
     updateTplPreview();
     await refreshAll();
+    renderEdits();
   })();
 })();
 </script>
