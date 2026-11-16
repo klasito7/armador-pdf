@@ -75,6 +75,8 @@
   .keybtn{min-width:96px;font:700 13px ui-monospace,Consolas,monospace}
   .keybtn.cap{background:var(--warn);color:#fff;border-color:var(--warn)}
   #cfgReset{margin-top:14px}
+  .cfgchk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:5px 0}
+  .cfgchk input{margin-top:3px}
   #mtPanel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
   #mtPanel.show{transform:none}
   #mtBody{overflow:auto;padding:12px 16px 24px;font-size:13.5px}
@@ -160,6 +162,7 @@
   .chip{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
   .chip.pend{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
   .chip.listo{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .chip.firmado{background:color-mix(in srgb,#7a3fd1 18%,transparent);color:#7a3fd1}
   .chip.noapto{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
 
   main{flex:1;overflow:auto;padding:14px 20px 150px;min-width:0}
@@ -281,6 +284,7 @@
   <div class="folder" id="fsControls">
     <span>📁 Socios: <b id="rootName">—</b></span><button id="pickRoot">Elegir</button>
     <span style="margin-left:8px">✅ Listos: <b id="outName">—</b></span><button id="pickOut">Elegir</button>
+    <span style="margin-left:8px" title="Carpeta donde quedan los PDF ya firmados (opcional)">✍ Firmados: <b id="signName">—</b></span><button id="pickSign">Elegir</button>
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
     <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
     <button id="cfgOpen" title="Configuración: atajos de teclado">⚙</button>
@@ -306,6 +310,7 @@
         <button data-f="pend">Pendientes</button>
         <button data-f="noapto">No aptos</button>
         <button data-f="listo">Listos</button>
+        <button data-f="firmado">Firmados</button>
       </div>
       <div class="counts" id="counts"></div>
       <div class="exportbar" id="namesBar" hidden>
@@ -537,6 +542,14 @@
     <p class="edhint">Tocá la tecla de una acción y apretá la nueva. Si ya la usaba otra acción, se intercambian. Esc cancela.</p>
     <div id="cfgKeys"></div>
     <button id="cfgReset" class="danger">Restablecer atajos originales</button>
+    <h4>▶ Uno tras otro</h4>
+    <label class="cfgchk"><input type="checkbox" id="set_autoNext"> Al guardar, pasar solo al siguiente pendiente</label>
+    <label class="cfgchk"><input type="checkbox" id="set_autoNextQ"> Al cargar la fecha con la tecla de fecha a mano, pasar al siguiente</label>
+    <label class="cfgchk"><input type="checkbox" id="set_openFirst"> Abrir la primera hoja en grande al pasar al siguiente</label>
+    <h4>💾 Copia de seguridad</h4>
+    <p class="edhint">Guarda todo lo cargado (fechas, observaciones, listas de nombres y CUIL, Para editar, cierres, métricas, objetivo, atajos) de los dos apartados en un archivo. Sirve si se borra Chrome o cambiás de PC. Las carpetas no viajan: después de importar elegilas de nuevo.</p>
+    <div class="frow"><button id="cfgExport">💾 Exportar configuración</button><button id="cfgImport">📂 Importar configuración</button></div>
+    <input type="file" id="cfgFile" accept=".json,application/json" hidden>
   </div>
 </div>
 <div id="mtPanel" class="sidepanel">
@@ -580,8 +593,18 @@
     catch (e) { console.warn("No se pudo guardar", k, e); }
   }
 
+  async function kvAll() {
+    const db = await openDb();
+    return new Promise((res, rej) => {
+      const out = {}, st = db.transaction("kv").objectStore("kv"), q = st.openCursor();
+      q.onsuccess = () => { const c = q.result; if (!c) return res(out); out[c.key] = c.value; c.continue(); };
+      q.onerror = () => rej(q.error);
+    });
+  }
+
   /* ================= Estado ================= */
-  let rootDir = null, outDir = null;
+  let rootDir = null, outDir = null, signDir = null;
+  let firmados = [];          // nombres de archivos en la carpeta de firmados (minúsculas)
   // Apartados: cada uno con sus carpetas, formato de nombre, fechas, marcas y "Para editar"
   const PROFS = { diabetes: "🩸 Diabetes", hsextras: "⏱ Hs extras" };
   let prof = "diabetes";
@@ -697,14 +720,16 @@
   async function pickDir(which) {
     if (!HAS_FS) return;
     try {
-      const h = await window.showDirectoryPicker({ id: (which === "root" ? "socios" : "listos") + (prof === "diabetes" ? "" : "-" + prof), mode: "readwrite" });
+      const h = await window.showDirectoryPicker({ id: (which === "root" ? "socios" : which === "sign" ? "firmados" : "listos") + (prof === "diabetes" ? "" : "-" + prof), mode: which === "sign" ? "read" : "readwrite" });
       if (which === "root") { rootDir = h; await kvSet(pk("rootDir"), h); }
+      else if (which === "sign") { signDir = h; await kvSet(pk("signDir"), h); }
       else { outDir = h; await kvSet(pk("outDir"), h); }
       await refreshAll();
     } catch (e) { if (e.name !== "AbortError") alertMsg("No pude abrir la carpeta: " + e.message); }
   }
   $("pickRoot").onclick = $("setupRoot").onclick = () => pickDir("root");
   $("pickOut").onclick = $("setupOut").onclick = () => pickDir("out");
+  $("pickSign").onclick = () => pickDir("sign");
 
   async function hasPerm(h, ask) {
     if (!h) return false;
@@ -714,7 +739,7 @@
     return false;
   }
   $("reconnect").onclick = async () => {
-    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); } catch (e) {}
+    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); if (signDir) await signDir.requestPermission({ mode: "read" }); } catch (e) {}
     await refreshAll();
   };
 
@@ -756,6 +781,7 @@
     }
     renderTandas();
     await refreshListos(okOut);
+    await refreshFirmados();
     renderSocios();
     const ready = okRoot && okOut;
     $("setup").hidden = ready || !!current;
@@ -787,6 +813,32 @@
     $("work").hidden = true; $("footer").hidden = true;
     await refreshAll(); renderEdits();
   });
+  // Firmados: se mira la carpeta (y una subcarpeta adentro) buscando el DNI o el CUIL en el nombre del archivo
+  async function refreshFirmados() {
+    firmados = [];
+    $("signName").textContent = signDir ? signDir.name : "—";
+    if (!signDir) return;
+    try {
+      if ((await signDir.queryPermission({ mode: "read" })) !== "granted") { $("reconnect").hidden = false; return; }
+      const walk = async (dir, depth) => {
+        for await (const [name, h] of dir.entries()) {
+          if (h.kind === "file" && /\.pdf$/i.test(name)) firmados.push(name.toLowerCase());
+          else if (h.kind === "directory" && depth < 1) await walk(h, depth + 1);
+        }
+      };
+      await walk(signDir, 0);
+    } catch (e) { console.warn(e); }
+  }
+  function isFirmado(s) {
+    if (!firmados.length) return false;
+    const ids = [s.dni, cuilOf(s)].filter(Boolean);
+    return firmados.some(n => (n.match(/\d+/g) || []).some(t => ids.includes(t) || ids.includes(String(+t))));
+  }
+  // Al volver a la ventana se releen las carpetas (por si la autofirma ya devolvió PDFs)
+  window.addEventListener("focus", async () => {
+    if (!rootDir) return;
+    await refreshListos(); await refreshFirmados(); renderSocios();
+  });
   async function refreshListos(ok) {
     listos = new Set(); listosMap = new Map();
     if (ok === undefined) ok = outDir && await hasPerm(outDir, false);
@@ -806,16 +858,17 @@
     try { return isListoWith(s); } finally { tpl = o; }
   }
   function statusOf(s) {
+    if (isFirmado(s)) return "firmado";
     if (isListo(s) || noteOf(s).fp) return "listo";   // con fecha de planilla cargada, cuenta como listo
     if (flags[flagKey(s)] === "noapto") return "noapto";
     return "pend";
   }
-  const CHIP = { pend: "Pendiente", listo: "✓ Listo", noapto: "⚠ No apto" };
+  const CHIP = { pend: "Pendiente", listo: "✓ Listo", noapto: "⚠ No apto", firmado: "✍ Firmado" };
 
   function renderSocios() {
     const q = $("search").value.trim().toLowerCase();
     const box = $("socios"); box.innerHTML = "";
-    const c = { pend: 0, listo: 0, noapto: 0 };
+    const c = { pend: 0, listo: 0, noapto: 0, firmado: 0 };
     for (const s of socios) {
       const st = statusOf(s); c[st]++;
       if (filter !== "all" && st !== filter) continue;
@@ -833,7 +886,7 @@
       box.appendChild(row);
     }
     if (typeof renderMetrics === "function") setTimeout(renderMetrics, 0);
-    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos · ${c.listo} listos` : "";
+    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos · ${c.listo} listos${c.firmado ? ` · ${c.firmado} firmados` : ""}` : "";
     if (current) updateSocioHead();
   }
   $("search").addEventListener("input", renderSocios);
@@ -1572,6 +1625,7 @@
     renderSocios();
     if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
     say(`✓ Guardado en "${outDir.name}": ${saved.join(", ")}`, "ok");
+    if (settings.autoNext) setTimeout(goNextAuto, 250);
     return true;
   }
   function downloadAll(pdfs, base, say) {
@@ -2298,6 +2352,7 @@
     setNote("fp", iso); $("fechaPlanilla").value = iso; $("fechaPlanilla").classList.remove("missing");
     learnFromManual(iso);
     qClose(); toast(`📅 Fecha planilla: ${fmtFecha(iso)}`);
+    if (settings.autoNextQ) setTimeout(goNextAuto, 400);
   };
   $("qCancel").onclick = qClose;
   $("qdlg").addEventListener("pointerdown", e => { if (e.target === $("qdlg")) qClose(); });
@@ -2374,7 +2429,7 @@
     const hoyG = savesIn(today, today).length, hoyE = editsIn(today, today);
     const pendEd = myEdits().reduce((a, e) => a + e.pages.length, 0);
     // Tanda actual
-    const tot = socios.length, lis = socios.filter(s => statusOf(s) === "listo").length, noap = socios.filter(s => statusOf(s) === "noapto").length;
+    const tot = socios.length, firm = socios.filter(s => statusOf(s) === "firmado").length, lis = socios.filter(s => statusOf(s) === "listo").length + firm, noap = socios.filter(s => statusOf(s) === "noapto").length;
     const tLabel = tandas.length ? (tandaSel === "__all" ? "Todas las fechas" : tandaSel) : (rootDir ? rootDir.name : "—");
     const tDone = tandas.filter(t => !t.loose && tandasDone[t.name]).length, tTot = tandas.filter(t => !t.loose).length;
     // Objetivo
@@ -2397,7 +2452,7 @@
       </div>
       <h4>📂 ${escapeHtml(tLabel)}</h4>
       <div class="mtbar"><i style="width:${tot ? Math.round(lis * 100 / tot) : 0}%"></i></div>
-      <p class="mtline">${lis} de ${tot} listos${noap ? ` · ${noap} no aptos` : ""} · faltan ${tot - lis}${tTot ? ` · fechas listas: ${tDone} de ${tTot}` : ""}</p>
+      <p class="mtline">${lis} de ${tot} listos${firm ? ` (${firm} ya firmados)` : ""}${noap ? ` · ${noap} no aptos` : ""} · faltan ${tot - lis}${tTot ? ` · fechas listas: ${tDone} de ${tTot}` : ""}</p>
       <h4>🎯 Objetivo</h4>
       <div class="mtgoal">
         <label>Total <input type="number" min="0" id="gTotal" value="${goal.total || ""}" placeholder="ej: 230"></label>
@@ -2511,7 +2566,35 @@
 
   /* ================= Lista de nombres (DNI -> Apellido, Nombre) ================= */
   // Cada renglón puede traer DNI, CUIL y Apellido, Nombre, en cualquier orden (columnas de Excel)
+  // Si lo pegado tiene encabezados (resultado del Bot Padrón, export de SURGE, Excel), se usan las columnas
+  function parseByHeader(txt) {
+    const lines = txt.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return null;
+    const sep = lines[0].includes("\t") ? "\t" : (lines[0].split(";").length > 2 ? ";" : null);
+    if (!sep) return null;
+    const nrm = h => h.replace(/"/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const head = lines[0].split(sep).map(nrm);
+    const find = (...opts) => { for (const o of opts) { const i = head.indexOf(o); if (i >= 0) return i; } return -1; };
+    const iC = find("cuil", "cuil beneficiario", "cuil afiliado");
+    const iN = find("apellido y nombre", "nombre beneficiario", "nombre y apellido", "apellido, nombre", "nombre");
+    const iD = find("numero de documento", "dni consultado", "dni", "nro documento", "documento");
+    if (iC < 0 && iN < 0) return null;
+    const names = {}, cuils = {};
+    for (const l of lines.slice(1)) {
+      const c = l.split(sep).map(x => x.replace(/"/g, "").trim());
+      const cuil = iC >= 0 ? (c[iC] || "").replace(/\D/g, "") : "";
+      let dni = iD >= 0 ? (c[iD] || "").replace(/\D/g, "") : "";
+      if (!dni && cuil.length === 11) dni = String(+cuil.slice(2, 10));
+      if (!dni) continue;
+      dni = String(+dni);
+      if (iN >= 0 && c[iN] && /[a-záéíóúñ]/i.test(c[iN])) names[dni] = c[iN].replace(/\s+/g, " ");
+      if (cuil.length === 11) cuils[dni] = cuil;
+    }
+    return { names, cuils };
+  }
   function parseNames(txt) {
+    const byHead = parseByHeader(txt);
+    if (byHead && (Object.keys(byHead.names).length || Object.keys(byHead.cuils).length)) return byHead;
     const names = {}, cuils = {};
     for (const raw of txt.split(/\r?\n/)) {
       let line = raw.replace(/"/g, " ").trim(); if (!line) continue;
@@ -2638,6 +2721,56 @@
     keymap[capturing] = c; capturing = null;
     kvSet("keymap", keymap); renderCfg(); applyKeyLabels();
   }, true);
+  /* Copia de seguridad: exportar / importar */
+  const isHandle = v => typeof FileSystemHandle !== "undefined" && v instanceof FileSystemHandle;
+  $("cfgExport").onclick = async () => {
+    try {
+      const all = await kvAll(), data = {}, carpetas = {};
+      for (const [k, v] of Object.entries(all)) {
+        if (isHandle(v)) carpetas[k] = v.name; else data[k] = v;
+      }
+      const payload = { app: "armador-pdf", version: 1, exportado: new Date().toISOString(), carpetas, data };
+      const d = new Date(), name = `armador-config-${isoDay(d)}.json`;
+      const json = JSON.stringify(payload, null, 1);
+      downloadBytes(new TextEncoder().encode(json), name, "application/json");
+      toast(`💾 Configuración exportada: ${name}. Guardala en un lugar seguro (tiene nombres y DNI).`);
+    } catch (e) { toast("No pude exportar: " + e.message); }
+  };
+  $("cfgImport").onclick = () => $("cfgFile").click();
+  $("cfgFile").addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try {
+      const p = JSON.parse(await f.text());
+      if (p.app !== "armador-pdf" || !p.data) throw new Error("no es un archivo de configuración del Armador");
+      if (!confirm(`Importar la configuración del ${new Date(p.exportado).toLocaleString("es-AR")}?\nReemplaza lo cargado en esta PC (las carpetas elegidas se mantienen).`)) return;
+      for (const [k, v] of Object.entries(p.data)) await kvSet(k, v);
+      const carp = Object.entries(p.carpetas || {}).map(([k, n]) => `${k}: ${n}`).join(" · ");
+      toast("📂 Configuración importada." + (carp ? " Carpetas que usabas: " + carp : ""));
+      keymap = { ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }; applyKeyLabels();
+      settings = { ...settings, ...((await kvGet("settings")) || {}) }; renderSettings(); renderCfg();
+      const sp = await kvGet("prof"); if (sp && PROFS[sp]) prof = sp;
+      await loadProfile();
+    } catch (err) { toast("No pude importar: " + err.message); }
+  });
+
+  /* Opciones generales */
+  let settings = { autoNext: true, autoNextQ: false, openFirst: true };
+  async function goNextAuto() {
+    const n = nextPending();
+    if (!n) { toast("🎉 No quedan pendientes en esta fecha."); return; }
+    if (pv.classList.contains("show")) closePreview();
+    modal.classList.remove("show");
+    await openSocio(n);
+    await renderQueue;
+    if (settings.openFirst && items.length) zoom(items.find(it => it.on) || items[0]);
+    toast(`▶ Siguiente: ${n.name}${personName(n) ? " · " + personName(n) : ""}`);
+  }
+  function renderSettings() {
+    for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) el.checked = !!settings[k]; }
+  }
+  for (const k of ["autoNext", "autoNextQ", "openFirst"]) {
+    $("set_" + k).addEventListener("change", () => { settings[k] = $("set_" + k).checked; kvSet("settings", settings); });
+  }
   $("cfgReset").onclick = () => { keymap = { ...KEY_DEFAULTS }; kvSet("keymap", keymap); renderCfg(); applyKeyLabels(); toast("Atajos restablecidos."); };
   function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); $("cfgPanel").classList.add("show"); }
   function closeCfg() { capturing = null; $("cfgPanel").classList.remove("show"); }
@@ -2733,7 +2866,8 @@
     $("mtProf").textContent = "· " + PROFS[prof];
     edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
     rootDir = outDir = null;
-    if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; }
+    signDir = null;
+    if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; signDir = (await kvGet(pk("signDir"))) || null; }
     $("search").value = "";
     updateTplPreview();
     await refreshAll();
@@ -2754,6 +2888,7 @@
       $(k).addEventListener("change", () => kvSet("opts", Object.fromEntries(OPTS.map(x => [x, $(x).value]))));
     });
     const sp = await kvGet("prof"); if (sp && PROFS[sp]) prof = sp;
+    settings = { ...settings, ...((await kvGet("settings")) || {}) }; renderSettings();
     keymap = { ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }; applyKeyLabels();
     await loadProfile();
   })();
