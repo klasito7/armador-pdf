@@ -68,13 +68,15 @@
   .edbtns button{font-size:12.5px;padding:4px 8px}
   #edBtn{position:fixed;right:16px;z-index:46;border-radius:999px;padding:8px 14px;font-weight:600;background:var(--warn);color:#fff;border-color:var(--warn);box-shadow:0 4px 14px rgba(0,0,0,.25)}
   #edBtn kbd{opacity:.9}
-  #kbar{position:fixed;right:16px;bottom:70px;z-index:45;background:color-mix(in srgb,var(--ink) 88%,transparent);color:var(--panel);border-radius:12px;padding:8px 10px 8px 12px;font-size:12.5px;display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;max-width:min(760px,calc(100vw - 32px));box-shadow:0 6px 24px rgba(0,0,0,.25);backdrop-filter:blur(6px)}
+  /* Barra de atajos incrustada abajo de cada apartado */
+  #kbar{display:flex;align-items:center;gap:4px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);padding:7px 14px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--ink) 4%,var(--panel));flex-shrink:0}
+  #kbar[hidden]{display:none}
   #kbar .k{white-space:nowrap}
-  #kbar kbd{opacity:1;border-color:color-mix(in srgb,var(--panel) 60%,transparent);margin:0 3px 0 0}
-  #kbar .x{background:none;border:none;color:inherit;opacity:.7;padding:0 2px;font-size:14px;margin-left:auto}
-  #kbar .x:hover{opacity:1}
-  #kbarBtn{position:fixed;right:16px;bottom:70px;z-index:45;border-radius:999px;padding:6px 10px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
-  .overlay.show ~ #kbar, .modal.show ~ #kbar{bottom:16px}
+  #kbar .ttl{font-weight:700;color:var(--ink);margin-right:2px}
+  #kbar kbd{opacity:1;color:var(--ink);margin:0 3px 0 0}
+  footer #kbar{margin:8px -16px -10px;border-radius:0}
+  .modal .box #kbar{margin:8px -10px -10px;border-radius:0 0 10px 10px}
+  #edPanel #kbar{margin-top:auto}
   kbd{font:600 10.5px/1 ui-monospace,Consolas,monospace;border:1px solid currentColor;border-radius:4px;padding:2px 4px;opacity:.6;margin-left:3px;vertical-align:1px}
 
   /* Barra superior */
@@ -104,7 +106,7 @@
   .chip.listo{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
   .chip.noapto{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
 
-  main{flex:1;overflow:auto;padding:14px 20px 110px;min-width:0}
+  main{flex:1;overflow:auto;padding:14px 20px 150px;min-width:0}
   .setup{max-width:680px;margin:30px auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
   .setup h2{margin:0 0 8px;font-size:19px}
   .setup p{color:var(--muted);line-height:1.5;margin:6px 0 14px}
@@ -412,7 +414,6 @@
 </div>
 <button id="edBtn" hidden title="Mandar esta planilla a Para editar (E)">📝 Para editar <kbd>E</kbd></button>
 <div id="kbar" hidden></div>
-<button id="kbarBtn" title="Mostrar atajos" hidden>⌨ Atajos</button>
 
 <script>
 (() => {
@@ -1953,46 +1954,45 @@
     else if (k === "p") { e.preventDefault(); $("preview").click(); }
   });
 
-  /* Barrita flotante de atajos (cambia según la pantalla) */
+  /* Barra de atajos incrustada: se mueve al apartado en el que estás y cambia su contenido */
   const KB = {
-    lista: [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["F", "leer fecha"], ["E", "para editar"], ["P", "vista previa"], ["Ctrl+S", "guardar"]],
-    visor: [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["F", "leer fecha"], ["E", "para editar"], ["Esc", "cerrar"]],
-    previa: [["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Esc", "volver"]]
+    lista: ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["F", "leer fecha"], ["E", "para editar"], ["P", "vista previa"], ["Ctrl+S", "guardar"]]],
+    visor: ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["F", "leer fecha"], ["E", "para editar"], ["Clic afuera", "cerrar"], ["Esc", "cerrar"]]],
+    previa: ["Vista previa", [["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Clic afuera", "volver"], ["Esc", "volver"]]],
+    panel: ["Para editar", [["Enter", "guardar nota"], ["✕", "descartar"], ["Esc", "cerrar"]]]
   };
-  let kbHidden = false, kbMode = "";
+  let kbMode = "";
   function kbUpdate() {
-    let mode = "";
-    if (modal.classList.contains("show")) mode = "visor";
-    else if (pv.classList.contains("show")) mode = "previa";
-    else if (!$("work").hidden && !$("ppOv").classList.contains("show")) mode = "lista";
-    const hb = !mode || kbHidden, hbb = !mode || !kbHidden;   // solo tocar si cambia (evita bucles del observer)
-    if ($("kbar").hidden !== hb) $("kbar").hidden = hb;
-    if ($("kbarBtn").hidden !== hbb) $("kbarBtn").hidden = hbb;
+    let mode = "", host = null;
+    if ($("ppOv").classList.contains("show")) mode = "";
+    else if (modal.classList.contains("show")) { mode = "visor"; host = modal.querySelector(".box"); }
+    else if (pv.classList.contains("show")) { mode = "previa"; host = pv; }
+    else if ($("edPanel").classList.contains("show")) { mode = "panel"; host = $("edPanel"); }
+    else if (!$("work").hidden) { mode = "lista"; host = $("footer"); }
+    const kb = $("kbar");
+    if (kb.hidden !== !mode) kb.hidden = !mode;
+    if (host && kb.parentNode !== host) host.appendChild(kb);
     if (mode && mode !== kbMode) {
-      $("kbar").innerHTML = KB[mode].map(([k, t]) => `<span class="k">${k.split("+").map(x => `<kbd>${x}</kbd>`).join("+")}${t}</span>`).join("") + '<button class="x" title="Ocultar atajos">✕</button>';
-      $("kbar").querySelector(".x").onclick = () => { kbHidden = true; kvSet("kbHidden", true); kbUpdate(); };
+      const [title, keys] = KB[mode];
+      kb.innerHTML = `<span class="ttl">⌨ ${title}:</span>` + keys.map(([k, t]) => `<span class="k">${k.split("+").map(x => `<kbd>${x}</kbd>`).join("+")}${t}</span>`).join("");
     }
     kbMode = mode;
-    // con el pie de página visible, la barra va arriba de él
-    const up = mode === "lista" ? ($("footer").offsetHeight + 12) + "px" : "16px";
-    if ($("kbar").style.bottom !== up) $("kbar").style.bottom = $("kbarBtn").style.bottom = up;
-    // botón flotante "Para editar", encima de la barrita de atajos
+    // Botón flotante "Para editar": justo arriba de la barra de atajos
     const eb = $("edBtn"), showEb = mode === "lista" || mode === "visor";
     if (eb.hidden !== !showEb) eb.hidden = !showEb;
     if (showEb) {
-      const ref = !$("kbar").hidden ? $("kbar") : $("kbarBtn");
-      const b = (parseInt(up) + (ref.offsetHeight || 34) + 8) + "px";
+      const top = (mode === "lista" ? $("footer") : kb).getBoundingClientRect().top;
+      const b = Math.max(16, Math.round(window.innerHeight - top + 10)) + "px";
       if (eb.style.bottom !== b) eb.style.bottom = b;
     }
   }
-  $("kbarBtn").onclick = () => { kbHidden = false; kvSet("kbHidden", false); kbUpdate(); };
-  const kbWatch = ["modal", "pv", "ppOv", "work", "footer"].map(id => $(id));
+  const kbWatch = ["modal", "pv", "ppOv", "work", "footer", "edPanel"].map(id => $(id));
   const kbObs = new MutationObserver(kbUpdate);
   kbWatch.forEach(el => kbObs.observe(el, { attributes: true, attributeFilter: ["class", "hidden"] }));
   window.addEventListener("resize", kbUpdate);
 
   (async function init() {
-    kbHidden = !!(await kvGet("kbHidden")); kbUpdate();
+    kbUpdate();
     tpl = (await kvGet("tpl")) || tpl; $("tpl").value = tpl;
     const OPTS = ["pageSize", "quality", "pdfMode", "colorMode"];
     const saved = (await kvGet("opts")) || {};
