@@ -63,6 +63,31 @@
   .edthumbs{display:flex;gap:3px;align-items:center;flex-shrink:0}
   .edthumbs img{width:48px;height:64px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px}
   .edthumbs span{font-size:12px;color:var(--muted)}
+  #mtPanel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
+  #mtPanel.show{transform:none}
+  #mtBody{overflow:auto;padding:12px 16px 24px;font-size:13.5px}
+  #mtBody h4{margin:16px 0 6px;font-size:13.5px}
+  .mtgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mt{background:color-mix(in srgb,var(--accent) 9%,var(--panel));border-radius:10px;padding:10px;text-align:center}
+  .mt b{display:block;font-size:24px;line-height:1.1;color:var(--accent)}
+  .mt span{font-size:11.5px;color:var(--muted)}
+  .mtbar{height:8px;border-radius:99px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden;position:relative}
+  .mtbar i{display:block;height:100%;background:var(--ok);border-radius:99px}
+  .mtbar.big{height:16px}
+  .mtbar em{position:absolute;right:6px;top:0;font-size:11px;line-height:16px;font-style:normal;font-weight:700}
+  .mtline{margin:6px 0 0;color:var(--ink);line-height:1.45}
+  .mtline.muted{color:var(--muted)}
+  .mtgoal{display:flex;gap:6px;flex-wrap:wrap}
+  .mtgoal label{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:2px}
+  .mtgoal input{font:inherit;font-size:13px;padding:4px 6px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);width:118px}
+  .mtgoal input[type=number]{width:80px}
+  .mtchart{display:flex;gap:4px;align-items:flex-end;height:90px;padding-top:14px}
+  .mtchart div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative}
+  .mtchart i{display:block;width:70%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
+  .mtchart span{position:absolute;top:-2px;font-size:10.5px;font-weight:700}
+  .mtchart small{font-size:9.5px;color:var(--muted);margin-top:3px}
+  #tandaDone{padding:5px 9px;font-size:12.5px}
+  #tandaDone.on{background:var(--ok);color:#fff;border-color:var(--ok)}
   #edPanel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
   #edPanel.show{transform:none}
   .edhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -110,7 +135,7 @@
   aside .head input{width:100%}
   .tandarow{display:flex;align-items:center;gap:6px;font-size:13px}
   .tandarow[hidden]{display:none}
-  #tandaSel{flex:1;font-weight:600}
+  #tandaSel{flex:1;min-width:0;font-weight:600}
   .filters{display:flex;gap:4px;flex-wrap:wrap}
   .filters button{font-size:12px;padding:3px 8px;border-radius:999px}
   .filters button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
@@ -241,6 +266,7 @@
     <span>📁 Socios: <b id="rootName">—</b></span><button id="pickRoot">Elegir</button>
     <span style="margin-left:8px">✅ Listos: <b id="outName">—</b></span><button id="pickOut">Elegir</button>
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
+    <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
     <button id="edOpen" title="Planillas que mandaste a editar">📝 Para editar <span class="badge" id="edCount" hidden>0</span></button>
   </div>
   <div class="folder">
@@ -253,7 +279,8 @@
 <div class="layout">
   <aside id="aside">
     <div class="head">
-      <label class="tandarow" id="tandaRow" hidden>📂 <select id="tandaSel" title="Carpeta de fecha (tanda) que estás trabajando"></select></label>
+      <label class="tandarow" id="tandaRow" hidden>📂 <select id="tandaSel" title="Carpeta de fecha (tanda) que estás trabajando"></select>
+        <button id="tandaDone" type="button" title="Marcar esta fecha como terminada">✓ Lista</button></label>
       <input type="text" id="search" placeholder="🔍 Buscar DNI o nombre…">
       <div class="filters" id="filters">
         <button data-f="all" class="on">Todos</button>
@@ -475,6 +502,10 @@
     <button id="edCancel">Cancelar</button>
   </div>
 </div></div>
+<div id="mtPanel" class="sidepanel">
+  <div class="edhead"><h3>📊 Métricas <span class="label" id="mtProf"></span></h3><button id="mtClose">✕</button></div>
+  <div id="mtBody"></div>
+</div>
 <div id="edPanel">
   <div class="edhead"><h3>📝 Para editar</h3><button id="edPanelClose">✕</button></div>
   <p class="edhint">Planillas que marcaste para corregir en esta tanda. Al usar la versión editada de Photopea se quitan solas.</p>
@@ -687,8 +718,13 @@
     const row = $("tandaRow"), sel = $("tandaSel");
     row.hidden = !tandas.length;
     if (!tandas.length) return;
-    sel.innerHTML = tandas.map(t => `<option value="${t.name.replace(/"/g, "&quot;")}">${t.name}</option>`).join("") + `<option value="__all">Todas las fechas</option>`;
+    sel.innerHTML = tandas.map(t => `<option value="${t.name.replace(/"/g, "&quot;")}">${tandasDone[t.name] ? "✅ " : ""}${t.name}</option>`).join("") + `<option value="__all">Todas las fechas</option>`;
     sel.value = tandaSel;
+    const b = $("tandaDone"), single = tandaSel && tandaSel !== "__all" && !(tandas.find(t => t.name === tandaSel) || {}).loose;
+    b.hidden = !single;
+    b.classList.toggle("on", !!tandasDone[tandaSel]);
+    b.textContent = tandasDone[tandaSel] ? "✅ Lista" : "✓ Marcar lista";
+    b.title = tandasDone[tandaSel] ? "Fecha terminada. Tocá para volverla a pendiente" : "Marcar esta fecha como terminada";
   }
   $("tandaSel").addEventListener("change", async () => {
     tandaSel = $("tandaSel").value; await kvSet(pk("tanda"), tandaSel);
@@ -733,6 +769,7 @@
       row.onclick = () => openSocio(s);
       box.appendChild(row);
     }
+    if (typeof renderMetrics === "function") setTimeout(renderMetrics, 0);
     $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos · ${c.listo} listos` : "";
     if (current) updateSocioHead();
   }
@@ -793,7 +830,7 @@
     await kvSet(pk("notes"), notes);
     renderSocios();
   }
-  $("fechaPlanilla").addEventListener("change", () => setNote("fp", $("fechaPlanilla").value));
+  $("fechaPlanilla").addEventListener("change", () => { setNote("fp", $("fechaPlanilla").value); if (typeof learnFromManual === "function") learnFromManual($("fechaPlanilla").value); });
   $("fname").addEventListener("input", () => { $("fname").dataset.manual = "1"; });
   $("obs").addEventListener("change", () => setNote("obs", $("obs").value.trim()));
   $("obs").addEventListener("keydown", e => { if (e.key === "Enter") $("obs").blur(); });
@@ -1344,6 +1381,7 @@
       drawImgThumb(it); render();
       modal.classList.remove("show");
       setStatus(`✓ Página ${label}.`, "ok");
+      logEdit(1, label);
     } catch (e) { console.error(e); setStatus("No pude aplicar el cambio: " + e.message, "err"); }
     btn.disabled = false;
   };
@@ -1717,6 +1755,7 @@
       render();
       await ppCloseAll();
       $("ppOv").classList.remove("show");
+      logEdit(done.length, "photopea");
       setStatus(`✓ ${done.length} hoja(s) reemplazada(s) por la versión editada.` + (folders.size ? ` Copia guardada en ${[...folders].join(", ")}.` : ""), "ok");
       if (current) await removeEditedPages(current.name, done);
       ppItems = [];
@@ -1733,6 +1772,7 @@
     if (!$("nmlg").hidden) { $("nmlg").hidden = true; return; }
     if (!$("daylg").hidden) { $("daylg").hidden = true; return; }
     if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
+    if ($("mtPanel").classList.contains("show")) { closeMetrics(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
     else if (pv.classList.contains("show")) closePreview();
@@ -1821,14 +1861,21 @@
     return null;
   }
 
-  async function getZones() { return (await kvGet(pk("dateZones"))) || []; }
-  async function rememberZone(z) {
-    const zones = (await getZones()).filter(o => {
-      const ix = Math.max(0, Math.min(o.x + o.w, z.x + z.w) - Math.max(o.x, z.x)), iy = Math.max(0, Math.min(o.y + o.h, z.y + z.h) - Math.max(o.y, z.y));
-      return ix * iy < 0.5 * Math.min(o.w * o.h, z.w * z.h);
-    });
-    zones.unshift(z); await kvSet(pk("dateZones"), zones.slice(0, 6));
+  // Zonas aprendidas: cada una con un puntaje. Sube cuando acierta o cuando la marcás vos; baja cuando la corregís.
+  async function getZones() { return ((await kvGet(pk("dateZones"))) || []).map(z => ({ score: 0, ...z })).sort((a, b) => b.score - a.score); }
+  const overlaps = (o, z) => {
+    const ix = Math.max(0, Math.min(o.x + o.w, z.x + z.w) - Math.max(o.x, z.x)), iy = Math.max(0, Math.min(o.y + o.h, z.y + z.h) - Math.max(o.y, z.y));
+    return ix * iy >= 0.5 * Math.min(o.w * o.h, z.w * z.h);
+  };
+  async function rememberZone(z, delta = 1) {
+    const zones = await getZones();
+    const prev = zones.find(o => overlaps(o, z));
+    const score = (prev ? prev.score : 0) + delta;
+    const rest = zones.filter(o => o !== prev);
+    rest.unshift({ x: z.x, y: z.y, w: z.w, h: z.h, score });
+    await kvSet(pk("dateZones"), rest.filter(o => o.score > -3).sort((a, b) => b.score - a.score).slice(0, 8));
   }
+  let lastAuto = null;   // {iso, zone} de la última lectura automática, para aprender si la corregís
 
   // Busca la palabra impresa "Fecha" y arma recortes al costado / abajo / arriba
   async function labelCrops(page) {
@@ -1861,17 +1908,18 @@
 
   async function readDate(it) {
     if (!it) { toast("Pasá el mouse por la planilla (o abrila en grande) y apretá F."); return; }
+    lastAuto = null;
     toast("📅 Leyendo la fecha…", { sticky: true });
     let page, lastRaw = "", lastCrop = null;
     try {
       page = await pageToCanvas(it, 2200);
       // 1) Zonas que ya marcaste antes
-      for (const z of (await getZones()).slice(0, 3)) {
+      for (const z of (await getZones()).filter(z => z.score > -2).slice(0, 3)) {
         const c = cropFor(page, z.x * page.width, z.y * page.height, z.w * page.width, z.h * page.height);
         if (!c) continue;
         const raw = await readHandwriting(c), iso = parseDate(raw);
         lastRaw = raw || lastRaw; lastCrop = lastCrop || c;
-        if (iso) return applyDate(iso, it, raw);
+        if (iso) { await rememberZone(z, 1); return applyDate(iso, it, raw, z); }
       }
       // La fecha va siempre abajo a la derecha: se trabaja solo con esa zona
       const br = document.createElement("canvas");
@@ -1888,7 +1936,7 @@
           if (!c) continue;
           const raw = await readHandwriting(c), iso = parseDate(raw);
           if (raw) { lastRaw = raw; lastCrop = c; }
-          if (iso) { await rememberZone({ x: (bx + Math.max(0, k.x)) / page.width, y: (by + Math.max(0, k.y)) / page.height, w: Math.min(k.w, br.width - k.x) / page.width, h: k.h / page.height }); return applyDate(iso, it, raw); }
+          if (iso) { const z = { x: (bx + Math.max(0, k.x)) / page.width, y: (by + Math.max(0, k.y)) / page.height, w: Math.min(k.w, br.width - k.x) / page.width, h: k.h / page.height }; await rememberZone(z, 1); return applyDate(iso, it, raw, z); }
         }
       } catch (e) { console.warn("Sin Tesseract, sigo con franjas", e); }
       // 3) Franjas horizontales de esa zona, de abajo hacia arriba
@@ -1897,7 +1945,7 @@
         if (!c) continue;
         const raw = await readHandwriting(c), iso = parseDate(raw);
         if (raw && !lastRaw) { lastRaw = raw; lastCrop = c; }
-        if (iso) { await rememberZone({ x: bx / page.width, y: (by + br.height * f) / page.height, w: br.width / page.width, h: br.height * 0.18 / page.height }); return applyDate(iso, it, raw); }
+        if (iso) { const z = { x: bx / page.width, y: (by + br.height * f) / page.height, w: br.width / page.width, h: br.height * 0.18 / page.height }; await rememberZone(z, 1); return applyDate(iso, it, raw, z); }
       }
       if (lineDates.length) return applyDate(lineDates[0].iso, it, lineDates[0].raw);
     } catch (e) {
@@ -1909,10 +1957,11 @@
     fdOpen({ it, crop: lastCrop, msg: lastRaw ? `No pude entender la fecha. Leí: "${lastRaw}".` : "No encontré la fecha en esta hoja." });
   }
 
-  function applyDate(iso, it, raw) {
+  function applyDate(iso, it, raw, zone) {
+    lastAuto = { iso, zone: zone || null, socio: current ? sidOf(current) : "" };
     if (current) { setNote("fp", iso); $("fechaPlanilla").value = iso; $("fechaPlanilla").classList.remove("missing"); }
     toast(`📅 Fecha planilla: ${fmtFecha(iso)}` + (current ? "" : " (abrí un socio para guardarla)"), {
-      actions: [{ label: "Corregir", fn: () => fdOpen({ it, iso, msg: raw ? `Leí: "${raw}"` : "" }) }]
+      actions: [{ label: "Corregir", fn: () => fdOpen({ it, iso, msg: raw ? `Leí: "${raw}". Si la corregís, aprendo que esa zona no sirve tanto.` : "" }) }]
     });
   }
 
@@ -1928,12 +1977,18 @@
     setTimeout(() => $("fdDate").focus(), 30);
   }
   function fdClose() { $("fdlg").hidden = true; fdCtx = null; }
+  // Si la lectura automática se corrigió a mano, esa zona pierde puntos (y se prueba última o se descarta)
+  async function learnFromManual(v) {
+    if (!lastAuto || !current || lastAuto.socio !== sidOf(current)) return;
+    if (lastAuto.zone && v !== lastAuto.iso) await rememberZone(lastAuto.zone, -2);
+    lastAuto = null;
+  }
   $("fdCancel").onclick = fdClose;
   $("fdlg").addEventListener("pointerdown", e => { if (e.target === $("fdlg")) fdClose(); });
   $("fdOk").onclick = () => {
     const v = $("fdDate").value;
     if (!v) { $("fdDate").focus(); return; }
-    if (current) { setNote("fp", v); $("fechaPlanilla").value = v; $("fechaPlanilla").classList.remove("missing"); toast(`📅 Fecha planilla: ${fmtFecha(v)}`); }
+    if (current) { setNote("fp", v); $("fechaPlanilla").value = v; $("fechaPlanilla").classList.remove("missing"); toast(`📅 Fecha planilla: ${fmtFecha(v)}`); learnFromManual(v); }
     else toast("Abrí un socio para guardar la fecha.");
     fdClose();
   };
@@ -1951,12 +2006,13 @@
   // Al terminar de marcar el recuadro en modo "fecha"
   async function onFechaZone() {
     const it = zItem, rect = zRect;
+    lastAuto = null;
     zPurpose = null; setCropMode(false); zRect = null; zShowSel();
     toast("📅 Leyendo la zona marcada…", { sticky: true });
     try {
       const page = straighten(await pageToCanvas(it, 2200), zAng);
       const c = cropFor(page, rect.x * page.width, rect.y * page.height, rect.w * page.width, rect.h * page.height);
-      await rememberZone(rect);
+      await rememberZone(rect, 3);
       const raw = c ? await readHandwriting(c) : "", iso = parseDate(raw);
       hideToast();
       fdOpen({ it, iso: iso || "", crop: c, msg: iso ? `Leí: "${raw}". Confirmá con Enter. Ya me acuerdo de esta zona para las próximas planillas.` : `No pude entenderla${raw ? ` (leí "${raw}")` : ""}. Escribila a mano; igual me acuerdo de la zona para la próxima.` });
@@ -2126,6 +2182,100 @@
     e.preventDefault();
     edAsk(edTargetItems());
   });
+
+  /* ================= Fechas (tandas) marcadas como listas ================= */
+  let tandasDone = {};   // nombre de tanda -> timestamp
+  async function toggleTandaDone() {
+    if (!tandaSel || tandaSel === "__all") return;
+    if (tandasDone[tandaSel]) delete tandasDone[tandaSel]; else tandasDone[tandaSel] = Date.now();
+    await kvSet(pk("tandasDone"), tandasDone);
+    renderTandas(); renderMetrics();
+    toast(tandasDone[tandaSel] ? `✅ Fecha ${tandaSel} marcada como lista` : `↩ Fecha ${tandaSel} vuelve a pendiente`);
+  }
+  $("tandaDone").onclick = toggleTandaDone;
+
+  /* ================= Registro de ediciones (para métricas) ================= */
+  let editLog = [];   // {ts, root, socio, n, kind}
+  function logEdit(n, kind) {
+    if (!current || !n) return;
+    editLog.push({ ts: Date.now(), root: scopeOf(current), socio: current.name, n, kind });
+    const cut = Date.now() - 1000 * 60 * 60 * 24 * 120;
+    editLog = editLog.filter(r => r.ts > cut);
+    kvSet(pk("editlog"), editLog);
+  }
+
+  /* ================= Métricas ================= */
+  let goal = { total: 0, desde: "", hasta: "" };
+  const parseIso = iso => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
+  function workdaysBetween(a, b) {   // días hábiles (lun a vie) entre a y b, ambos incluidos
+    let n = 0; const d = new Date(a); d.setHours(0, 0, 0, 0); const end = new Date(b); end.setHours(0, 0, 0, 0);
+    while (d <= end) { const w = d.getDay(); if (w !== 0 && w !== 6) n++; d.setDate(d.getDate() + 1); }
+    return n;
+  }
+  function defaultGoal() {
+    const d = new Date(), y = d.getFullYear(), m = d.getMonth();
+    return { total: 0, desde: isoDay(new Date(y, m, 1)), hasta: isoDay(new Date(y, m + 1, 0)) };
+  }
+  // Un guardado cuenta una vez por socio y día (si lo guardaste en partes o lo re-guardaste, no suma doble)
+  function savesIn(from, to) {
+    const seen = new Set();
+    return dayLog.filter(r => { const d = isoDay(new Date(r.ts)); if (d < from || d > to) return false; const k = d + "|" + r.root + "|" + r.socio; if (seen.has(k)) return false; seen.add(k); return true; });
+  }
+  const editsIn = (from, to) => editLog.filter(r => { const d = isoDay(new Date(r.ts)); return d >= from && d <= to; }).reduce((a, r) => a + r.n, 0);
+
+  function renderMetrics() {
+    const box = $("mtBody"); if (!box || !$("mtPanel").classList.contains("show")) return;
+    const today = isoDay(new Date());
+    const hoyG = savesIn(today, today).length, hoyE = editsIn(today, today);
+    const pendEd = myEdits().reduce((a, e) => a + e.pages.length, 0);
+    // Tanda actual
+    const tot = socios.length, lis = socios.filter(s => statusOf(s) === "listo").length, noap = socios.filter(s => statusOf(s) === "noapto").length;
+    const tLabel = tandas.length ? (tandaSel === "__all" ? "Todas las fechas" : tandaSel) : (rootDir ? rootDir.name : "—");
+    const tDone = tandas.filter(t => !t.loose && tandasDone[t.name]).length, tTot = tandas.filter(t => !t.loose).length;
+    // Objetivo
+    const g = goal.desde ? goal : defaultGoal();
+    const hechos = savesIn(g.desde, g.hasta).length, edits = editsIn(g.desde, g.hasta);
+    const faltan = Math.max(0, (goal.total || 0) - hechos);
+    const desdeHoy = today > g.desde ? today : g.desde;
+    const diasRest = today > g.hasta ? 0 : workdaysBetween(parseIso(desdeHoy), parseIso(g.hasta));
+    const ritmo = diasRest ? Math.ceil((faltan + (today >= g.desde && today <= g.hasta ? hoyG : 0)) / diasRest) : faltan;
+    const pct = goal.total ? Math.min(100, Math.round(hechos * 100 / goal.total)) : 0;
+    // Últimos 10 días hábiles
+    const days = []; const d = new Date();
+    while (days.length < 10) { const w = d.getDay(); if (w !== 0 && w !== 6) days.unshift(isoDay(d)); d.setDate(d.getDate() - 1); }
+    const counts = days.map(x => savesIn(x, x).length), max = Math.max(1, ...counts);
+    box.innerHTML = `
+      <div class="mtgrid">
+        <div class="mt"><b>${hoyG}</b><span>guardados hoy</span></div>
+        <div class="mt"><b>${hoyE}</b><span>hojas editadas hoy</span></div>
+        <div class="mt"><b>${pendEd}</b><span>para editar</span></div>
+      </div>
+      <h4>📂 ${escapeHtml(tLabel)}</h4>
+      <div class="mtbar"><i style="width:${tot ? Math.round(lis * 100 / tot) : 0}%"></i></div>
+      <p class="mtline">${lis} de ${tot} listos${noap ? ` · ${noap} no aptos` : ""} · faltan ${tot - lis}${tTot ? ` · fechas listas: ${tDone} de ${tTot}` : ""}</p>
+      <h4>🎯 Objetivo</h4>
+      <div class="mtgoal">
+        <label>Total <input type="number" min="0" id="gTotal" value="${goal.total || ""}" placeholder="ej: 230"></label>
+        <label>Desde <input type="date" id="gDesde" value="${g.desde}"></label>
+        <label>Hasta <input type="date" id="gHasta" value="${g.hasta}"></label>
+      </div>
+      ${goal.total ? `<div class="mtbar big"><i style="width:${pct}%"></i><em>${pct}%</em></div>
+      <p class="mtline"><b>${hechos}</b> de <b>${goal.total}</b> hechos · ${edits} hojas editadas · faltan <b>${faltan}</b></p>
+      <p class="mtline">${diasRest ? `Quedan <b>${diasRest}</b> días hábiles → <b>${ritmo}</b> por día para llegar justo.` : (faltan ? "Ya pasó la fecha límite." : "")}
+      ${faltan === 0 ? " 🎉 Objetivo cumplido." : ""}${diasRest && hoyG >= ritmo && faltan ? " Hoy ya cubriste el ritmo del día." : ""}</p>` : `<p class="mtline muted">Poné el total para ver el avance y cuántos por día te tocan.</p>`}
+      <h4>📈 Últimos 10 días hábiles</h4>
+      <div class="mtchart">${days.map((x, i) => `<div title="${fmtFecha(x)}: ${counts[i]}"><i style="height:${Math.round(counts[i] * 100 / max)}%"></i><span>${counts[i] || ""}</span><small>${x.slice(8)}/${x.slice(5, 7)}</small></div>`).join("")}</div>`;
+    const save = async () => {
+      goal = { total: Math.max(0, parseInt($("gTotal").value) || 0), desde: $("gDesde").value || defaultGoal().desde, hasta: $("gHasta").value || defaultGoal().hasta };
+      await kvSet(pk("goal"), goal); renderMetrics();
+    };
+    ["gTotal", "gDesde", "gHasta"].forEach(id => $(id).addEventListener("change", save));
+  }
+  function escapeHtml(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function openMetrics() { closeEdPanel(); $("mtPanel").classList.add("show"); renderMetrics(); }
+  function closeMetrics() { $("mtPanel").classList.remove("show"); }
+  $("mtOpen").onclick = () => $("mtPanel").classList.contains("show") ? closeMetrics() : openMetrics();
+  $("mtClose").onclick = closeMetrics;
 
   /* ================= Cierre del día: registro de lo guardado ================= */
   let dayLog = [];   // {ts, root, socio, dni, file, fp, nombre, tipo, periodo, obs}
@@ -2325,7 +2475,7 @@
     document.title = `Armador de PDF · ${PROFS[prof].replace(/^\S+\s/, "")}`;
     [...$("profs").children].forEach(b => b.classList.toggle("on", b.dataset.p === prof));
     // Cerrar todo lo abierto del apartado anterior
-    modal.classList.remove("show"); closePreview(); closeEdPanel();
+    modal.classList.remove("show"); closePreview(); closeEdPanel(); closeMetrics();
     current = null; resetItems(); render();
     $("work").hidden = true; $("footer").hidden = true; $("pickHint").hidden = true;
     socios = []; listos = new Set(); listosMap = new Map();
@@ -2336,6 +2486,10 @@
     namesMap = (await kvGet(pk("names"))) || {};
     tandaSel = (await kvGet(pk("tanda"))) || "";
     dayLog = (await kvGet(pk("daylog"))) || []; updateDayCount();
+    editLog = (await kvGet(pk("editlog"))) || [];
+    goal = (await kvGet(pk("goal"))) || defaultGoal();
+    tandasDone = (await kvGet(pk("tandasDone"))) || {};
+    $("mtProf").textContent = "· " + PROFS[prof];
     edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
     rootDir = outDir = null;
     if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; }
