@@ -278,8 +278,10 @@
     <button id="edOpen" title="Planillas que mandaste a editar">📝 Para editar <span class="badge" id="edCount" hidden>0</span></button>
   </div>
   <div class="folder">
+    <span class="label">Guardar con:</span>
+    <select id="idSel" title="Qué número va al principio del nombre del archivo"><option value="dni">DNI</option><option value="cuil">CUIL</option></select>
     <span class="label">Nombre:</span>
-    <input type="text" id="tpl" title="Podés usar {dni}, {carpeta}, {tramite}, {fecha}, {nombre}, {tipo} y {periodo}">
+    <input type="text" id="tpl" title="Podés usar {dni}, {cuil}, {carpeta}, {tramite}, {fecha}, {nombre}, {tipo} y {periodo}">
     <span id="tplPreview"></span>
   </div>
 </div>
@@ -500,8 +502,8 @@
 </div></div>
 <div class="fdlg" id="nmlg" hidden><div class="fbox">
   <h3>👥 Lista de nombres</h3>
-  <p>Copiá de tu Excel las dos columnas <b>DNI</b> y <b>Apellido, Nombre</b> y pegalas acá (Ctrl+V). Cada carpeta busca su DNI y toma el nombre solo. Lo que pegues se suma a la lista que ya tenías.</p>
-  <textarea id="nmText" rows="9" placeholder="16749332&#9;GALEAZZI, SILVINA SANDRA&#10;17523969&#9;GARCIA SANCHEZ, MARINA NOEMI"></textarea>
+  <p>Copiá de tu Excel las columnas <b>DNI</b>, <b>CUIL</b> y <b>Apellido, Nombre</b> (en cualquier orden; el CUIL es opcional) y pegalas acá (Ctrl+V). Cada carpeta busca su DNI y toma nombre y CUIL solos. Lo que pegues se suma a la lista que ya tenías.</p>
+  <textarea id="nmText" rows="9" placeholder="16749332&#9;27167493324&#9;GALEAZZI, SILVINA SANDRA&#10;17523969&#9;27175239694&#9;GARCIA SANCHEZ, MARINA NOEMI"></textarea>
   <p id="nmInfo"></p>
   <div class="frow">
     <button class="primary" id="nmOk">Guardar</button>
@@ -584,7 +586,10 @@
     for await (const [name, h] of dir.entries()) { if (h.kind === "directory" && isSocioName(name)) return true; if (++k > 60) break; }
     return false;
   }
-  const usesNamesList = () => Object.keys(namesMap).length > 0;
+  const usesNamesList = () => Object.keys(namesMap).length > 0 || Object.keys(cuilMap).length > 0;
+  let cuilMap = {};           // DNI -> CUIL (11 números)
+  const cuilOf = s => (s && (cuilMap[s.dni] || "")) || "";
+  const fmtCuil = c => c && c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : (c || "");
   // Nombre "real" de la persona (lista pegada o cargado a mano); no usa el nombre de la carpeta
   function personName(s) { if (!s) return ""; const n = (s.name && typeof noteOf === "function") ? noteOf(s) : {}; return n.nombre || namesMap[s.dni] || ""; }
   const showNames = () => usesTok("nombre") || usesNamesList();
@@ -620,7 +625,7 @@
   // Campos que se completan por socio (Hs extras): {nombre} {tipo} {periodo}
   const FIELD_TOKENS = { nombre: "Nombre y apellido", tipo: "Tipo de documentación", periodo: "Período" };
   const usesTok = t => new RegExp("\\{" + t + "\\}", "i").test(tpl);
-  const VAR_RE = /\{(tramite|fecha|nombre|tipo|periodo)\}/i;
+  const VAR_RE = /\{(tramite|fecha|nombre|tipo|periodo|cuil)\}/i;
   // Nombre sugerido desde la carpeta: "30123456 PEREZ JUAN" -> "PEREZ JUAN"
   const nombreDeCarpeta = s => s.name.replace(/\d{7,9}/, "").replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
   function fieldVal(s, f) {
@@ -630,7 +635,7 @@
     return n[f] || "";
   }
   function fillTpl(s, tramite, fecha, wild) {
-    let out = tpl.replace(/\{dni\}/gi, s.dni).replace(/\{carpeta\}/gi, s.name)
+    let out = tpl.replace(/\{dni\}/gi, s.dni).replace(/\{cuil\}/gi, s.__sample ? "27167493324" : (cuilOf(s) || (wild ? "\u0002" : ""))).replace(/\{carpeta\}/gi, s.name)
       .replace(/\{tramite\}/gi, tramite).replace(/\{fecha\}/gi, fecha);
     for (const f of Object.keys(FIELD_TOKENS)) out = out.replace(new RegExp("\\{" + f + "\\}", "gi"), wild ? "\u0001" : fieldVal(s, f));
     return out;
@@ -641,18 +646,29 @@
     const t = tramiteOf(s);
     return cleanName(tidy(fillTpl(s, t ? t.nro : "", t ? t.iso : "")).replace(/[\s_-]+(\.pdf)?$/i, "$1"));
   }
-  function missingFields(s) { return Object.keys(FIELD_TOKENS).filter(f => usesTok(f) && !fieldVal(s, f)); }
+  function missingFields(s) { return Object.keys(FIELD_TOKENS).filter(f => usesTok(f) && !fieldVal(s, f)).concat(usesTok("cuil") && !cuilOf(s) ? ["cuil"] : []); }
   // Para el estado "listo" sin haber abierto la carpeta: los datos variables valen cualquier cosa
   function listoRegex(s) {
     const raw = cleanName(fillTpl(s, "\u0001", "\u0001", true)).toLowerCase();
     const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\u0001/g, ".*");
     return new RegExp("^" + esc + "$");
   }
-  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { __sample: { nombre: "Juan Pérez", tipo: "Planilla", periodo: "9-26" }, dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); updateFieldInputs(); updateNamesUi(); }
+  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { __sample: { nombre: "Juan Pérez", tipo: "Planilla", periodo: "9-26" }, dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); updateFieldInputs(); updateNamesUi(); syncIdSel(); }
   $("tpl").addEventListener("input", () => {
     tpl = $("tpl").value || "{dni}"; kvSet(pk("tpl"), tpl); updateTplPreview();
     if (current) $("fname").value = nameFor(current);
     renderSocios();
+  });
+  // Guardar con DNI o CUIL: cambia el primer {dni}/{cuil} del formato
+  function syncIdSel() { $("idSel").value = /\{cuil\}/i.test(tpl) ? "cuil" : "dni"; }
+  $("idSel").addEventListener("change", () => {
+    const to = $("idSel").value;
+    let t = tpl;
+    if (to === "cuil") t = /\{dni\}/i.test(t) ? t.replace(/\{dni\}/i, "{cuil}") : "{cuil} " + t;
+    else t = /\{cuil\}/i.test(t) ? t.replace(/\{cuil\}/i, "{dni}") : "{dni} " + t;
+    $("tpl").value = t; $("tpl").dispatchEvent(new Event("input"));
+    if (to === "cuil" && !Object.keys(cuilMap).length) toast("Para usar CUIL, pegá los CUIL en 👥 Lista de nombres (DNI, CUIL y nombre).");
+    if (current) { $("fname").dataset.manual = ""; updateSocioHead(); }
   });
   // Muestra solo los campos que usa el formato de nombre
   function updateFieldInputs() {
@@ -759,9 +775,17 @@
     if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
   }
 
-  function isListo(s) {
+  function isListoWith(s) {
     if (VAR_RE.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return true; return false; }
     return listos.has(nameFor(s).toLowerCase());
+  }
+  // Listo si está guardado con el formato actual o con el otro número (DNI <-> CUIL), por si cambiaste a mitad de tanda
+  function isListo(s) {
+    if (isListoWith(s)) return true;
+    const alt = /\{cuil\}/i.test(tpl) ? tpl.replace(/\{cuil\}/gi, "{dni}") : /\{dni\}/i.test(tpl) && cuilOf(s) ? tpl.replace(/\{dni\}/gi, "{cuil}") : null;
+    if (!alt) return false;
+    const o = tpl; tpl = alt;
+    try { return isListoWith(s); } finally { tpl = o; }
   }
   function statusOf(s) {
     if (isListo(s) || noteOf(s).fp) return "listo";   // con fecha de planilla cargada, cuenta como listo
@@ -895,12 +919,13 @@
   let COLS = BASE_COLS;
   async function buildRows() {
     const xf = Object.keys(FIELD_TOKENS).filter(f => usesTok(f) || (f === "nombre" && usesNamesList()));
-    COLS = ["DNI", ...xf.map(f => FIELD_TOKENS[f]), ...BASE_COLS.slice(1)];
+    const withCuil = Object.keys(cuilMap).length > 0 || usesTok("cuil");
+    COLS = ["DNI", ...(withCuil ? ["CUIL"] : []), ...xf.map(f => FIELD_TOKENS[f]), ...BASE_COLS.slice(1)];
     const rows = [];
     for (const s of socios) {
       const t = await tramiteInfo(s), nt = noteOf(s);
       const extra = xf.map(f => f === "nombre" ? (personName(s) || fieldVal(s, f)) : fieldVal(s, f));
-      rows.push([s.dni, ...extra, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.pages.map(p => p.label).join(", ")}: ${e.note || "(sin nota)"}`).join(" | ")]);
+      rows.push([s.dni, ...(withCuil ? [cuilOf(s)] : []), ...extra, s.name, t ? t.nro : "", t ? t.fecha : "", fmtFecha(nt.fp), CHIP[statusOf(s)].replace(/^[✓⚠]\s*/, ""), listosDe(s).join(" / "), nt.obs || "", editsOf(s).map(e => `${e.pages.map(p => p.label).join(", ")}: ${e.note || "(sin nota)"}`).join(" | ")]);
     }
     return rows;
   }
@@ -1512,7 +1537,11 @@
   async function saveAllToListos(pdfs, base, say) {
     if (!outDir) { say("Primero elegí la carpeta de listos (arriba).", "err"); return false; }
     const falta = current && !$("fname").dataset.manual ? missingFields(current) : [];
-    if (falta.length) { say("Completá antes de guardar: " + falta.map(f => FIELD_TOKENS[f]).join(", ") + ".", "err"); const el = $("f_" + falta[0]); el.focus(); el.classList.add("missing"); return false; }
+    if (falta.length) {
+      say("Completá antes de guardar: " + falta.map(f => f === "cuil" ? "CUIL (no está en la 👥 lista de nombres: pegalo ahí o cambiá a Guardar con DNI)" : FIELD_TOKENS[f]).join(", ") + ".", "err");
+      const el = $("f_" + falta.find(f => f !== "cuil")); if (el) { el.focus(); el.classList.add("missing"); }
+      return false;
+    }
     if (!(await hasPerm(outDir, true))) { say("Sin permiso para guardar en la carpeta de listos.", "err"); return false; }
     const names = partNames(base, pdfs.length), saved = [];
     for (let i = 0; i < pdfs.length; i++) {
@@ -2396,6 +2425,7 @@
   }
   function dayColumns() {
     const cols = [["DNI", r => r.dni]];
+    if (Object.keys(cuilMap).length || usesTok("cuil")) cols.push(["CUIL", r => cuilMap[r.dni] || ""]);
     if (showNames()) cols.push(["Nombre y apellido", r => r.nombre]);
     if (usesTok("tipo")) cols.push(["Tipo", r => r.tipo]);
     if (usesTok("periodo")) cols.push(["Período", r => r.periodo]);
@@ -2452,7 +2482,8 @@
   /* Cartel con DNI + Nombre del socio (para chequear a ojo que la doc sea suya y no de un pariente) */
   function updatePerson() {
     const nm = personName(current);
-    const txt = current ? (nm ? `${current.dni} · ${nm}` : `${current.dni} · (sin nombre en la lista)`) : "";
+    const cu = cuilOf(current);
+    const txt = current ? `${cu ? "CUIL " + fmtCuil(cu) : "DNI " + current.dni} · ${nm || "(sin nombre en la lista)"}` : "";
     for (const id of ["socioPerson", "zPerson", "pvPerson"]) {
       const el = $(id); el.hidden = !current || (!nm && !showNames());
       el.textContent = txt; el.title = txt; el.classList.toggle("nolist", !nm);
@@ -2460,41 +2491,52 @@
   }
 
   /* ================= Lista de nombres (DNI -> Apellido, Nombre) ================= */
+  // Cada renglón puede traer DNI, CUIL y Apellido, Nombre, en cualquier orden (columnas de Excel)
   function parseNames(txt) {
-    const out = {};
-    for (const line of txt.split(/\r?\n/)) {
-      const m = line.trim().match(/^"?([\d.\s]{7,12})"?\s*(?:\t|;|\s{2,}|\s-\s|,(?=\s*[A-ZÁÉÍÓÚÑ])|\s)\s*"?(.+?)"?\s*$/);
-      if (!m) continue;
-      const dni = m[1].replace(/\D/g, "");
-      const nom = m[2].replace(/\t+/g, " ").replace(/\s+/g, " ").trim();
-      if (dni.length >= 7 && dni.length <= 9 && nom && /[a-záéíóúñ]/i.test(nom)) out[dni] = nom;
+    const names = {}, cuils = {};
+    for (const raw of txt.split(/\r?\n/)) {
+      let line = raw.replace(/"/g, " ").trim(); if (!line) continue;
+      let cuil = "", dni = "";
+      // CUIL: 11 números, con o sin guiones (20-16749332-4)
+      line = line.replace(/(?<!\d)(\d{2})[-\s.]?(\d{7,8})[-\s.]?(\d)(?!\d)/, (m0, a, b, c) => {
+        const d = a + b.padStart(8, "0") + c;
+        if (/^(20|23|24|25|26|27|30|33|34)/.test(d) && d.length === 11) { cuil = d; return " "; }
+        return m0;
+      });
+      // DNI: 7 u 8 números (puede tener puntos)
+      line = line.replace(/(?<![\d-])(\d{1,2}\.?\d{3}\.?\d{3})(?![\d-])/, m0 => { dni = m0.replace(/\D/g, ""); return " "; });
+      if (!dni && cuil) dni = String(+cuil.slice(2, 10));
+      if (!dni) continue;
+      const nom = line.replace(/[\t;|]+/g, " ").replace(/^[\s,\-]+|[\s,\-]+$/g, "").replace(/\s+/g, " ").trim();
+      if (nom && /[a-záéíóúñ]/i.test(nom)) names[dni] = nom;
+      if (cuil) cuils[dni] = cuil;
     }
-    return out;
+    return { names, cuils };
   }
   function updateNamesUi() {
-    const n = Object.keys(namesMap).length;
+    const n = new Set([...Object.keys(namesMap), ...Object.keys(cuilMap)]).size;
     $("namesBar").hidden = false;
     $("namesCount").textContent = n; $("namesCount").hidden = !n;
   }
-  $("namesBtn").onclick = () => { $("nmText").value = ""; $("nmInfo").textContent = `Ahora hay ${Object.keys(namesMap).length} nombres cargados.`; $("nmlg").hidden = false; setTimeout(() => $("nmText").focus(), 30); };
+  $("namesBtn").onclick = () => { $("nmText").value = ""; $("nmInfo").textContent = `Ahora hay ${Object.keys(namesMap).length} nombres y ${Object.keys(cuilMap).length} CUIL cargados.`; $("nmlg").hidden = false; setTimeout(() => $("nmText").focus(), 30); };
   $("nmText").addEventListener("input", () => {
-    const got = parseNames($("nmText").value), n = Object.keys(got).length;
-    const match = socios.filter(s => got[s.dni]).length;
-    $("nmInfo").textContent = n ? `Reconocí ${n} renglones · ${match} coinciden con carpetas de esta tanda.` : "Pegá las filas copiadas de Excel.";
+    const got = parseNames($("nmText").value), dnis = new Set([...Object.keys(got.names), ...Object.keys(got.cuils)]);
+    const match = socios.filter(s => dnis.has(s.dni)).length;
+    $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` : "Pegá las filas copiadas de Excel.";
   });
   $("nmCancel").onclick = () => { $("nmlg").hidden = true; };
   $("nmlg").addEventListener("pointerdown", e => { if (e.target === $("nmlg")) $("nmlg").hidden = true; });
   $("nmOk").onclick = async () => {
     const got = parseNames($("nmText").value);
-    Object.assign(namesMap, got);
-    await kvSet(pk("names"), namesMap);
+    Object.assign(namesMap, got.names); Object.assign(cuilMap, got.cuils);
+    await kvSet(pk("names"), namesMap); await kvSet(pk("cuils"), cuilMap);
     $("nmlg").hidden = true; updateNamesUi(); renderSocios(); updatePerson();
     if (current) { $("fname").dataset.manual = ""; updateSocioHead(); }
-    toast(`👥 ${Object.keys(got).length} nombres cargados · ${socios.filter(s => namesMap[s.dni]).length} carpetas con nombre.`);
+    toast(`👥 ${Object.keys(got.names).length} nombres y ${Object.keys(got.cuils).length} CUIL cargados · ${socios.filter(s => namesMap[s.dni]).length} carpetas con nombre.`);
   };
   $("nmClear").onclick = async () => {
     if (!confirm("¿Borrar toda la lista de nombres de este apartado?")) return;
-    namesMap = {}; await kvSet(pk("names"), namesMap);
+    namesMap = {}; cuilMap = {}; await kvSet(pk("names"), namesMap); await kvSet(pk("cuils"), cuilMap);
     $("nmlg").hidden = true; updateNamesUi(); renderSocios(); if (current) updateSocioHead();
   };
 
@@ -2591,6 +2633,7 @@
     notes = (await kvGet(pk("notes"))) || {};
     if (tpl === "{dni} - {nombre} - {tipo} - {periodo}") { tpl = "{dni} - {nombre} - {tipo} {periodo}"; $("tpl").value = tpl; kvSet(pk("tpl"), tpl); }
     namesMap = (await kvGet(pk("names"))) || {};
+    cuilMap = (await kvGet(pk("cuils"))) || {};
     tandaSel = (await kvGet(pk("tanda"))) || "";
     dayLog = (await kvGet(pk("daylog"))) || []; updateDayCount();
     editLog = (await kvGet(pk("editlog"))) || [];
