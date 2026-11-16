@@ -83,6 +83,38 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const say = (t, ok) => { const m = box.querySelector(".msg"); if (m) { m.textContent = t; m.className = "msg" + (ok ? " ok" : ""); } };
 
+  /* ---------- Atajos sobre los botones de SURGE (andan con el panel abierto o cerrado) ---------- */
+  const visible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  const btnTxt = el => (el.innerText || el.value || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const boton = (...txts) => {
+    const all = [...document.querySelectorAll("button, a.btn, input[type=submit], input[type=button]")].filter(b => visible(b) && !b.disabled && !b.closest("#crp"));
+    for (const t of txts) { const b = all.find(x => btnTxt(x) === t); if (b) return b; }
+    return null;
+  };
+  const toast = t => { let el = document.getElementById("cr_toast"); if (!el) { el = document.createElement("div"); el.id = "cr_toast"; el.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:8px;z-index:100000;font:14px system-ui"; document.body.appendChild(el); } el.textContent = t; el.style.display = "block"; clearTimeout(el._t); el._t = setTimeout(() => el.style.display = "none", 2500); };
+  const pestanas = () => [...document.querySelectorAll(".nav-tabs .nav-link, .nav-pills .nav-link, [role=tab]")].filter(visible);
+  let revisionArmada = 0;
+  window.addEventListener("keydown", e => {
+    const k = e.key.toLowerCase();
+    if (e.ctrlKey && !e.shiftKey && !e.altKey && k === "s") {
+      e.preventDefault(); e.stopPropagation();
+      const activa = (pestanas().find(t => t.classList.contains("active")) || {}).innerText || "";
+      const b = /datos b/i.test(activa) ? boton("guardar", "siguiente") : boton("siguiente", "guardar todo", "guardar");
+      if (b) { toast("▶ " + btnTxt(b)); b.click(); } else toast("No hay botón Siguiente ni Guardar a la vista.");
+    } else if (e.ctrlKey && e.shiftKey && !e.altKey && k === "s") {
+      e.preventDefault(); e.stopPropagation();
+      const b = boton("enviar a revisión", "enviar a revision");
+      if (!b) { toast("No hay botón Enviar a revisión a la vista."); return; }
+      if (Date.now() - revisionArmada < 3000) { revisionArmada = 0; toast("📤 Enviar a revisión"); b.click(); }
+      else { revisionArmada = Date.now(); toast("¿Enviar a revisión? Apretá Ctrl + Shift + S otra vez para confirmar."); }
+    } else if (e.key === "F2") {
+      const ts = pestanas(); if (!ts.length) return;
+      e.preventDefault(); e.stopPropagation();
+      const i = ts.findIndex(t => t.classList.contains("active"));
+      const n = ts[(i + (e.shiftKey ? -1 : 1) + ts.length) % ts.length]; n.click(); toast("📑 " + n.innerText.trim());
+    }
+  }, true);
+
   window.__cr = { toggle() { box.hidden = !box.hidden; if (!box.hidden) focusFirst(); } };
   const focusFirst = () => setTimeout(() => { const i = box.querySelector("[data-first]") || box.querySelector("input"); if (i) i.focus(); }, 30);
 
@@ -118,7 +150,7 @@
       </div>
       <div class="msg"></div>
       <div class="btns"><button class="b p" id="cr_go">Completar <kbd>Ctrl+Enter</kbd></button></div>
-      <p class="hint">Paso 1: fecha de planilla y CUIL → Completar → apretá <b>Siguiente</b> en SURGE. Paso 2: diagnóstico y médico → Completar → apretá <b>Guardar</b>. Mínimo permitido: ${esc(minFecha)}.</p>`;
+      <p class="hint"><kbd>Ctrl+S</kbd> Siguiente / Guardar · <kbd>F2</kbd> pestaña siguiente (<kbd>Shift+F2</kbd> anterior).<br>Paso 1: fecha de planilla y CUIL → Completar → <b>Siguiente</b>. Paso 2: diagnóstico y médico → Completar → apretá <b>Guardar</b>. Mínimo permitido: ${esc(minFecha)}.</p>`;
     const altaDe = s => {
       const d = toDate(s); d.setFullYear(d.getFullYear() - 1);
       let alta = fmt(d), aviso = "";
@@ -219,7 +251,7 @@
       <div id="cr_rows">${defs.map(rowHtml).join("")}</div>
       <div class="msg"></div>
       <div class="btns"><button class="b p" id="cr_go">Completar en SURGE <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_log">📋 Copiar registro de hoy</button><button class="b" id="cr_clear">Limpiar</button></div>
-      <p class="hint">Enter = siguiente · Tab = fecha del valor (vacía = la de planilla; <kbd>2023</kbd> = 01/01/2023) · opciones con las teclas · <kbd>0</kbd> = "no presenta/ninguna" · después apretá <b>Guardar todo</b> en SURGE.</p>`;
+      <p class="hint">Enter = siguiente · Tab = fecha del valor (vacía = la de planilla; <kbd>2023</kbd> = 01/01/2023) · opciones con las teclas · <kbd>0</kbd> = "no presenta/ninguna" · después <b>Guardar todo</b>.<br><kbd>Ctrl+S</kbd> Guardar todo (en Datos básicos: Guardar) · <kbd>Ctrl+Shift+S</kbd> dos veces = Enviar a revisión · <kbd>F2</kbd> / <kbd>Shift+F2</kbd> cambiar de pestaña.</p>`;
     wire(defs);
   }
   function rowHtml(f, i) {
