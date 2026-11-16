@@ -36,6 +36,10 @@
   #fdDate{font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:12px}
   .frow{display:flex;flex-wrap:wrap;gap:8px}
   .daybox{max-width:900px}
+  .qbox{max-width:340px}
+  #qDate{width:100%;font:600 26px/1.2 ui-monospace,Consolas,monospace;letter-spacing:2px;text-align:center;padding:10px;border-radius:10px;border:2px solid var(--accent);background:var(--panel);color:var(--ink);margin:4px 0 8px}
+  #qPrev{text-align:center;font-size:17px;font-weight:700;min-height:24px;margin:0 0 12px}
+  #qPrev.bad{color:var(--danger);font-size:13.5px;font-weight:400}
   .dayopts{align-items:center;gap:14px;margin-bottom:8px;font-size:13.5px}
   .dayopts input[type=date]{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
   #dayText{width:100%;font:12.5px/1.45 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel);color:var(--ink);white-space:pre;overflow:auto;margin-bottom:10px;tab-size:16}
@@ -466,6 +470,12 @@
   </div>
 </div></div>
 <div id="toast" hidden></div>
+<div class="fdlg" id="qdlg" hidden><div class="fbox qbox">
+  <h3>📅 Fecha de planilla</h3>
+  <input type="text" id="qDate" inputmode="numeric" autocomplete="off" placeholder="ddmmaa  (ej: 261026)">
+  <p id="qPrev"></p>
+  <div class="frow"><button class="primary" id="qOk">Guardar <kbd>Enter</kbd></button><button id="qCancel">Cancelar <kbd>Esc</kbd></button></div>
+</div></div>
 <div class="fdlg" id="daylg" hidden><div class="fbox daybox">
   <h3>🌙 Cierre del día <span id="dayProf" class="label"></span></h3>
   <div class="frow dayopts">
@@ -1771,6 +1781,7 @@
     if (!$("edlg").hidden) { edClose(); return; }
     if (!$("nmlg").hidden) { $("nmlg").hidden = true; return; }
     if (!$("daylg").hidden) { $("daylg").hidden = true; return; }
+    if (!$("qdlg").hidden) { qClose(); return; }
     if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
     if ($("mtPanel").classList.contains("show")) { closeMetrics(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
@@ -2183,6 +2194,54 @@
     edAsk(edTargetItems());
   });
 
+  /* ================= Fecha a mano rápida (tecla Q) ================= */
+  // Acepta 261026 · 26102026 · 2610 (año actual) · 26/10/26 · 26-10-2026
+  function quickDate(txt) {
+    const t = txt.trim();
+    let d, m, y;
+    const sep = t.match(/^(\d{1,2})\D+(\d{1,2})(?:\D+(\d{2}|\d{4}))?$/);
+    if (sep) [d, m, y] = [sep[1], sep[2], sep[3]];
+    else {
+      const n = t.replace(/\D/g, "");
+      if (n.length === 8) [d, m, y] = [n.slice(0, 2), n.slice(2, 4), n.slice(4)];
+      else if (n.length === 6) [d, m, y] = [n.slice(0, 2), n.slice(2, 4), n.slice(4)];
+      else if (n.length === 4) [d, m] = [n.slice(0, 2), n.slice(2, 4)];
+      else return null;
+    }
+    if (!y) y = String(new Date().getFullYear());
+    return validDate(d, m, y);
+  }
+  function qOpen() {
+    if (!current) { toast("Abrí un socio para cargarle la fecha."); return; }
+    $("qDate").value = ""; $("qPrev").textContent = ""; $("qPrev").className = "";
+    $("qdlg").hidden = false; $("qDate").focus();
+  }
+  function qClose() { $("qdlg").hidden = true; }
+  $("qDate").addEventListener("input", () => {
+    const v = $("qDate").value, iso = quickDate(v), p = $("qPrev");
+    if (!v.trim()) { p.textContent = ""; p.className = ""; return; }
+    if (iso) { p.textContent = "→ " + fmtFecha(iso); p.className = ""; }
+    else { p.textContent = v.replace(/\D/g, "").length >= 6 ? "Fecha inválida" : "ddmmaa (6 números) o ddmmaaaa (8)"; p.className = "bad"; }
+  });
+  $("qOk").onclick = () => {
+    const iso = quickDate($("qDate").value);
+    if (!iso) { $("qDate").focus(); $("qDate").select(); return; }
+    setNote("fp", iso); $("fechaPlanilla").value = iso; $("fechaPlanilla").classList.remove("missing");
+    learnFromManual(iso);
+    qClose(); toast(`📅 Fecha planilla: ${fmtFecha(iso)}`);
+  };
+  $("qCancel").onclick = qClose;
+  $("qdlg").addEventListener("pointerdown", e => { if (e.target === $("qdlg")) qClose(); });
+  $("qDate").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); $("qOk").click(); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); qClose(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key.toLowerCase() !== "q" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || [ "qdlg", "fdlg", "edlg", "nmlg", "daylg" ].some(id => !$(id).hidden) || $("ppOv").classList.contains("show") || $("work").hidden) return;
+    e.preventDefault(); qOpen();
+  });
+
   /* ================= Fechas (tandas) marcadas como listas ================= */
   let tandasDone = {};   // nombre de tanda -> timestamp
   async function toggleTandaDone() {
@@ -2434,9 +2493,9 @@
 
   /* Barra de atajos incrustada: se mueve al apartado en el que estás y cambia su contenido */
   const KB = {
-    lista: ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["F", "leer fecha"], ["E", "para editar"], ["P", "vista previa"], ["Ctrl+S", "guardar"]]],
-    visor: ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["F", "leer fecha"], ["E", "para editar"], ["Clic afuera", "cerrar"], ["Esc", "cerrar"]]],
-    previa: ["Vista previa", [["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Clic afuera", "volver"], ["Esc", "volver"]]],
+    lista: ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["Q", "fecha a mano"], ["F", "leer fecha"], ["E", "para editar"], ["P", "vista previa"], ["Ctrl+S", "guardar"]]],
+    visor: ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["Q", "fecha a mano"], ["F", "leer fecha"], ["E", "para editar"], ["Clic afuera", "cerrar"], ["Esc", "cerrar"]]],
+    previa: ["Vista previa", [["Q", "fecha a mano"], ["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Clic afuera", "volver"], ["Esc", "volver"]]],
     panel: ["Para editar", [["Enter", "guardar nota"], ["✕", "descartar"], ["Esc", "cerrar"]]]
   };
   let kbMode = "";
