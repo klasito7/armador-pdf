@@ -1386,6 +1386,7 @@
       items.slice(before).forEach(it => { it.groupKey = g.key; if (s.sel === "__all") it.tram = g.nro ? "#" + g.nro : g.label; });
     }
     const n = applyEditedCopies();
+    items.forEach(it => { it.on = false; });   // al abrir un socio, todas las hojas arrancan sin seleccionar
     render();
     setStatus(`${items.length} página(s) en la lista.` + (n ? ` Se usaron ${n} versión(es) editada(s) en Photopea en lugar de los originales.` : ""));
   }
