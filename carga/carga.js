@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v6";
+  const VER = "v7";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -155,9 +155,15 @@
   function verPlanilla(file) {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     pdfUrl = URL.createObjectURL(file);
-    const w = Math.round(screen.availWidth * 0.5), h = screen.availHeight;
-    const win = window.open(pdfUrl, "cr_planilla", `popup,left=0,top=0,width=${w},height=${h}`);
+    // Abre donde la dejaste la última vez (sirve para mandarla al segundo monitor)
+    const pos = LS("pdfpos", null) || { x: 0, y: 0, w: Math.round(screen.availWidth * 0.5), h: screen.availHeight };
+    const win = window.open(pdfUrl, "cr_planilla", `popup,left=${pos.x},top=${pos.y},width=${pos.w},height=${pos.h}`);
     if (!win) { say("Chrome bloqueó la ventana: tocá el ícono de la barra de direcciones y permití ventanas emergentes para SURGE."); return false; }
+    try { win.focus(); } catch (e) {}
+    clearInterval(verPlanilla._t);
+    verPlanilla._t = setInterval(() => {
+      try { if (win.closed) { clearInterval(verPlanilla._t); return; } SS("pdfpos", { x: win.screenX, y: win.screenY, w: win.outerWidth, h: win.outerHeight }); } catch (e) { clearInterval(verPlanilla._t); }
+    }, 2000);
     return true;
   }
   async function abrirPlanilla(cuil, otra) {
