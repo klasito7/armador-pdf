@@ -107,8 +107,12 @@
   .overlay.show{display:flex}
   .ov-top{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .ov-top h2{font-size:16px;margin:0 8px 0 0}
-  .pv-body{flex:1;overflow:auto;padding:20px 12px 40px}
-  .pv-page{max-width:860px;margin:0 auto 22px;text-align:center}
+  .pv-body{flex:1;overflow:auto;padding:20px 12px 40px;--pvw:860px;cursor:grab}
+  .pv-body.pressing{cursor:grabbing;user-select:none}
+  .pvzoom{display:flex;gap:4px;align-items:center}
+  .pvzoom button{padding:5px 10px}
+  #pvZoomVal{min-width:48px;text-align:center;font-size:13px;font-variant-numeric:tabular-nums}
+  .pv-page{width:var(--pvw);margin:0 auto 22px;text-align:center}
   .pv-page canvas{width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .pv-page .lbl{font-size:12px;color:var(--muted);margin-top:6px}
   #ppWrap{flex:1;position:relative;background:#222}
@@ -128,7 +132,7 @@
   .card.cut{box-shadow:-6px 0 0 var(--danger)}
   .card .cutlbl{position:absolute;top:-11px;left:8px;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 8px;z-index:3}
   .tools button.cutb.active{background:var(--danger);color:#fff;border-color:var(--danger)}
-  .pv-part{max-width:860px;margin:6px auto 14px;font-weight:700;font-size:15px;border-bottom:2px solid var(--line);padding-bottom:6px}
+  .pv-part{width:min(var(--pvw),100%);margin:6px auto 14px;font-weight:700;font-size:15px;border-bottom:2px solid var(--line);padding-bottom:6px}
 
   @media (max-width:800px){ .layout{flex-direction:column} aside{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid var(--line)} }
 </style>
@@ -261,6 +265,9 @@
     <button class="primary" id="pvSave">💾 Guardar en Listos</button>
     <button id="pvDl">⬇ Descargar</button>
     <button id="pvBack">◀ Volver a editar</button>
+    <span class="pvzoom" title="Zoom: mantené apretado el clic sobre el PDF y girá la ruedita (o Ctrl + ruedita)">
+      <button id="pvZoomOut">−</button><span id="pvZoomVal">100%</span><button id="pvZoomIn">+</button><button id="pvZoomFit">Ajustar</button>
+    </span>
     <span id="pvInfo"></span>
   </div>
   <div class="pv-body" id="pvBody"></div>
@@ -1019,15 +1026,77 @@
     const names = partNames($("pvName").value, pvPdfs.length);
     pvBody.querySelectorAll(".pv-part").forEach((h, i) => h.textContent = `📄 Archivo ${i + 1} de ${pvPdfs.length}: ${names[i]} · ${fmtSize(pvPdfs[i].length)}`);
   }
+  /* Zoom de la vista previa: clic apretado (o Ctrl) + ruedita; arrastrar con clic apretado mueve la hoja */
+  let pvZoom = 1, pvEntries = [], pvRerenderT = null, pvRenderToken = 0;
+  const pvBaseW = () => Math.max(200, Math.min(860, pvBody.clientWidth - 24));
+  const pvCurW = () => Math.round(pvBaseW() * pvZoom);
+  function setPvZoom(z, cx, cy) {
+    z = Math.min(5, Math.max(0.4, z));
+    const r = pvBody.getBoundingClientRect();
+    if (cx === undefined) { cx = r.left + r.width / 2; cy = r.top + r.height / 2; }
+    const ox = cx - r.left, oy = cy - r.top;
+    const fx = (pvBody.scrollLeft + ox) / pvBody.scrollWidth, fy = (pvBody.scrollTop + oy) / pvBody.scrollHeight;
+    pvZoom = z;
+    pvBody.style.setProperty("--pvw", pvCurW() + "px");
+    pvBody.scrollLeft = fx * pvBody.scrollWidth - ox;
+    pvBody.scrollTop = fy * pvBody.scrollHeight - oy;
+    $("pvZoomVal").textContent = Math.round(pvZoom * 100) + "%";
+    clearTimeout(pvRerenderT); pvRerenderT = setTimeout(pvRerender, 300);
+  }
+  async function pvRenderEntry(e, token) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.min(4000, pvCurW() * dpr);
+    if (e.renderedW && e.renderedW >= w * 0.95 && e.renderedW <= w * 2.5) return;
+    const vp0 = e.page.getViewport({ scale: 1 }), vp = e.page.getViewport({ scale: w / vp0.width });
+    const tmp = document.createElement("canvas");
+    tmp.width = Math.round(vp.width); tmp.height = Math.round(vp.height);
+    await e.page.render({ canvasContext: tmp.getContext("2d"), viewport: vp }).promise;
+    if (token !== pvRenderToken) return;
+    e.canvas.width = tmp.width; e.canvas.height = tmp.height;
+    e.canvas.getContext("2d").drawImage(tmp, 0, 0);
+    e.renderedW = w;
+  }
+  async function pvRerender() {
+    const token = ++pvRenderToken;
+    const r = pvBody.getBoundingClientRect();
+    const vis = e => { const b = e.canvas.getBoundingClientRect(); return b.bottom > r.top && b.top < r.bottom; };
+    const order = [...pvEntries.filter(vis), ...pvEntries.filter(e => !vis(e))];
+    for (const e of order) { if (token !== pvRenderToken || !pv.classList.contains("show")) return; await pvRenderEntry(e, token); }
+  }
+  let pvPressed = false, pvLast = null;
+  pvBody.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    pvPressed = true; pvLast = { x: e.clientX, y: e.clientY };
+    pvBody.classList.add("pressing");
+  });
+  window.addEventListener("pointermove", e => {
+    if (!pvPressed) return;
+    pvBody.scrollLeft -= e.clientX - pvLast.x; pvBody.scrollTop -= e.clientY - pvLast.y;
+    pvLast = { x: e.clientX, y: e.clientY };
+  });
+  const pvRelease = () => { pvPressed = false; pvBody.classList.remove("pressing"); };
+  window.addEventListener("pointerup", pvRelease);
+  window.addEventListener("blur", pvRelease);
+  pvBody.addEventListener("wheel", e => {
+    if (!pvPressed && !e.ctrlKey) return;      // ruedita sola = scroll normal
+    e.preventDefault();
+    const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    setPvZoom(pvZoom * Math.exp(-delta * 0.0015), e.clientX, e.clientY);
+  }, { passive: false });
+  $("pvZoomIn").onclick = () => setPvZoom(pvZoom * 1.25);
+  $("pvZoomOut").onclick = () => setPvZoom(pvZoom / 1.25);
+  $("pvZoomFit").onclick = () => setPvZoom(1);
+  window.addEventListener("resize", () => { if (pv.classList.contains("show")) setPvZoom(pvZoom); });
+
   $("preview").onclick = () => withBuild($("preview"), setStatus, async () => {
     pvPdfs = await buildAll(setStatus); setStatus("");
     $("pvName").value = cleanName($("fname").value);
-    pvBody.innerHTML = ""; pv.classList.add("show");
-    const token = ++pvToken;
+    pvBody.innerHTML = ""; pvEntries = []; pv.classList.add("show");
+    pvZoom = 1; pvBody.style.setProperty("--pvw", pvCurW() + "px"); $("pvZoomVal").textContent = "100%";
+    const token = ++pvToken; ++pvRenderToken;
     const total = pvPdfs.reduce((a, b) => a + b.length, 0);
     const summary = `${items.filter(x => x.on).length} página(s)${pvPdfs.length > 1 ? ` en ${pvPdfs.length} archivos` : ""} · ${fmtSize(total)}`;
     pvSay(summary + " · cargando…");
-    const dpr = Math.min(window.devicePixelRatio || 1, 2), targetW = Math.min(860, pvBody.clientWidth - 24) * dpr;
     for (let k = 0; k < pvPdfs.length; k++) {
       if (pvPdfs.length > 1) { const h = document.createElement("div"); h.className = "pv-part"; pvBody.appendChild(h); }
       pvLabels();
@@ -1038,14 +1107,14 @@
         const c = document.createElement("canvas"), lbl = document.createElement("div");
         lbl.className = "lbl"; lbl.textContent = `Página ${i} de ${doc.numPages}`;
         wrap.append(c, lbl); pvBody.appendChild(wrap);
-        const page = await doc.getPage(i), vp0 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: targetW / vp0.width });
-        c.width = Math.round(vp.width); c.height = Math.round(vp.height);
-        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+        const e = { page: await doc.getPage(i), canvas: c, renderedW: 0 };
+        pvEntries.push(e);
+        await pvRenderEntry(e, pvRenderToken);
       }
     }
-    if (token === pvToken) pvSay(summary);
+    if (token === pvToken) pvSay(summary + " · Zoom: clic apretado + ruedita");
   });
-  function closePreview() { pvToken++; pv.classList.remove("show"); pvBody.innerHTML = ""; }
+  function closePreview() { pvToken++; pvRenderToken++; pvEntries = []; pv.classList.remove("show"); pvBody.innerHTML = ""; }
   $("pvBack").onclick = closePreview;
   $("pvName").addEventListener("input", () => { $("fname").value = $("pvName").value; pvLabels(); });
   $("pvSave").onclick = async () => {
