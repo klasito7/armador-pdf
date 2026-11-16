@@ -35,6 +35,10 @@
   .fbox img{display:block;max-width:100%;max-height:120px;margin:0 0 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
   #fdDate{font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);margin-bottom:12px}
   .frow{display:flex;flex-wrap:wrap;gap:8px}
+  .daybox{max-width:900px}
+  .dayopts{align-items:center;gap:14px;margin-bottom:8px;font-size:13.5px}
+  .dayopts input[type=date]{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+  #dayText{width:100%;font:12.5px/1.45 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel);color:var(--ink);white-space:pre;overflow:auto;margin-bottom:10px;tab-size:16}
   #nmText{width:100%;font:13px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel);color:var(--ink);resize:vertical;margin-bottom:6px}
   #nmInfo{font-size:13px;margin:0 0 10px}
   .pvfields{display:flex;gap:6px;align-items:center}
@@ -260,6 +264,9 @@
         <button id="copyList" title="Copia el listado para pegarlo directo en Excel">📋 Copiar listado</button>
         <button id="saveList" title="Guarda el listado como .csv (se abre con Excel)">💾 Guardar listado</button>
       </div>
+      <div class="exportbar">
+        <button id="dayBtn" title="Lo que guardaste hoy, para pegar en tu Excel">🌙 Cierre del día <span class="badge" id="dayCount" hidden>0</span></button>
+      </div>
     </div>
     <div id="socios"></div>
   </aside>
@@ -427,6 +434,21 @@
   </div>
 </div></div>
 <div id="toast" hidden></div>
+<div class="fdlg" id="daylg" hidden><div class="fbox daybox">
+  <h3>🌙 Cierre del día <span id="dayProf" class="label"></span></h3>
+  <div class="frow dayopts">
+    <label>Día <input type="date" id="dayDate"></label>
+    <label><input type="checkbox" id="dayHead" checked> Con encabezados</label>
+    <label><input type="checkbox" id="dayPend"> Sumar pendientes (no aptos / para editar)</label>
+  </div>
+  <p id="dayInfo"></p>
+  <textarea id="dayText" rows="12" readonly></textarea>
+  <div class="frow">
+    <button class="primary" id="dayCopy">📋 Copiar para Excel</button>
+    <button id="dayTxt">💾 Guardar .txt</button>
+    <button id="dayClose" style="margin-left:auto">Cerrar</button>
+  </div>
+</div></div>
 <div class="fdlg" id="nmlg" hidden><div class="fbox">
   <h3>👥 Lista de nombres</h3>
   <p>Copiá de tu Excel las dos columnas <b>DNI</b> y <b>Apellido, Nombre</b> y pegalas acá (Ctrl+V). Cada carpeta busca su DNI y toma el nombre solo. Lo que pegues se suma a la lista que ya tenías.</p>
@@ -1362,6 +1384,7 @@
     for (let i = 0; i < pdfs.length; i++) {
       if (await fileExists(outDir, names[i]) && !confirm(`Ya existe "${names[i]}" en la carpeta de listos.\n¿Lo reemplazo?`)) continue;
       await writeFile(outDir, names[i], pdfs[i]);
+      logSave(names[i], pdfs.length > 1 ? i + 1 : 0);
       listos.add(names[i].toLowerCase()); listosMap.set(names[i].toLowerCase(), names[i]); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
     }
     if (current && flags[current.name] && listos.has(nameFor(current).toLowerCase())) { delete flags[current.name]; kvSet(pk("flags"), flags); }
@@ -1643,6 +1666,7 @@
     if (!$("fdlg").hidden) { fdClose(); return; }
     if (!$("edlg").hidden) { edClose(); return; }
     if (!$("nmlg").hidden) { $("nmlg").hidden = true; return; }
+    if (!$("daylg").hidden) { $("daylg").hidden = true; return; }
     if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
@@ -2037,6 +2061,81 @@
     edAsk(edTargetItems());
   });
 
+  /* ================= Cierre del día: registro de lo guardado ================= */
+  let dayLog = [];   // {ts, root, socio, dni, file, fp, nombre, tipo, periodo, obs}
+  const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  function logSave(file, part) {
+    if (!current) return;
+    const nt = noteOf(current), today = isoDay(new Date());
+    const rec = { ts: Date.now(), root: rootName(), socio: current.name, dni: current.dni, file, part,
+      fp: nt.fp || "", nombre: usesTok("nombre") ? fieldVal(current, "nombre") : "", tipo: nt.tipo || "", periodo: nt.periodo || "", obs: nt.obs || "" };
+    // Si ya lo guardaste hoy (mismo archivo), se actualiza en vez de repetirse
+    dayLog = dayLog.filter(r => !(r.file.toLowerCase() === file.toLowerCase() && isoDay(new Date(r.ts)) === today));
+    dayLog.push(rec);
+    const cut = Date.now() - 1000 * 60 * 60 * 24 * 120;   // se guardan los últimos 4 meses
+    dayLog = dayLog.filter(r => r.ts > cut);
+    kvSet(pk("daylog"), dayLog);
+    updateDayCount();
+  }
+  function updateDayCount() {
+    const n = dayLog.filter(r => isoDay(new Date(r.ts)) === isoDay(new Date())).length;
+    $("dayCount").textContent = n; $("dayCount").hidden = !n;
+  }
+  function dayColumns() {
+    const cols = [["DNI", r => r.dni]];
+    if (usesTok("nombre")) cols.push(["Nombre y apellido", r => r.nombre]);
+    if (usesTok("tipo")) cols.push(["Tipo", r => r.tipo]);
+    if (usesTok("periodo")) cols.push(["Período", r => r.periodo]);
+    cols.push(["Fecha planilla", r => fmtFecha(r.fp)], ["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs]);
+    return cols;
+  }
+  function dayRows() {
+    const day = $("dayDate").value;
+    let rows = dayLog.filter(r => isoDay(new Date(r.ts)) === day).sort((a, b) => a.ts - b.ts);
+    if ($("dayPend").checked) {
+      const hechos = new Set(rows.map(r => r.socio));
+      for (const s of socios) {
+        if (hechos.has(s.name)) continue;
+        const ne = editsOf(s), st = statusOf(s);
+        if (st !== "noapto" && !ne.length) continue;
+        const nt = noteOf(s);
+        rows.push({ dni: s.dni, nombre: usesTok("nombre") ? fieldVal(s, "nombre") : "", tipo: nt.tipo || "", periodo: nt.periodo || "", fp: nt.fp || "",
+          estado: ne.length ? "Para editar" : "No apto", file: "", ts: 0,
+          obs: [nt.obs, ...ne.map(e => e.note)].filter(Boolean).join(" · ") });
+      }
+    }
+    return rows;
+  }
+  function renderDay() {
+    const cols = dayColumns(), rows = dayRows();
+    const clean = v => String(v == null ? "" : v).replace(/[\t\r\n]+/g, " ");
+    const lines = rows.map(r => cols.map(([, f]) => clean(f(r))).join("\t"));
+    if ($("dayHead").checked) lines.unshift(cols.map(([h]) => h).join("\t"));
+    $("dayText").value = lines.join("\r\n");
+    const nOk = rows.filter(r => !r.estado).length, pend = rows.length - nOk;
+    $("dayInfo").textContent = `${fmtFecha($("dayDate").value)} · ${nOk} guardado${nOk === 1 ? "" : "s"}` + (pend ? ` · ${pend} pendiente${pend === 1 ? "" : "s"}` : "") + (rows.length ? "" : " · No hay nada guardado ese día en este apartado.");
+  }
+  $("dayBtn").onclick = () => {
+    $("dayProf").textContent = "· " + PROFS[prof];
+    $("dayDate").value = isoDay(new Date());
+    renderDay(); $("daylg").hidden = false;
+  };
+  ["dayDate", "dayHead", "dayPend"].forEach(id => $(id).addEventListener("change", renderDay));
+  $("dayClose").onclick = () => { $("daylg").hidden = true; };
+  $("daylg").addEventListener("pointerdown", e => { if (e.target === $("daylg")) $("daylg").hidden = true; });
+  $("dayCopy").onclick = async () => {
+    try { await navigator.clipboard.writeText($("dayText").value); toast("📋 Copiado. Pegalo en tu Excel con Ctrl+V."); }
+    catch (e) { $("dayText").select(); toast("Seleccioné el texto: copialo con Ctrl+C."); }
+  };
+  $("dayTxt").onclick = async () => {
+    const name = `cierre ${PROFS[prof].replace(/^\S+\s/, "")} ${$("dayDate").value}.txt`;
+    const data = "\ufeff" + $("dayText").value;
+    try {
+      if (outDir && await hasPerm(outDir, true)) { await writeFile(outDir, name, new Blob([data], { type: "text/plain" })); toast(`💾 Guardado en "${outDir.name}": ${name}`); }
+      else { downloadBytes(new TextEncoder().encode(data), name, "text/plain"); toast(`⬇ Descargado: ${name}`); }
+    } catch (e) { toast("No pude guardar el .txt: " + e.message); }
+  };
+
   /* ================= Lista de nombres (DNI -> Apellido, Nombre) ================= */
   function parseNames(txt) {
     const out = {};
@@ -2169,6 +2268,7 @@
     notes = (await kvGet(pk("notes"))) || {};
     if (tpl === "{dni} - {nombre} - {tipo} - {periodo}") { tpl = "{dni} - {nombre} - {tipo} {periodo}"; $("tpl").value = tpl; kvSet(pk("tpl"), tpl); }
     namesMap = (await kvGet(pk("names"))) || {};
+    dayLog = (await kvGet(pk("daylog"))) || []; updateDayCount();
     edits = ((await kvGet(pk("edits"))) || []).map(e => e.pages ? e : { id: e.id, root: e.root, socio: e.socio, note: e.note, created: e.created, pages: [{ file: e.file, page: e.page, label: e.label, group: e.group, thumb: e.thumb }] });
     rootDir = outDir = null;
     if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; }
