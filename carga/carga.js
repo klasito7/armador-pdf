@@ -168,7 +168,16 @@
       if (m) { box.querySelector("#cr_med").value = m.nombre; box.querySelector("#cr_tmat").value = m.tipo; }
     });
     const setPicker = (input, ddmmyyyy) => {
-      try { const dp = $ && $(input).data("DateTimePicker"); if (dp && window.moment) { dp.date(window.moment(ddmmyyyy, "DD/MM/YYYY")); return true; } } catch (e) {}
+      try {
+        const dp = $ && $(input).data("DateTimePicker");
+        if (dp && window.moment) {
+          const m = window.moment(ddmmyyyy, "DD/MM/YYYY");
+          dp.date(m);
+          // SURGE toma la fecha recién cuando el calendario se cierra (evento dp.hide)
+          $(input).trigger($.Event("dp.hide", { date: m }));
+          return true;
+        }
+      } catch (e) {}
       input.value = ddmmyyyy; input.dispatchEvent(new Event("input", { bubbles: true })); input.dispatchEvent(new Event("change", { bubbles: true }));
       return false;
     };
@@ -187,6 +196,7 @@
         if (ci) { ci.value = cuil; ci.dispatchEvent(new Event("input", { bubbles: true })); }
         const fi = document.querySelector('input[placeholder="Fecha alta de empadronamiento"]');
         if (fi) setPicker(fi, alta);
+        if (!v.abm.fecha_inicio_tratamiento) v.$set(v.abm, "fecha_inicio_tratamiento", alta);
         SS("pend", { cuil, fp: f });
         say(`✓ Diabetes · ${cuil} · alta ${alta}. Revisá y apretá Siguiente.`, true);
         const wait = setInterval(() => { if (v.can_completar_resto) { clearInterval(wait); upd(); const x = box.querySelector("#cr_fdiag"); if (x) x.focus(); } }, 400);
