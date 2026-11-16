@@ -980,20 +980,31 @@
     await refreshAll();
   };
 
+  // Si una carpeta elegida ya no existe (se renombró o movió), se avisa y se sigue con lo demás
+  function folderProblem(which, e) {
+    console.warn("Carpeta", which, e);
+    const el = $({ root: "rootName", out: "outName", sign: "signName" }[which]);
+    if (el) el.textContent = "⚠ " + el.textContent.replace(/^⚠ /, "") + " (no la encuentro)";
+    const nombre = { root: "de socios", out: "de listos", sign: "de firmados" }[which];
+    toast(`No encuentro la carpeta ${nombre}. Si la renombraste o la moviste, tocá "Elegir" y seleccionala de nuevo.`, { sticky: true });
+  }
+  async function safePerm(h) { try { return !!h && await hasPerm(h, false); } catch (e) { return false; } }
   async function refreshAll() {
     $("rootName").textContent = rootDir ? rootDir.name : "—";
     $("outName").textContent = outDir ? outDir.name : "—";
-    const okRoot = rootDir && await hasPerm(rootDir, false);
-    const okOut = outDir && await hasPerm(outDir, false);
+    const okRoot = await safePerm(rootDir);
+    const okOut = await safePerm(outDir);
     $("reconnect").hidden = !((rootDir && !okRoot) || (outDir && !okOut));
     socios = []; tandas = [];
-    if (okRoot) {
+    if (okRoot) $("counts").textContent = "Cargando carpetas…";
+    if (okRoot) try {
       const direct = [], cands = [];
       for await (const [name, h] of rootDir.entries()) {
         if (h.kind !== "directory" || name.startsWith(".")) continue;
         (isSocioName(name) ? direct : cands).push({ name, handle: h });
       }
-      for (const c of cands) { if (await hasSocioChild(c.handle)) tandas.push(c); else direct.push(c); }
+      // Las carpetas con fecha en el nombre (16-11-26) son tandas sin tener que abrirlas: arranca mucho más rápido
+      for (const c of cands) { if (dateKey(c.name) || await hasSocioChild(c.handle)) tandas.push(c); else direct.push(c); }
       if (!tandas.length) {
         for (const d of direct) socios.push({ name: d.name, dni: dniOf(d.name), handle: d.handle });
       } else {
@@ -1015,9 +1026,10 @@
         }
       }
       socios.sort((a, b) => natural(a.name, b.name) || natural(a.tanda || "", b.tanda || ""));
-    }
+    } catch (e) { socios = []; tandas = []; folderProblem("root", e); }
     renderTandas();
-    await refreshListos(okOut);
+    renderSocios();            // la lista aparece ya; listos y firmados se completan enseguida
+    try { await refreshListos(okOut); } catch (e) { listos = new Set(); listosMap = new Map(); folderProblem("out", e); }
     await refreshFirmados();
     renderSocios();
     const ready = okRoot && okOut;
@@ -1051,20 +1063,30 @@
     await refreshAll(); renderEdits();
   });
   // Firmados: se mira la carpeta (y una subcarpeta adentro) buscando el DNI o el CUIL en el nombre del archivo
+  // Solo se lee la fecha de los archivos que tienen el DNI o CUIL de algún socio de la tanda (rápido aunque haya miles)
+  const firmFechas = new Map();   // nombre -> fecha, para no volver a leerla
   async function refreshFirmados() {
     firmados = [];
     $("signName").textContent = signDir ? signDir.name : "—";
     if (!signDir) return;
     try {
       if ((await signDir.queryPermission({ mode: "read" })) !== "granted") { $("reconnect").hidden = false; return; }
-      const walk = async (dir, depth) => {
+      const ids = new Set();
+      for (const s of socios) { ids.add(s.dni); const c = cuilOf(s); if (c) ids.add(c); }
+      const walk = async (dir, depth, ruta) => {
         for await (const [name, h] of dir.entries()) {
-          if (h.kind === "file" && /\.pdf$/i.test(name)) { let t = 0; try { t = (await h.getFile()).lastModified; } catch (e) {} firmados.push({ n: name.toLowerCase(), t }); }
-          else if (h.kind === "directory" && depth < 1) await walk(h, depth + 1);
+          if (h.kind === "file" && /\.pdf$/i.test(name)) {
+            const toks = (name.match(/\d+/g) || []);
+            if (!toks.some(t => ids.has(t) || ids.has(String(+t)))) continue;
+            const key = ruta + name;
+            let t = firmFechas.get(key);
+            if (t === undefined) { try { t = (await h.getFile()).lastModified; } catch (e) { t = 0; } firmFechas.set(key, t); }
+            firmados.push({ n: name.toLowerCase(), t });
+          } else if (h.kind === "directory" && depth < 1) await walk(h, depth + 1, ruta + name + "/");
         }
       };
-      await walk(signDir, 0);
-    } catch (e) { console.warn(e); }
+      await walk(signDir, 0, "");
+    } catch (e) { firmados = []; folderProblem("sign", e); }
   }
   // Cuándo quedó listo este socio en el Armador (guardado o fecha de planilla cargada)
   function listoDesde(s) {
@@ -1083,9 +1105,12 @@
     return firmados.some(f => f.t >= minimo && (f.n.match(/\d+/g) || []).some(t => ids.includes(t) || ids.includes(String(+t))));
   }
   // Al volver a la ventana se releen las carpetas (por si la autofirma ya devolvió PDFs)
+  let lastFocusRefresh = 0;
   window.addEventListener("focus", async () => {
-    if (!rootDir) return;
-    await refreshListos(); await refreshFirmados(); renderSocios();
+    if (!rootDir || Date.now() - lastFocusRefresh < 20000) return;   // como mucho cada 20 segundos
+    lastFocusRefresh = Date.now();
+    try { await refreshListos(); } catch (e) { return; }
+    await refreshFirmados(); renderSocios();
   });
   async function refreshListos(ok) {
     listos = new Set(); listosMap = new Map();
