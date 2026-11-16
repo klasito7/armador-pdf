@@ -27,6 +27,7 @@
   button.danger{color:var(--danger)}
   button:disabled{opacity:.5;cursor:default}
   .label{color:var(--muted);font-size:13px}
+  kbd{font:600 10.5px/1 ui-monospace,Consolas,monospace;border:1px solid currentColor;border-radius:4px;padding:2px 4px;opacity:.6;margin-left:3px;vertical-align:1px}
 
   /* Barra superior */
   .top{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
@@ -232,9 +233,9 @@
         <button id="keepRange">Dejar solo estas</button>
         <button id="dropRange">Quitar estas</button>
         <span class="sep"></span>
-        <button id="all">Todas</button>
-        <button id="none">Ninguna</button>
-        <button id="invert">Invertir</button>
+        <button id="all" title="Atajo: T">Todas <kbd>T</kbd></button>
+        <button id="none" title="Atajo: N">Ninguna <kbd>N</kbd></button>
+        <button id="invert" title="Atajo: I">Invertir <kbd>I</kbd></button>
         <span class="sep"></span>
         <button id="removeOff" class="danger">Borrar excluidas</button>
         <span class="sep"></span>
@@ -275,8 +276,8 @@
   <div class="in">
     <span class="label">Guardar como:</span>
     <input type="text" id="fname" value="documento.pdf">
-    <button id="preview">👁 Vista previa</button>
-    <button class="primary" id="saveBtn">💾 Guardar en Listos</button>
+    <button id="preview" title="Atajo: P">👁 Vista previa <kbd>P</kbd></button>
+    <button class="primary" id="saveBtn" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd>Ctrl+S</kbd></button>
     <button id="dlBtn">⬇ Descargar</button>
     <span id="status"></span>
   </div>
@@ -288,7 +289,7 @@
     <h2>Vista previa</h2>
     <span class="label">Nombre:</span>
     <input type="text" id="pvName">
-    <button class="primary" id="pvSave">💾 Guardar en Listos</button>
+    <button class="primary" id="pvSave" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd>Ctrl+S</kbd></button>
     <button id="pvDl">⬇ Descargar</button>
     <button id="pvBack">◀ Volver a editar</button>
     <span class="pvzoom" title="Zoom: Ctrl + ruedita. Para ver una página suelta con zoom de ruedita, hacé clic en ella en la lista.">
@@ -1402,6 +1403,27 @@
     if (e.key !== "Escape") return;
     if (modal.classList.contains("show")) modal.classList.remove("show");
     else if (pv.classList.contains("show")) closePreview();
+  });
+
+  /* ================= Atajos de teclado ================= */
+  document.addEventListener("keydown", e => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+    const pvOpen = pv.classList.contains("show"), ppOpen = $("ppOv").classList.contains("show");
+    // Ctrl + S: guardar (en Listos si hay carpeta; si no, descargar)
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      if (ppOpen) return;
+      if (typing) e.target.blur();   // para que se guarde lo que se estaba escribiendo
+      if (pvOpen) ($("pvSave").hidden ? $("pvDl") : $("pvSave")).click();
+      else if (!$("footer").hidden) ($("saveBtn").hidden ? $("dlBtn") : $("saveBtn")).click();
+      return;
+    }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey || pvOpen || ppOpen || modal.classList.contains("show") || $("work").hidden) return;
+    const k = e.key.toLowerCase();
+    if (k === "n") { e.preventDefault(); $("none").click(); }
+    else if (k === "t") { e.preventDefault(); $("all").click(); }
+    else if (k === "i") { e.preventDefault(); $("invert").click(); }
+    else if (k === "p") { e.preventDefault(); $("preview").click(); }
   });
 
   (async function init() {
