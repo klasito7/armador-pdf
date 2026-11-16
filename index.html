@@ -67,6 +67,14 @@
   .edthumbs{display:flex;gap:3px;align-items:center;flex-shrink:0}
   .edthumbs img{width:48px;height:64px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px}
   .edthumbs span{font-size:12px;color:var(--muted)}
+  #cfgPanel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:56;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
+  #cfgPanel.show{transform:none}
+  .cfgbody{overflow:auto;padding:4px 16px 24px}
+  .cfgbody h4{margin:12px 0 4px}
+  .cfgrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .keybtn{min-width:96px;font:700 13px ui-monospace,Consolas,monospace}
+  .keybtn.cap{background:var(--warn);color:#fff;border-color:var(--warn)}
+  #cfgReset{margin-top:14px}
   #mtPanel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
   #mtPanel.show{transform:none}
   #mtBody{overflow:auto;padding:12px 16px 24px;font-size:13.5px}
@@ -275,6 +283,7 @@
     <span style="margin-left:8px">✅ Listos: <b id="outName">—</b></span><button id="pickOut">Elegir</button>
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
     <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
+    <button id="cfgOpen" title="Configuración: atajos de teclado">⚙</button>
     <button id="edOpen" title="Planillas que mandaste a editar">📝 Para editar <span class="badge" id="edCount" hidden>0</span></button>
   </div>
   <div class="folder">
@@ -361,9 +370,9 @@
         <button id="keepRange">Dejar solo estas</button>
         <button id="dropRange">Quitar estas</button>
         <span class="sep"></span>
-        <button id="all" title="Atajo: T">Todas <kbd>T</kbd></button>
-        <button id="none" title="Atajo: N">Ninguna <kbd>N</kbd></button>
-        <button id="invert" title="Atajo: I">Invertir <kbd>I</kbd></button>
+        <button id="all" title="Atajo: T">Todas <kbd data-k="all">T</kbd></button>
+        <button id="none" title="Atajo: N">Ninguna <kbd data-k="none">N</kbd></button>
+        <button id="invert" title="Atajo: I">Invertir <kbd data-k="invert">I</kbd></button>
         <span class="sep"></span>
         <button id="removeOff" class="danger">Borrar excluidas</button>
         <span class="sep"></span>
@@ -404,8 +413,8 @@
   <div class="in">
     <span class="label">Guardar como:</span>
     <input type="text" id="fname" value="documento.pdf">
-    <button id="preview" title="Atajo: P">👁 Vista previa <kbd>P</kbd></button>
-    <button class="primary" id="saveBtn" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd>Ctrl+S</kbd></button>
+    <button id="preview" title="Atajo: P">👁 Vista previa <kbd data-k="preview">P</kbd></button>
+    <button class="primary" id="saveBtn" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd data-k="save">Ctrl+S</kbd></button>
     <button id="dlBtn">⬇ Descargar</button>
     <span id="status"></span>
   </div>
@@ -422,7 +431,7 @@
       <input type="text" id="pv_tipo" list="tiposList" placeholder="Tipo (ej: RHC)">
       <input type="text" id="pv_periodo" placeholder="Período (ej: 9-26)">
     </span>
-    <button class="primary" id="pvSave" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd>Ctrl+S</kbd></button>
+    <button class="primary" id="pvSave" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd data-k="save">Ctrl+S</kbd></button>
     <button id="pvDl">⬇ Descargar</button>
     <button id="pvBack">◀ Volver a editar</button>
     <span class="pvzoom" title="Zoom: Ctrl + ruedita. Para ver una página suelta con zoom de ruedita, hacé clic en ella en la lista.">
@@ -521,6 +530,15 @@
     <button id="edCancel">Cancelar</button>
   </div>
 </div></div>
+<div id="cfgPanel" class="sidepanel">
+  <div class="edhead"><h3>⚙ Configuración</h3><button id="cfgClose">✕</button></div>
+  <div class="cfgbody">
+    <h4>⌨ Atajos de teclado</h4>
+    <p class="edhint">Tocá la tecla de una acción y apretá la nueva. Si ya la usaba otra acción, se intercambian. Esc cancela.</p>
+    <div id="cfgKeys"></div>
+    <button id="cfgReset" class="danger">Restablecer atajos originales</button>
+  </div>
+</div>
 <div id="mtPanel" class="sidepanel">
   <div class="edhead"><h3>📊 Métricas <span class="label" id="mtProf"></span></h3><button id="mtClose">✕</button></div>
   <div id="mtBody"></div>
@@ -531,7 +549,7 @@
   <div id="edList"></div>
   <div class="empty" id="edEmpty">No hay planillas para editar.</div>
 </div>
-<button id="edBtn" hidden title="Mandar esta planilla a Para editar (E)">📝 Para editar <kbd>E</kbd></button>
+<button id="edBtn" hidden title="Mandar esta planilla a Para editar (E)">📝 Para editar <kbd data-k="toEdit">E</kbd></button>
 <div id="kbar" hidden></div>
 
 <script>
@@ -1390,9 +1408,9 @@
   });
   document.addEventListener("keydown", e => {
     if (!modal.classList.contains("show") || e.target.tagName === "INPUT") return;
-    if (e.key === "ArrowLeft") { e.preventDefault(); zGo(-1); }
-    else if (e.key === "ArrowRight") { e.preventDefault(); zGo(1); }
-    else if (e.key === " ") { e.preventDefault(); $("zIncl").click(); }
+    if (keyIs(e, "prevPage")) { e.preventDefault(); zGo(-1); }
+    else if (keyIs(e, "nextPage")) { e.preventDefault(); zGo(1); }
+    else if (keyIs(e, "toggleIncl")) { e.preventDefault(); $("zIncl").click(); }
   });
   $("zAngle").addEventListener("input", () => { zAng = +$("zAngle").value; $("zAngleVal").textContent = zAng + "°"; zDraw(); });
   $("zClearCrop").onclick = () => { zRect = null; zShowSel(); };
@@ -1834,6 +1852,7 @@
     if (!$("qdlg").hidden) { qClose(); return; }
     if ($("edPanel").classList.contains("show")) { closeEdPanel(); return; }
     if ($("mtPanel").classList.contains("show")) { closeMetrics(); return; }
+    if ($("cfgPanel").classList.contains("show")) { closeCfg(); return; }
     if (zPurpose) { zPurpose = null; setCropMode(false); zRect = null; zShowSel(); hideToast(); return; }
     if (modal.classList.contains("show")) modal.classList.remove("show");
     else if (pv.classList.contains("show")) closePreview();
@@ -2092,7 +2111,7 @@
 
   // Tecla F
   document.addEventListener("keydown", e => {
-    if (e.key.toLowerCase() !== "f" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!keyIs(e, "readDate")) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault();
     readDate(modal.classList.contains("show") ? zItem : (hoverItem || lastClicked));
@@ -2238,7 +2257,7 @@
 
   // Tecla E: mandar a "Para editar"
   document.addEventListener("keydown", e => {
-    if (e.key.toLowerCase() !== "e" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!keyIs(e, "toEdit")) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("edlg").hidden || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault();
     edAsk(edTargetItems());
@@ -2287,7 +2306,7 @@
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); qClose(); }
   });
   document.addEventListener("keydown", e => {
-    if (e.key.toLowerCase() !== "q" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!keyIs(e, "quickDate")) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || [ "qdlg", "fdlg", "edlg", "nmlg", "daylg" ].some(id => !$(id).hidden) || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault(); qOpen();
   });
@@ -2560,12 +2579,85 @@
     el.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
   }
 
+  /* ================= Atajos configurables ================= */
+  const KEY_ACTIONS = [
+    ["none", "Deseleccionar todo (Ninguna)", "n"],
+    ["all", "Seleccionar todo (Todas)", "t"],
+    ["invert", "Invertir selección", "i"],
+    ["preview", "Abrir vista previa", "p"],
+    ["save", "Guardar en Listos", "ctrl+s"],
+    ["quickDate", "Fecha de planilla a mano", "q"],
+    ["readDate", "Leer fecha manuscrita", "f"],
+    ["toEdit", "Mandar a Para editar", "e"],
+    ["closePreview", "Cerrar hoja en grande / vista previa", "enter"],
+    ["toggleIncl", "Incluir/excluir hoja (en grande)", "space"],
+    ["prevPage", "Hoja anterior (en grande)", "arrowleft"],
+    ["nextPage", "Hoja siguiente (en grande)", "arrowright"]
+  ];
+  const KEY_DEFAULTS = Object.fromEntries(KEY_ACTIONS.map(([a, , k]) => [a, k]));
+  let keymap = { ...KEY_DEFAULTS };
+  function comboOf(e) {
+    const k = e.key === " " ? "space" : e.key.toLowerCase();
+    if (["control", "shift", "alt", "meta"].includes(k)) return "";
+    return (e.ctrlKey || e.metaKey ? "ctrl+" : "") + (e.altKey ? "alt+" : "") + (e.shiftKey && k.length === 1 && k !== k.toUpperCase() ? "shift+" : "") + k;
+  }
+  const keyIs = (e, action) => !!keymap[action] && comboOf(e) === keymap[action];
+  const KEY_NAMES = { space: "Espacio", enter: "Enter", escape: "Esc", arrowleft: "←", arrowright: "→", arrowup: "↑", arrowdown: "↓", tab: "Tab", backspace: "Borrar", delete: "Supr" };
+  function keyLabel(combo) {
+    if (!combo) return "—";
+    return combo.split("+").map(p => p === "ctrl" ? "Ctrl" : p === "alt" ? "Alt" : p === "shift" ? "Shift" : (KEY_NAMES[p] || (p.length === 1 ? p.toUpperCase() : p[0].toUpperCase() + p.slice(1)))).join("+");
+  }
+  const KL = a => keyLabel(keymap[a]);
+  // Actualiza las teclitas que aparecen en los botones
+  function applyKeyLabels() {
+    document.querySelectorAll("kbd[data-k]").forEach(k => { k.textContent = KL(k.dataset.k); });
+    if (typeof kbUpdate === "function") { kbMode = ""; kbUpdate(); }
+  }
+
+  /* Panel de configuración */
+  let capturing = null;
+  function renderCfg() {
+    const box = $("cfgKeys"); box.innerHTML = "";
+    for (const [a, label] of KEY_ACTIONS) {
+      const row = document.createElement("div"); row.className = "cfgrow";
+      const sp = document.createElement("span"); sp.textContent = label;
+      const b = document.createElement("button"); b.className = "keybtn" + (capturing === a ? " cap" : "");
+      b.textContent = capturing === a ? "Apretá una tecla…" : KL(a);
+      b.onclick = () => { capturing = capturing === a ? null : a; renderCfg(); };
+      row.append(sp, b); box.appendChild(row);
+    }
+  }
+  // Captura la nueva tecla antes que cualquier otro atajo
+  document.addEventListener("keydown", e => {
+    if (!capturing) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (e.key === "Escape") { capturing = null; renderCfg(); return; }
+    const c = comboOf(e); if (!c) return;
+    const other = Object.keys(keymap).find(a => a !== capturing && keymap[a] === c);
+    if (other) { keymap[other] = keymap[capturing]; toast(`"${keyLabel(c)}" estaba en "${KEY_ACTIONS.find(x => x[0] === other)[1]}": se intercambiaron.`); }
+    keymap[capturing] = c; capturing = null;
+    kvSet("keymap", keymap); renderCfg(); applyKeyLabels();
+  }, true);
+  $("cfgReset").onclick = () => { keymap = { ...KEY_DEFAULTS }; kvSet("keymap", keymap); renderCfg(); applyKeyLabels(); toast("Atajos restablecidos."); };
+  function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); $("cfgPanel").classList.add("show"); }
+  function closeCfg() { capturing = null; $("cfgPanel").classList.remove("show"); }
+  $("cfgOpen").onclick = () => $("cfgPanel").classList.contains("show") ? closeCfg() : openCfg();
+  $("cfgClose").onclick = closeCfg;
+
+  // Enter (o la tecla elegida): cerrar la hoja en grande o la vista previa
+  document.addEventListener("keydown", e => {
+    if (!keyIs(e, "closePreview")) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["fdlg", "edlg", "qdlg", "nmlg", "daylg"].some(id => !$(id).hidden)) return;
+    if (modal.classList.contains("show")) { e.preventDefault(); e.stopPropagation(); if (zPurpose) return; modal.classList.remove("show"); }
+    else if (pv.classList.contains("show")) { e.preventDefault(); e.stopPropagation(); closePreview(); }
+  }, true);
+
   /* ================= Atajos de teclado ================= */
   document.addEventListener("keydown", e => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
     const pvOpen = pv.classList.contains("show"), ppOpen = $("ppOv").classList.contains("show");
     // Ctrl + S: guardar (en Listos si hay carpeta; si no, descargar)
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "s") {
+    if (keyIs(e, "save")) {
       e.preventDefault();
       if (ppOpen) return;
       if (typing) e.target.blur();   // para que se guarde lo que se estaba escribiendo
@@ -2573,19 +2665,18 @@
       else if (!$("footer").hidden) ($("saveBtn").hidden ? $("dlBtn") : $("saveBtn")).click();
       return;
     }
-    if (typing || e.ctrlKey || e.metaKey || e.altKey || pvOpen || ppOpen || modal.classList.contains("show") || $("work").hidden) return;
-    const k = e.key.toLowerCase();
-    if (k === "n") { e.preventDefault(); $("none").click(); }
-    else if (k === "t") { e.preventDefault(); $("all").click(); }
-    else if (k === "i") { e.preventDefault(); $("invert").click(); }
-    else if (k === "p") { e.preventDefault(); $("preview").click(); }
+    if (typing || pvOpen || ppOpen || modal.classList.contains("show") || $("work").hidden) return;
+    if (keyIs(e, "none")) { e.preventDefault(); $("none").click(); }
+    else if (keyIs(e, "all")) { e.preventDefault(); $("all").click(); }
+    else if (keyIs(e, "invert")) { e.preventDefault(); $("invert").click(); }
+    else if (keyIs(e, "preview")) { e.preventDefault(); $("preview").click(); }
   });
 
   /* Barra de atajos incrustada: se mueve al apartado en el que estás y cambia su contenido */
   const KB = {
-    lista: ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], ["N", "ninguna"], ["T", "todas"], ["I", "invertir"], ["Q", "fecha a mano"], ["F", "leer fecha"], ["E", "para editar"], ["P", "vista previa"], ["Ctrl+S", "guardar"]]],
-    visor: ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], ["← →", "página"], ["Espacio", "incluir/excluir"], ["Q", "fecha a mano"], ["F", "leer fecha"], ["E", "para editar"], ["Clic afuera", "cerrar"], ["Esc", "cerrar"]]],
-    previa: ["Vista previa", [["Q", "fecha a mano"], ["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], ["Ctrl+S", "guardar"], ["Clic afuera", "volver"], ["Esc", "volver"]]],
+    get lista() { return ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], [KL("none"), "ninguna"], [KL("all"), "todas"], [KL("invert"), "invertir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("toEdit"), "para editar"], [KL("preview"), "vista previa"], [KL("save"), "guardar"]]]; },
+    get visor() { return ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], [KL("prevPage") + " " + KL("nextPage"), "página"], [KL("toggleIncl"), "incluir/excluir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("toEdit"), "para editar"], [KL("closePreview"), "cerrar"], ["Clic afuera", "cerrar"]]]; },
+    get previa() { return ["Vista previa", [[KL("quickDate"), "fecha a mano"], ["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], [KL("save"), "guardar"], [KL("closePreview"), "volver"], ["Clic afuera", "volver"]]]; },
     panel: ["Para editar", [["Enter", "guardar nota"], ["✕", "descartar"], ["Esc", "cerrar"]]]
   };
   let kbMode = "";
@@ -2663,6 +2754,7 @@
       $(k).addEventListener("change", () => kvSet("opts", Object.fromEntries(OPTS.map(x => [x, $(x).value]))));
     });
     const sp = await kvGet("prof"); if (sp && PROFS[sp]) prof = sp;
+    keymap = { ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }; applyKeyLabels();
     await loadProfile();
   })();
 })();
