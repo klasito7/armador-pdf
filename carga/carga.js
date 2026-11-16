@@ -1,6 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
+  const VER = "v4";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -119,7 +120,7 @@
   const focusFirst = () => setTimeout(() => { const i = box.querySelector("[data-first]") || box.querySelector("input"); if (i) i.focus(); }, 30);
 
   if (!mode) {
-    box.innerHTML = `<h3>⚡ Carga rápida <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>`;
+    box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>`;
     box.querySelector("[data-close]").onclick = () => box.hidden = true;
     return;
   }
@@ -135,7 +136,7 @@
   if (mode === "create") {
     const v = vmCreate;
     const minFecha = isoToFmt(v.minDataFechaInicio || "");
-    box.innerHTML = `<h3>⚡ Carga rápida · Alta <button class="x" data-close>✕</button></h3>
+    box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> · Alta <button class="x" data-close>✕</button></h3>
       <div class="top">${fpInput}
         <label>Fecha alta</label><b id="cr_alta">—</b>
         <label>CUIL</label><input id="cr_cuil" placeholder="20123456789">
@@ -253,7 +254,7 @@
 
   function render() {
     const defs = fieldDefs();
-    box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#888">solicitud ${esc(solicitud)}</small><button class="x" data-close>✕</button></h3>
+    box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <small style="font-weight:400;color:#888">solicitud ${esc(solicitud)}</small><button class="x" data-close>✕</button></h3>
       <div class="top">${fpInput}
         <label>Modelo</label><div>${Object.entries(MODELOS).map(([n, m]) => `<span class="op ${+n === +modelo ? "on" : ""}" data-mod="${n}"><b>Alt+${n}</b>${esc(m.nombre)}</span>`).join(" ")}</div>
       </div>
