@@ -64,6 +64,10 @@
 
   .socio-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
   .socio-head h2{margin:0;font-size:20px}
+  .tramites{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-2px 0 10px}
+  .tramites button{font-size:13px;padding:5px 11px;border-radius:999px}
+  .tramites button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+  .tramites button small{opacity:.7;font-weight:400}
   .drop{border:2px dashed var(--line);border-radius:12px;background:var(--panel);padding:14px;text-align:center;cursor:pointer;transition:.15s;font-size:13.5px;color:var(--muted)}
   .drop strong{color:var(--ink)}
   .drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
@@ -140,7 +144,7 @@
   </div>
   <div class="folder">
     <span class="label">Nombre:</span>
-    <input type="text" id="tpl" title="Usá {dni} y/o {carpeta}">
+    <input type="text" id="tpl" title="Podés usar {dni}, {carpeta}, {tramite} y {fecha}">
     <span id="tplPreview"></span>
   </div>
 </div>
@@ -184,6 +188,8 @@
         <button id="reloadSocio" hidden title="Vuelve a leer la carpeta (ej. si agregaste archivos)">↻ Recargar carpeta</button>
         <button id="nextPend" hidden>Siguiente pendiente ▶</button>
       </div>
+
+      <div class="tramites" id="tramites" hidden></div>
 
       <div class="drop" id="drop">
         <strong>Sumar más archivos:</strong> arrastrá PDFs o imágenes (JPG, PNG, JFIF) acá, o tocá para elegirlos.
@@ -335,8 +341,27 @@
     if (!/\.pdf$/i.test(n)) n += ".pdf";
     return n;
   }
-  function nameFor(s) { return cleanName(tpl.replace(/\{dni\}/gi, s.dni).replace(/\{carpeta\}/gi, s.name)); }
-  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { dni: "30123456", name: "30123456" }); }
+  // Trámite que se usa para {tramite}/{fecha}: el elegido, o el más reciente
+  function tramiteOf(s) {
+    if (!s || !s.groups) return null;
+    const sel = s.groups.find(g => g.key === s.sel && g.nro);
+    return sel || s.groups.find(g => g.nro) || null;
+  }
+  function fillTpl(s, tramite, fecha) {
+    return tpl.replace(/\{dni\}/gi, s.dni).replace(/\{carpeta\}/gi, s.name)
+      .replace(/\{tramite\}/gi, tramite).replace(/\{fecha\}/gi, fecha);
+  }
+  function nameFor(s) {
+    const t = tramiteOf(s);
+    return cleanName(fillTpl(s, t ? t.nro : "", t ? t.iso : "").replace(/[\s_-]+(\.pdf)?$/i, "$1"));
+  }
+  // Para el estado "listo" sin haber abierto la carpeta: {tramite}/{fecha} valen cualquier cosa
+  function listoRegex(s) {
+    const raw = cleanName(fillTpl(s, "\u0001", "\u0001")).toLowerCase();
+    const esc = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\u0001/g, ".*");
+    return new RegExp("^" + esc + "$");
+  }
+  function updateTplPreview() { $("tplPreview").textContent = "→ " + nameFor(current || { dni: "30123456", name: "30123456", sel: "x", groups: [{ key: "x", nro: "302087859", iso: "2026-10-07" }] }); }
   $("tpl").addEventListener("input", () => {
     tpl = $("tpl").value || "{dni}"; kvSet("tpl", tpl); updateTplPreview();
     if (current) $("fname").value = nameFor(current);
@@ -400,7 +425,8 @@
   }
 
   function statusOf(s) {
-    if (listos.has(nameFor(s).toLowerCase())) return "listo";
+    if (/\{(tramite|fecha)\}/i.test(tpl)) { const re = listoRegex(s); for (const n of listos) if (re.test(n)) return "listo"; }
+    else if (listos.has(nameFor(s).toLowerCase())) return "listo";
     if (flags[s.name] === "noapto") return "noapto";
     return "pend";
   }
@@ -452,24 +478,104 @@
     $("toggleNoApto").textContent = flags[current.name] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
   }
 
+  const TRAM_RE = /^(\d{4})-(\d{2})-(\d{2})_(\d+)/;
+  const fileDir = new WeakMap();   // File -> carpeta donde está
+  const skipName = n => n.startsWith(".") || n.startsWith("~$");
+  async function collectFiles(dir, out = []) {
+    for await (const [name, h] of dir.entries()) {
+      if (skipName(name)) continue;
+      if (h.kind === "file") { const f = await h.getFile(); if (isPdf(f) || isImg(f)) { fileDir.set(f, dir); out.push(f); } }
+      else await collectFiles(h, out);
+    }
+    return out;
+  }
+
   async function openSocio(s) {
     showWork(s);
     resetItems(); render();
+    $("tramites").hidden = true;
     setStatus("Leyendo carpeta…");
     try {
       if (!(await hasPerm(rootDir, true))) { setStatus("No tengo permiso para leer la carpeta. Tocá Reconectar.", "err"); return; }
-      const files = [];
+      const groups = [], loose = [];
       for await (const [name, h] of s.handle.entries()) {
-        if (h.kind !== "file" || name.startsWith(".") || name.startsWith("~$")) continue;
-        const f = await h.getFile();
-        if (isPdf(f) || isImg(f)) files.push(f);
+        if (skipName(name)) continue;
+        if (h.kind === "directory") {
+          const m = name.match(TRAM_RE);
+          const files = (await collectFiles(h)).sort((a, b) => natural(a.name, b.name));
+          groups.push(m
+            ? { key: name, iso: `${m[1]}-${m[2]}-${m[3]}`, nro: m[4], label: `${m[3]}/${m[2]}/${m[1]}`, sub: `Trámite ${m[4]}`, files }
+            : { key: name, iso: "", nro: "", label: name, sub: "", files });
+        } else {
+          const f = await h.getFile();
+          if (isPdf(f) || isImg(f)) { fileDir.set(f, s.handle); loose.push(f); }
+        }
       }
-      files.sort((a, b) => natural(a.name, b.name));
-      if (!files.length) { setStatus("Esta carpeta no tiene PDFs ni imágenes.", "err"); }
-      await addFiles(files, true);
+      groups.sort((a, b) => natural(b.key, a.key));   // más reciente primero
+      if (loose.length) groups.push({ key: "__loose", iso: "", nro: "", label: "Sueltos", sub: "en la carpeta del DNI", files: loose.sort((a, b) => natural(a.name, b.name)) });
+      s.groups = groups;
+      if (!s.sel || !groups.some(g => g.key === s.sel)) { const first = groups.find(g => g.files.length); s.sel = first ? first.key : null; }
+      renderTramites();
+      await loadSelection();
     } catch (e) { console.error(e); setStatus("Error leyendo la carpeta: " + e.message, "err"); }
     renderSocios();
     $("main").scrollTop = 0;
+  }
+
+  function renderTramites() {
+    const box = $("tramites"), g = current && current.groups;
+    box.innerHTML = "";
+    if (!g || !g.length || (g.length === 1 && g[0].key === "__loose")) { box.hidden = true; return; }
+    box.hidden = false;
+    const lbl = document.createElement("span"); lbl.className = "label"; lbl.textContent = g.length > 1 ? "Trámite:" : "Trámite:"; box.appendChild(lbl);
+    const opts = [...g];
+    if (g.length > 1) opts.push({ key: "__all", label: "Todos", sub: "", files: g.flatMap(x => x.files) });
+    for (const o of opts) {
+      const b = document.createElement("button");
+      b.className = current.sel === o.key ? "on" : "";
+      b.innerHTML = `<b></b> <small></small>`;
+      b.querySelector("b").textContent = o.label;
+      b.querySelector("small").textContent = `${o.sub ? o.sub + " · " : ""}${o.files.length} archivo${o.files.length === 1 ? "" : "s"}`;
+      b.onclick = async () => { if (current.sel === o.key) return; current.sel = o.key; renderTramites(); await loadSelection(); };
+      box.appendChild(b);
+    }
+  }
+
+  async function loadSelection() {
+    const s = current;
+    resetItems(); render();
+    $("fname").value = nameFor(s); updateTplPreview();
+    const groups = s.sel === "__all" ? s.groups : s.groups.filter(g => g.key === s.sel);
+    if (!groups.some(g => g.files.length)) { setStatus(s.groups.length ? "Este trámite no tiene PDFs ni imágenes." : "Esta carpeta no tiene PDFs ni imágenes.", "err"); return; }
+    for (const g of groups) {
+      const before = items.length;
+      await addFiles(g.files, true);
+      if (s.sel === "__all") items.slice(before).forEach(it => it.tram = g.nro ? "#" + g.nro : g.label);
+    }
+    const n = applyEditedCopies();
+    render();
+    setStatus(`${items.length} página(s) en la lista.` + (n ? ` Se usaron ${n} versión(es) editada(s) en Photopea en lugar de los originales.` : ""));
+  }
+
+  // Si en la carpeta hay "X editado.jpg", reemplaza la página original X por esa versión
+  function applyEditedCopies() {
+    const edits = new Map();
+    for (const it of items) {
+      const m = it.kind === "img" && it.name.match(/^(.*?)(?: pág (\d+))? editado\.jpg$/i);
+      if (m) { it._edit = true; edits.set(`${(it.dir && it.dir.name) || ""}|${m[1].toLowerCase()}|${m[2] || "1"}`, it); }
+    }
+    if (!edits.size) return 0;
+    const keyOf = it => `${(it.dir && it.dir.name) || ""}|${(it.kind === "pdf" ? sources[it.src].name : it.name).replace(/\.[^.]+$/, "").toLowerCase()}|${it.kind === "pdf" ? it.page + 1 : 1}`;
+    const used = new Set();
+    for (const it of items) if (!it._edit) { const e = edits.get(keyOf(it)); if (e) used.add(e); }
+    const placed = new Set();
+    items = items.flatMap(it => {
+      if (it._edit) return used.has(it) ? [] : [it];
+      const e = edits.get(keyOf(it));
+      if (e && used.has(e) && !placed.has(e)) { placed.add(e); e.edited = true; e.tram = it.tram; return [e]; }
+      return [it];
+    });
+    return used.size;
   }
   $("reloadSocio").onclick = () => current && openSocio(current);
   $("toggleNoApto").onclick = async () => {
@@ -528,7 +634,7 @@
     const sid = "s" + (++uid);
     sources[sid] = { kind: "pdf", name: f.name, bytes, pdfjs };
     for (let i = 0; i < pdfjs.numPages; i++) {
-      const it = { id: "p" + (++uid), kind: "pdf", src: sid, page: i, rot: 0, on: true, name: pdfjs.numPages > 1 ? `${f.name} · pág. ${i + 1}` : f.name, canvas: document.createElement("canvas") };
+      const it = { id: "p" + (++uid), kind: "pdf", src: sid, page: i, rot: 0, on: true, dir: fileDir.get(f) || null, name: pdfjs.numPages > 1 ? `${f.name} · pág. ${i + 1}` : f.name, canvas: document.createElement("canvas") };
       items.push(it); queueThumb(it);
     }
   }
@@ -548,7 +654,7 @@
   }
   async function addImg(blob, name, file) {
     const sid = await newImgSource(blob, name, file);
-    const it = { id: "p" + (++uid), kind: "img", src: sid, page: 0, rot: 0, on: true, name };
+    const it = { id: "p" + (++uid), kind: "img", src: sid, page: 0, rot: 0, on: true, dir: (file && fileDir.get(file)) || null, name };
     drawImgThumb(it); items.push(it);
   }
 
@@ -587,7 +693,7 @@
           <button data-a="del" title="Sacar de la lista">✕</button>
           <button data-a="right" title="Mover después">▶</button>
         </div>`;
-      const meta = card.querySelector(".meta"); meta.textContent = it.name; meta.title = it.name;
+      const meta = card.querySelector(".meta"); meta.textContent = (it.tram ? it.tram + " · " : "") + it.name; meta.title = meta.textContent;
       it.canvas.style.transform = `rotate(${it.rot}deg)` + (it.rot % 180 ? " scale(.75)" : "");
       card.querySelector(".thumb").appendChild(it.canvas);
 
@@ -1033,8 +1139,9 @@
       drawImgThumb(it); render();
       await ppCloseDoc();
       let extra = "";
-      if (current && rootDir && await hasPerm(rootDir, false)) {
-        try { await writeFile(current.handle, editedName, blob); extra = ` Copia guardada en la carpeta ${current.name}.`; }
+      const dir = it.dir || (current && current.handle);
+      if (dir && rootDir && await hasPerm(rootDir, false)) {
+        try { await writeFile(dir, editedName, blob); extra = ` Copia guardada en la carpeta ${dir.name}.`; }
         catch (e) { console.warn(e); }
       }
       $("ppOv").classList.remove("show");
