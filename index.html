@@ -548,6 +548,9 @@
     <label class="cfgchk"><input type="checkbox" id="set_autoNext"> Al guardar, pasar solo al siguiente pendiente</label>
     <label class="cfgchk"><input type="checkbox" id="set_autoNextQ"> Al cargar la fecha con la tecla de fecha a mano, pasar al siguiente</label>
     <label class="cfgchk"><input type="checkbox" id="set_openFirst"> Abrir la primera hoja en grande al pasar al siguiente</label>
+    <h4>✍ Firmados</h4>
+    <p class="edhint">Un PDF firmado cuenta solo si se firmó después de que dejaste listo a ese socio en el Armador (así no se confunden con los del año pasado). Si el Armador no tiene registro de ese socio, se toman los firmados de los últimos:</p>
+    <label class="cfgchk"><input type="number" id="set_signDays" min="1" max="365" style="width:70px"> días</label>
     <h4>💾 Copia de seguridad</h4>
     <p class="edhint">Guarda todo lo cargado (fechas, observaciones, listas de nombres y CUIL, Para editar, cierres, métricas, objetivo, atajos) de los dos apartados en un archivo. Sirve si se borra Chrome o cambiás de PC. Las carpetas no viajan: después de importar elegilas de nuevo.</p>
     <div class="frow"><button id="cfgExport">💾 Exportar configuración</button><button id="cfgImport">📂 Importar configuración</button></div>
@@ -606,7 +609,7 @@
 
   /* ================= Estado ================= */
   let rootDir = null, outDir = null, signDir = null;
-  let firmados = [];          // nombres de archivos en la carpeta de firmados (minúsculas)
+  let firmados = [];          // archivos de la carpeta de firmados: {n: nombre en minúsculas, t: fecha de modificación}
   // Apartados: cada uno con sus carpetas, formato de nombre, fechas, marcas y "Para editar"
   const PROFS = { diabetes: "🩸 Diabetes", hsextras: "⏱ Hs extras" };
   let prof = "diabetes";
@@ -824,17 +827,28 @@
       if ((await signDir.queryPermission({ mode: "read" })) !== "granted") { $("reconnect").hidden = false; return; }
       const walk = async (dir, depth) => {
         for await (const [name, h] of dir.entries()) {
-          if (h.kind === "file" && /\.pdf$/i.test(name)) firmados.push(name.toLowerCase());
+          if (h.kind === "file" && /\.pdf$/i.test(name)) { let t = 0; try { t = (await h.getFile()).lastModified; } catch (e) {} firmados.push({ n: name.toLowerCase(), t }); }
           else if (h.kind === "directory" && depth < 1) await walk(h, depth + 1);
         }
       };
       await walk(signDir, 0);
     } catch (e) { console.warn(e); }
   }
+  // Cuándo quedó listo este socio en el Armador (guardado o fecha de planilla cargada)
+  function listoDesde(s) {
+    let t = 0;
+    for (const r of dayLog) if (r.socio === s.name && r.root === scopeOf(s) && r.ts > t) t = r.ts;
+    const n = noteOf(s); if (n.fpTs && n.fpTs > t) t = n.fpTs;
+    return t;
+  }
+  // Firmado = hay un PDF con su DNI o CUIL en el nombre, firmado DESPUÉS de que lo dejaste listo.
+  // Si el Armador no tiene registro de ese socio, vale solo si se firmó en los últimos N días (Configuración).
   function isFirmado(s) {
     if (!firmados.length) return false;
     const ids = [s.dni, cuilOf(s)].filter(Boolean);
-    return firmados.some(n => (n.match(/\d+/g) || []).some(t => ids.includes(t) || ids.includes(String(+t))));
+    const desde = listoDesde(s);
+    const minimo = desde ? desde - 10 * 60 * 1000 : Date.now() - (settings.signDays || 30) * 24 * 3600 * 1000;
+    return firmados.some(f => f.t >= minimo && (f.n.match(/\d+/g) || []).some(t => ids.includes(t) || ids.includes(String(+t))));
   }
   // Al volver a la ventana se releen las carpetas (por si la autofirma ya devolvió PDFs)
   window.addEventListener("focus", async () => {
@@ -2803,7 +2817,7 @@
   });
 
   /* Opciones generales */
-  let settings = { autoNext: true, autoNextQ: false, openFirst: true };
+  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30 };
   async function goNextAuto() {
     const n = nextPending();
     if (!n) { toast("🎉 No quedan pendientes en esta fecha."); return; }
@@ -2815,11 +2829,15 @@
     toast(`▶ Siguiente: ${n.name}${personName(n) ? " · " + personName(n) : ""}`);
   }
   function renderSettings() {
-    for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) el.checked = !!settings[k]; }
+    for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) { if (el.type === "checkbox") el.checked = !!settings[k]; else el.value = settings[k]; } }
   }
   for (const k of ["autoNext", "autoNextQ", "openFirst"]) {
     $("set_" + k).addEventListener("change", () => { settings[k] = $("set_" + k).checked; kvSet("settings", settings); });
   }
+  $("set_signDays").addEventListener("change", () => {
+    settings.signDays = Math.max(1, parseInt($("set_signDays").value) || 30); $("set_signDays").value = settings.signDays;
+    kvSet("settings", settings); renderSocios();
+  });
   $("cfgReset").onclick = () => { keymap = { ...KEY_DEFAULTS }; kvSet("keymap", keymap); renderCfg(); applyKeyLabels(); toast("Atajos restablecidos."); };
   function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); $("cfgPanel").classList.add("show"); }
   function closeCfg() { capturing = null; $("cfgPanel").classList.remove("show"); }
