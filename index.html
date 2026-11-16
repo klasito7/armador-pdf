@@ -315,6 +315,8 @@
       <div class="counts" id="counts"></div>
       <div class="exportbar" id="namesBar" hidden>
         <button id="namesBtn" title="Pegá DNI y nombre desde tu Excel: cada carpeta toma su nombre sola">👥 Lista de nombres <span class="badge" id="namesCount" hidden>0</span></button>
+        <button id="clasifBtn" title="Importar el reporte del Bot Planillas (clasificacion_*.csv)">🤖 Importar clasificador</button>
+        <input type="file" id="clasifFile" accept=".csv,text/csv" hidden>
       </div>
       <div class="exportbar">
         <button id="copyList" title="Copia el listado para pegarlo directo en Excel">📋 Copiar listado</button>
@@ -2563,6 +2565,53 @@
       el.textContent = txt; el.title = txt; el.classList.toggle("nolist", !nm);
     }
   }
+
+  /* ================= Importar el reporte del Bot Planillas (clasificador) ================= */
+  // Lee clasificacion_*.csv: DNI;Nombre;Tipo;Fecha planilla;Validez;...;Revisar;PDF
+  // - Sin nada en "Revisar": se carga la fecha de planilla (queda ✓ Listo).
+  // - Con algo en "Revisar": queda pendiente y el motivo va a la observación, para revisarlo a mano.
+  async function importClasificador(text) {
+    const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) throw new Error("el archivo está vacío");
+    const sep = lines[0].split(";").length >= lines[0].split("\t").length ? ";" : "\t";
+    const split = l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(x => x.trim()); };
+    const nrm = h => h.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    const head = split(lines[0]).map(nrm);
+    const col = n => head.indexOf(n);
+    const iD = col("dni"), iN = col("nombre"), iF = col("fecha planilla"), iV = col("validez"), iR = col("revisar");
+    if (iD < 0 || iF < 0) throw new Error("no parece un reporte del clasificador (faltan las columnas DNI / Fecha planilla)");
+    const porDni = new Map(socios.map(s => [s.dni, s]));
+    let nListos = 0, revisar = 0, sinCarpeta = 0;
+    for (const l of lines.slice(1)) {
+      const c = split(l), dni = String(+(c[iD] || "").replace(/\D/g, "") || "");
+      if (!dni || dni === "0") continue;
+      if (iN >= 0 && c[iN] && !namesMap[dni]) namesMap[dni] = c[iN];
+      const s = porDni.get(dni);
+      if (!s) { sinCarpeta++; continue; }
+      const m = (c[iF] || "").match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/) || (c[iF] || "").match(/(\d{4})-(\d{2})-(\d{2})/);
+      const iso = m ? (m[1].length === 4 ? `${m[1]}-${m[2]}-${m[3]}` : validDate(m[1], m[2], m[3])) : null;
+      const rev = iR >= 0 ? (c[iR] || "") : "";
+      const val = iV >= 0 ? (c[iV] || "") : "";
+      const k = noteKey(s), n = { ...(notes[k] || {}) };
+      const nota = ["🤖 " + (rev ? "Revisar: " + rev : "Clasificador OK"), val && !/^OK/i.test(val) ? val : ""].filter(Boolean).join(" · ");
+      if (!n.obs || !n.obs.includes("🤖")) n.obs = [n.obs, nota].filter(Boolean).join(" · ");
+      if (iso && !rev && !n.fp) { n.fp = iso; n.fpTs = Date.now(); n.socio = s.name; n.dni = s.dni; n.scope = scopeOf(s); nListos++; }
+      if (rev) revisar++;
+      notes[k] = n;
+    }
+    await kvSet(pk("notes"), notes); await kvSet(pk("names"), namesMap);
+    updateNamesUi(); renderSocios(); updateDayCount(); if (current) updateSocioHead();
+    return { listos: nListos, revisar, sinCarpeta };
+  }
+  $("clasifBtn").onclick = () => $("clasifFile").click();
+  $("clasifFile").addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    if (!socios.length) { toast("Primero elegí la carpeta (y la fecha) de los socios que procesó el clasificador."); return; }
+    try {
+      const r = await importClasificador(await f.text());
+      toast(`🤖 Clasificador: ${r.listos} con fecha (✓ Listo) · ${r.revisar} para revisar` + (r.sinCarpeta ? ` · ${r.sinCarpeta} DNI sin carpeta en esta fecha` : ""));
+    } catch (err) { toast("No pude importar: " + err.message); }
+  });
 
   /* ================= Lista de nombres (DNI -> Apellido, Nombre) ================= */
   // Cada renglón puede traer DNI, CUIL y Apellido, Nombre, en cualquier orden (columnas de Excel)
