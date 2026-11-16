@@ -494,7 +494,7 @@
     <button id="zCrop" title="Activá y arrastrá sobre la página para recortar">✂ Recortar</button>
     <button id="zClearCrop">Quitar recorte</button>
     <button class="primary" id="zApply">✓ Aplicar</button>
-    <button class="pp" id="zPP" title="Abrir esta hoja en Photopea">✏️ Photopea</button>
+    <button class="pp" id="zPP" title="Abrir esta hoja en Photopea">✏️ Photopea <kbd data-k="photopea">E</kbd></button>
     <button id="mclose">Cerrar ✕</button>
   </div>
   <div id="zview"><div class="zwrap" id="zwrap"><canvas id="mcanvas"></canvas><div id="zsel" hidden></div></div></div>
@@ -617,7 +617,8 @@
 </ul>
 <h3>Photopea y Para editar</h3>
 <ul>
-<li><b>E</b> (o el botón naranja): manda la hoja abierta o bajo el mouse, más las elegidas con Ctrl + clic, a Para editar con una nota.</li>
+<li><b>E</b>: abre en Photopea la hoja abierta o bajo el mouse, más las elegidas con Ctrl + clic.</li>
+<li><b>L</b> (o el botón naranja): manda esas hojas a la lista Para editar, con una nota para hacerlas después.</li>
 <li><b>Panel Para editar:</b> Abrir, Photopea, Hecho y ✕ para descartar (con Deshacer).</li>
 <li><b>Photopea:</b> abre las hojas en pestañas; <b>Usar versión editada</b> las devuelve a su lugar y las quita de Para editar.</li>
 <li>La copia <code>... editado.jpg</code> queda en la carpeta del trámite y se usa al volver a abrir el socio.</li>
@@ -649,7 +650,7 @@
 <li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
 </ul>
 <h3>Atajos de teclado</h3>
-<table><tr><th>Tecla</th><th>Qué hace</th></tr><tr><td>Clic / Ctrl + clic / Shift + clic</td><td>Ver en grande / incluir-excluir / tramo</td></tr><tr><td>N / T / I</td><td>Ninguna / Todas / Invertir</td></tr><tr><td>Q</td><td>Fecha de planilla a mano</td></tr><tr><td>F</td><td>Leer la fecha manuscrita</td></tr><tr><td>E</td><td>Mandar a Para editar</td></tr><tr><td>P</td><td>Vista previa</td></tr><tr><td>Ctrl + S</td><td>Guardar en Listos</td></tr><tr><td>Enter / Esc</td><td>Cerrar hoja en grande o vista previa</td></tr><tr><td>Ruedita / Ctrl + ruedita</td><td>Zoom en hoja en grande / en vista previa</td></tr><tr><td>← → / Espacio</td><td>Hoja anterior-siguiente / incluir-excluir</td></tr></table>
+<table><tr><th>Tecla</th><th>Qué hace</th></tr><tr><td>Clic / Ctrl + clic / Shift + clic</td><td>Ver en grande / incluir-excluir / tramo</td></tr><tr><td>N / T / I</td><td>Ninguna / Todas / Invertir</td></tr><tr><td>Q</td><td>Fecha de planilla a mano</td></tr><tr><td>F</td><td>Leer la fecha manuscrita</td></tr><tr><td>E</td><td>Abrir en Photopea</td></tr><tr><td>L</td><td>Mandar a la lista Para editar</td></tr><tr><td>P</td><td>Vista previa</td></tr><tr><td>Ctrl + S</td><td>Guardar en Listos</td></tr><tr><td>Enter / Esc</td><td>Cerrar hoja en grande o vista previa</td></tr><tr><td>Ruedita / Ctrl + ruedita</td><td>Zoom en hoja en grande / en vista previa</td></tr><tr><td>← → / Espacio</td><td>Hoja anterior-siguiente / incluir-excluir</td></tr></table>
 <h3>Problemas frecuentes</h3>
 <table><tr><th>Qué pasa</th><th>Qué hacer</th></tr><tr><td>No veo los cambios nuevos</td><td>Recargar con Ctrl + F5</td></tr><tr><td>Aparece Reconectar carpetas</td><td>Tocarlo y elegir "Permitir en cada visita"</td></tr><tr><td>La lista muestra fechas como socios</td><td>Elegir como Socios la carpeta que contiene las fechas</td></tr><tr><td>No guarda: falta CUIL</td><td>Pegar el CUIL en la Lista de nombres o pasar a Guardar con DNI</td></tr><tr><td>Un firmado no aparece</td><td>La firma tiene que conservar el DNI o CUIL en el nombre</td></tr><tr><td>La F tarda o falla</td><td>Usar Q; marcar la zona de la fecha</td></tr><tr><td>Las fotos HEIC no cargan</td><td>Exportarlas como JPG</td></tr><tr><td>Cambié de PC</td><td>Importar configuración</td></tr></table>
 
@@ -721,7 +722,7 @@
 <li><label><input type='checkbox'> Si faltan valores de laboratorio, va el laboratorio.</label></li>
 <li><label><input type='checkbox'> La fecha está dentro del plazo (3 meses reemp., 1 año emp.).</label></li>
 <li><label><input type='checkbox'> Nada de más: orden, sensor o recetas fuera.</label></li>
-<li><label><input type='checkbox'> Algo para corregir → <b>E</b> con una nota.</label></li>
+<li><label><input type='checkbox'> Algo para corregir → <b>E</b> para Photopea ahora, o <b>L</b> con una nota para después.</label></li>
 <li><label><input type='checkbox'> No se puede presentar → <b>Marcar no apto</b> + motivo.</label></li>
 </ul>
 <h3>Paso 5: firma y carga en SURGE</h3>
@@ -798,7 +799,7 @@
   <div id="edList"></div>
   <div class="empty" id="edEmpty">No hay planillas para editar.</div>
 </div>
-<button id="edBtn" hidden title="Mandar esta planilla a Para editar (E)">📝 Para editar <kbd data-k="toEdit">E</kbd></button>
+<button id="edBtn" hidden title="Mandar a la lista Para editar">📝 Para editar <kbd data-k="toEdit">E</kbd></button>
 <div id="kbar" hidden></div>
 
 <script>
@@ -2608,7 +2609,17 @@
   $("edBtn").onclick = () => edAsk(edTargetItems());
   $("zPP").onclick = () => { const it = zItem; modal.classList.remove("show"); if (it) openPhotopea(it); };
 
-  // Tecla E: mandar a "Para editar"
+  // Tecla E (configurable): abrir en Photopea la hoja abierta / bajo el mouse + las elegidas con Ctrl+clic
+  document.addEventListener("keydown", e => {
+    if (!keyIs(e, "photopea")) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["edlg", "fdlg", "qdlg", "nmlg", "daylg"].some(id => !$(id).hidden) || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
+    e.preventDefault();
+    const list = edTargetItems();
+    if (!list.length) { toast("Pasá el mouse por la hoja (o abrila en grande) y apretá " + KL("photopea") + "."); return; }
+    modal.classList.remove("show");
+    openPhotopea(list);
+  });
+  // Tecla L (configurable): mandar a la lista "Para editar"
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "toEdit")) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("edlg").hidden || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
@@ -3017,13 +3028,19 @@
     ["save", "Guardar en Listos", "ctrl+s"],
     ["quickDate", "Fecha de planilla a mano", "q"],
     ["readDate", "Leer fecha manuscrita", "f"],
-    ["toEdit", "Mandar a Para editar", "e"],
+    ["photopea", "Abrir en Photopea", "e"],
+    ["toEdit", "Mandar a Para editar (lista)", "l"],
     ["closePreview", "Cerrar hoja en grande / vista previa", "enter"],
     ["toggleIncl", "Incluir/excluir hoja (en grande)", "space"],
     ["prevPage", "Hoja anterior (en grande)", "arrowleft"],
     ["nextPage", "Hoja siguiente (en grande)", "arrowright"]
   ];
   const KEY_DEFAULTS = Object.fromEntries(KEY_ACTIONS.map(([a, , k]) => [a, k]));
+  // Antes la E era "Para editar": si quedó guardada así, pasa a L y la E queda para Photopea
+  function migrateKeys(km) {
+    if (km.toEdit === km.photopea) km.toEdit = KEY_DEFAULTS.toEdit === km.photopea ? "" : KEY_DEFAULTS.toEdit;
+    return km;
+  }
   let keymap = { ...KEY_DEFAULTS };
   function comboOf(e) {
     const k = e.key === " " ? "space" : e.key.toLowerCase();
@@ -3092,7 +3109,7 @@
       for (const [k, v] of Object.entries(p.data)) await kvSet(k, v);
       const carp = Object.entries(p.carpetas || {}).map(([k, n]) => `${k}: ${n}`).join(" · ");
       toast("📂 Configuración importada." + (carp ? " Carpetas que usabas: " + carp : ""));
-      keymap = { ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }; applyKeyLabels();
+      keymap = migrateKeys({ ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }); applyKeyLabels();
       settings = { ...settings, ...((await kvGet("settings")) || {}) }; renderSettings(); renderCfg();
       const sp = await kvGet("prof"); if (sp && PROFS[sp]) prof = sp;
       await loadProfile();
@@ -3167,8 +3184,8 @@
 
   /* Barra de atajos incrustada: se mueve al apartado en el que estás y cambia su contenido */
   const KB = {
-    get lista() { return ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], [KL("none"), "ninguna"], [KL("all"), "todas"], [KL("invert"), "invertir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("toEdit"), "para editar"], [KL("preview"), "vista previa"], [KL("save"), "guardar"]]]; },
-    get visor() { return ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], [KL("prevPage") + " " + KL("nextPage"), "página"], [KL("toggleIncl"), "incluir/excluir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("toEdit"), "para editar"], [KL("closePreview"), "cerrar"], ["Clic afuera", "cerrar"]]]; },
+    get lista() { return ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], [KL("none"), "ninguna"], [KL("all"), "todas"], [KL("invert"), "invertir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("photopea"), "Photopea"], [KL("toEdit"), "para editar"], [KL("preview"), "vista previa"], [KL("save"), "guardar"]]]; },
+    get visor() { return ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], [KL("prevPage") + " " + KL("nextPage"), "página"], [KL("toggleIncl"), "incluir/excluir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("photopea"), "Photopea"], [KL("toEdit"), "para editar"], [KL("closePreview"), "cerrar"], ["Clic afuera", "cerrar"]]]; },
     get previa() { return ["Vista previa", [[KL("quickDate"), "fecha a mano"], ["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], [KL("save"), "guardar"], [KL("closePreview"), "volver"], ["Clic afuera", "volver"]]]; },
     panel: ["Para editar", [["Enter", "guardar nota"], ["✕", "descartar"], ["Esc", "cerrar"]]]
   };
@@ -3249,7 +3266,7 @@
     });
     const sp = await kvGet("prof"); if (sp && PROFS[sp]) prof = sp;
     settings = { ...settings, ...((await kvGet("settings")) || {}) }; renderSettings();
-    keymap = { ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }; applyKeyLabels();
+    keymap = migrateKeys({ ...KEY_DEFAULTS, ...((await kvGet("keymap")) || {}) }); applyKeyLabels();
     await loadProfile();
   })();
 })();
