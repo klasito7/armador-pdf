@@ -701,10 +701,20 @@
 <ul>
 <li><b>Fijarse:</b> Vencimientos (a quién reempadronar), Diferencias (qué corregir en el Excel), Seguimiento (borradores, pendientes, rechazados), Nros sin anotar / Solo en SURGE.</li>
 </ul>
+<h3>Cuando llega el reporte de Altas nuevas (mail con Excel)</h3>
+<ol>
+<li>Guardar el Excel en Descargas (o arrastrarlo sobre <code>ejecutar_altas.bat</code>).</li>
+<li>Doble clic en <code>ejecutar_altas.bat</code>: cruza con la base y separa lo que no hace falta consultar (vigentes, en trámite, jubilados).</li>
+<li>Pregunta si corre el Buscador Padrón con el resto: Enter = sí.</li>
+<li>Al terminar deja en la carpeta <code>altas</code>: <code>dnis_sgi.txt</code> (los que hoy tienen Swiss), <code>lista_nombres.txt</code> (para Lista de nombres del Armador) y <code>altas_FECHA.xlsx</code> con el detalle.</li>
+</ol>
+<ul>
+<li><b>Fijarse:</b> hoja Revisar (DNI que no coincide o error del padrón) y las "Reconsultar" (antes no desregula o baja Swiss).</li>
+</ul>
 <h3>Paso 2: bajar la documentación de SGI</h3>
 <ol>
 <li>Entrar a SGI (red o VPN) y loguearse.</li>
-<li>Favorito <b>Docs SGI</b> y pegar los DNI del Paso 1.</li>
+<li>Favorito <b>Docs SGI</b> y pegar los DNI del Paso 1 (o los de <code>dnis_sgi.txt</code> si vienen de Altas).</li>
 <li>Esperar <code>docs_sgi_FECHA.zip</code> en Descargas.</li>
 <li>Crear la carpeta del día (ej. <code>16-11-26</code>) y descomprimir el ZIP ahí.</li>
 </ol>
