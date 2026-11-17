@@ -524,12 +524,14 @@
     <label>Día <input type="date" id="dayDate"></label>
     <label><input type="checkbox" id="dayHead" checked> Con encabezados</label>
     <label><input type="checkbox" id="dayPend"> Sumar pendientes (no aptos / para editar)</label>
+    <label title="Toma lo hecho que todavía no pasaste, del más viejo al más nuevo, de a una tanda por día"><input type="checkbox" id="dayRep"> Repartir: tanda de <input type="number" id="dayCupo" min="1" max="200" style="width:56px"> por día</label>
   </div>
   <p id="dayInfo"></p>
   <textarea id="dayText" rows="12" readonly></textarea>
   <div class="frow">
     <button class="primary" id="dayCopy">📋 Copiar para Excel</button>
     <button id="dayTxt">💾 Guardar .txt</button>
+    <button id="dayDone" hidden title="Marca esta tanda como pasada al Excel: mañana sale la siguiente">✓ Ya los pegué</button>
     <button id="dayClose" style="margin-left:auto">Cerrar</button>
   </div>
 </div></div>
@@ -633,6 +635,7 @@
 <h3>Cierre del día, listado y métricas</h3>
 <ul>
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
+<li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
 <li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
 <li><b>Métricas:</b> listos y editadas hoy, avance de la tanda, objetivo y cuántos por día hábil.</li>
 </ul>
@@ -750,6 +753,7 @@
 <h3>Fin del día (últimos 20 minutos)</h3>
 <ol>
 <li><b>Cierre del día</b> → Sumar pendientes → <b>Copiar para Excel</b> → pegar en el Excel compartido.</li>
+<li>Si hiciste más de lo que pasás por día: <b>Repartir</b> (tanda de 20-25) → Copiar → pegar → <b>✓ Ya los pegué</b>. Lo que queda sale en los días siguientes.</li>
 <li><b>Guardar .txt</b> del cierre.</li>
 <li>Revisar <b>Para editar</b> y anotar lo pendiente.</li>
 <li>Si la tanda quedó completa, <b>Marcar lista</b> la fecha.</li>
@@ -2837,7 +2841,14 @@
     cols.push(["Fecha planilla", r => fmtFecha(r.fp)], ["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs]);
     return cols;
   }
+  // Repartir: lo hecho se pasa al Excel de a una tanda por día (del más viejo al más nuevo)
+  let pasados = new Set(), repDesde = 0;
+  const repKey = r => isoDay(new Date(r.ts)) + "|" + r.root + "|" + r.socio;
+  function repRows() {
+    return savesIn("0000-00-00", "9999-12-31").filter(r => r.ts >= repDesde && !pasados.has(repKey(r))).sort((a, b) => a.ts - b.ts);
+  }
   function dayRows() {
+    if ($("dayRep").checked) return repRows().slice(0, Math.max(1, +$("dayCupo").value || 22));
     const day = $("dayDate").value;
     let rows = savesIn(day, day).sort((a, b) => a.ts - b.ts);
     if ($("dayPend").checked) {
@@ -2861,14 +2872,38 @@
     if ($("dayHead").checked) lines.unshift(cols.map(([h]) => h).join("\t"));
     $("dayText").value = lines.join("\r\n");
     const nOk = rows.filter(r => !r.estado).length, pend = rows.length - nOk;
+    const rep = $("dayRep").checked;
+    $("dayDone").hidden = !rep || !rows.length;
+    $("dayDate").disabled = $("dayPend").disabled = rep;
+    if (rep) {
+      const quedan = repRows().length - rows.length;
+      $("dayInfo").textContent = rows.length ? `Tanda para pasar: ${rows.length} · quedan ${quedan} para los próximos días · desde ${fmtFecha(isoDay(new Date(repDesde)))}` : "No queda nada sin pasar. 🎉";
+      return;
+    }
     $("dayInfo").textContent = `${fmtFecha($("dayDate").value)} · ${nOk} listo${nOk === 1 ? "" : "s"}` + (pend ? ` · ${pend} pendiente${pend === 1 ? "" : "s"}` : "") + (rows.length ? "" : " · No hay nada guardado ese día en este apartado.");
   }
-  $("dayBtn").onclick = () => {
+  $("dayBtn").onclick = async () => {
     $("dayProf").textContent = "· " + PROFS[prof];
     $("dayDate").value = isoDay(new Date());
+    pasados = new Set((await kvGet(pk("pasados"))) || []);
+    repDesde = (await kvGet(pk("repDesde"))) || 0;
+    $("dayRep").checked = !!((await kvGet(pk("repOn"))) && repDesde);
+    $("dayCupo").value = (await kvGet(pk("cupo"))) || 22;
     renderDay(); $("daylg").hidden = false;
   };
   ["dayDate", "dayHead", "dayPend"].forEach(id => $(id).addEventListener("change", renderDay));
+  $("dayRep").addEventListener("change", async () => {
+    // La primera vez arranca desde hoy: lo de días anteriores ya lo pasaste a mano
+    if ($("dayRep").checked && !repDesde) { const d = new Date(); d.setHours(0, 0, 0, 0); repDesde = d.getTime(); kvSet(pk("repDesde"), repDesde); }
+    kvSet(pk("repOn"), $("dayRep").checked); renderDay();
+  });
+  $("dayCupo").addEventListener("change", () => { kvSet(pk("cupo"), Math.max(1, +$("dayCupo").value || 22)); renderDay(); });
+  $("dayDone").onclick = () => {
+    const rows = dayRows(); rows.forEach(r => pasados.add(repKey(r)));
+    const cut = Date.now() - 1000 * 60 * 60 * 24 * 130;
+    kvSet(pk("pasados"), [...pasados].filter(k => new Date(k.slice(0, 10)).getTime() > cut));
+    toast(`✓ ${rows.length} marcados como pasados.`); renderDay();
+  };
   $("dayClose").onclick = () => { $("daylg").hidden = true; };
   $("daylg").addEventListener("pointerdown", e => { if (e.target === $("daylg")) $("daylg").hidden = true; });
   $("dayCopy").onclick = async () => {
