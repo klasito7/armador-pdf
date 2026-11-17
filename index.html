@@ -580,7 +580,7 @@
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
-<li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual.</li>
+<li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa.</li>
 </ol>
 <table><tr><th>Dato</th><th>Qué pone</th></tr><tr><td><code>{dni}</code></td><td>DNI de la carpeta</td></tr><tr><td><code>{cuil}</code></td><td>CUIL de la lista de nombres</td></tr><tr><td><code>{nombre}</code></td><td>Apellido y nombre</td></tr><tr><td><code>{tipo}</code></td><td>Tipo de documentación (Hs extras)</td></tr><tr><td><code>{periodo}</code></td><td>Período, ej. 9-26 (Hs extras)</td></tr><tr><td><code>{tramite}</code> / <code>{fecha}</code></td><td>Número y fecha del trámite</td></tr><tr><td><code>{carpeta}</code></td><td>Nombre completo de la carpeta</td></tr></table>
 <h3>La pantalla principal</h3>
@@ -3015,9 +3015,16 @@
     }
     return { names, cuils };
   }
+  // Un CUIL vale solo si sus 8 números del medio son ese DNI (en el padrón, a los familiares
+  // a veces les figura el CUIL del titular)
+  function cuilDeOtro(res) {
+    res.malos = [];
+    for (const [dni, c] of Object.entries(res.cuils)) if (String(+c.slice(2, 10)) !== String(+dni)) { res.malos.push(dni); delete res.cuils[dni]; }
+    return res;
+  }
   function parseNames(txt) {
     const byHead = parseByHeader(txt);
-    if (byHead && (Object.keys(byHead.names).length || Object.keys(byHead.cuils).length)) return byHead;
+    if (byHead && (Object.keys(byHead.names).length || Object.keys(byHead.cuils).length)) return cuilDeOtro(byHead);
     const names = {}, cuils = {};
     for (const raw of txt.split(/\r?\n/)) {
       let line = raw.replace(/"/g, " ").trim(); if (!line) continue;
@@ -3036,7 +3043,7 @@
       if (nom && /[a-záéíóúñ]/i.test(nom)) names[dni] = nom;
       if (cuil) cuils[dni] = cuil;
     }
-    return { names, cuils };
+    return cuilDeOtro({ names, cuils });
   }
   function updateNamesUi() {
     const n = new Set([...Object.keys(namesMap), ...Object.keys(cuilMap)]).size;
@@ -3047,7 +3054,7 @@
   $("nmText").addEventListener("input", () => {
     const got = parseNames($("nmText").value), dnis = new Set([...Object.keys(got.names), ...Object.keys(got.cuils)]);
     const match = socios.filter(s => dnis.has(s.dni)).length;
-    $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` : "Pegá las filas copiadas de Excel.";
+    $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` + (got.malos.length ? ` ⚠ ${got.malos.length} CUIL ignorado${got.malos.length === 1 ? "" : "s"} porque no corresponde${got.malos.length === 1 ? "" : "n"} a su DNI (familiar con el CUIL del titular): ${got.malos.slice(0, 5).join(", ")}${got.malos.length > 5 ? "…" : ""}.` : "") : "Pegá las filas copiadas de Excel.";
   });
   $("nmCancel").onclick = () => { $("nmlg").hidden = true; };
   $("nmlg").addEventListener("pointerdown", e => { if (e.target === $("nmlg")) $("nmlg").hidden = true; });
