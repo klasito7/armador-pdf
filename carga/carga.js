@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v7";
+  const VER = "v8";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -108,6 +108,9 @@
       if (!b) { toast("No hay botón Enviar a revisión a la vista."); return; }
       if (Date.now() - revisionArmada < 3000) { revisionArmada = 0; toast("📤 Enviar a revisión"); b.click(); }
       else { revisionArmada = Date.now(); toast("¿Enviar a revisión? Apretá Ctrl + Shift + S otra vez para confirmar."); }
+    } else if (e.altKey && !e.ctrlKey && !e.shiftKey && k === "c") {
+      e.preventDefault(); e.stopPropagation();
+      if (window.__cr && window.__cr.excel) window.__cr.excel(); else toast("Abrí el panel en el empadronamiento para copiar al Excel.");
     } else if (e.altKey && !e.ctrlKey && k === "p") {
       e.preventDefault(); e.stopPropagation();
       if (window.__cr && window.__cr.ver) window.__cr.ver(e.shiftKey);
@@ -117,6 +120,11 @@
       const i = ts.findIndex(t => t.classList.contains("active"));
       const n = ts[(i + (e.shiftKey ? -1 : 1) + ts.length) % ts.length]; n.click(); toast("📑 " + n.innerText.trim());
     }
+  }, true);
+  // Al enviar a revisión (con atajo o con el mouse) se prepara lo del Excel
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("button, a.btn");
+    if (b && !b.closest("#crp") && /^enviar a revisi/.test(btnTxt(b)) && window.__cr && window.__cr.onEnviar) window.__cr.onEnviar();
   }, true);
 
   window.__cr = { toggle() { box.hidden = !box.hidden; if (!box.hidden) focusFirst(); } };
@@ -316,6 +324,7 @@
       </div>
       ${editable ? "" : `<p class="msg">Este empadronamiento no se puede editar (aceptado o pendiente). Abrí uno en Borrador, Rechazado o Reempadronar.</p>`}
       <div id="cr_rows">${defs.map(rowHtml).join("")}</div>
+      ${excelHtml()}
       <div class="msg"></div>
       <div class="btns"><button class="b p" id="cr_go">Completar en SURGE <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_ver">📄 Ver planilla <kbd>Alt+P</kbd></button><button class="b" id="cr_log">📋 Copiar registro de hoy</button><button class="b" id="cr_clear">Limpiar</button></div>
       <p class="hint">Enter = siguiente · Tab = fecha del valor (vacía = la de planilla; <kbd>2023</kbd> = 01/01/2023) · opciones con las teclas · <kbd>0</kbd> = "no presenta/ninguna" · después <b>Guardar todo</b>.<br><kbd>Ctrl+S</kbd> Guardar todo (en Datos básicos: Guardar) · <kbd>Ctrl+Shift+S</kbd> dos veces = Enviar a revisión · <kbd>F2</kbd> / <kbd>Shift+F2</kbd> cambiar de pestaña · <kbd>Alt+P</kbd> ver la planilla firmada.</p>`;
@@ -389,6 +398,7 @@
     });
     box.querySelector("#cr_go").onclick = aplicar;
     box.querySelector("#cr_log").onclick = copiarLog;
+    wireExcel();
     box.querySelector("#cr_ver").onclick = e => window.__cr.ver(e.shiftKey);
     box.querySelector("#cr_clear").onclick = () => { for (const k of Object.keys(state)) delete state[k]; archivo = null; save(); render(); focusRow(0); };
   }
@@ -471,6 +481,59 @@
       });
     }, 300));
   }
+  /* ---------- Excel compartido: bloque Emp/Reemp + fecha de planilla ---------- */
+  const usuario = LS("usuario", "Gino");
+  const pend = LS("pend", null);
+  let tipoX = LS("tipo_" + solicitud, pend && pend.cuil === cuilPage ? "emp" : "reemp");
+  const vigDesde = () => { const d = v.abm_datos_basicos && v.abm_datos_basicos.fecha_inicio_tratamiento; return d ? (parseDate(isoToFmt(d)) || "") : ""; };
+  const masUnAnio = s => { if (!s) return ""; const d = toDate(s); d.setFullYear(d.getFullYear() + 1); return fmt(d); };
+  let hastaX = LS("hasta_" + solicitud, "");
+  function excelHtml() {
+    const q = LS("xq", []).filter(x => !x.ok);
+    return `<div class="top" style="border-top:1px solid #eee;border-bottom:0;margin-top:8px;padding-top:8px">
+      <label>📊 Excel</label><div><span class="op ${tipoX === "emp" ? "on" : ""}" data-tx="emp">Empadronamiento</span> <span class="op ${tipoX === "reemp" ? "on" : ""}" data-tx="reemp">Reempadronamiento</span> <small style="color:#999">Alt+R</small></div>
+      <label>Vigencia desde</label><b>${esc(vigDesde() || "—")}</b>
+      <label>Vigencia hasta</label><input id="cr_hasta" placeholder="${esc(masUnAnio(vigDesde()) || "ddmmaa")} (o fecha de baja OS)" value="${esc(hastaX)}">
+    </div>
+    <div class="btns" style="margin-top:0"><button class="b" id="cr_xq">📊 Excel pendientes (${q.length})</button></div>
+    <div id="cr_xlist" hidden></div>`;
+  }
+  function wireExcel() {
+    box.querySelectorAll("[data-tx]").forEach(el => el.onclick = () => { tipoX = el.dataset.tx; SS("tipo_" + solicitud, tipoX); box.querySelectorAll("[data-tx]").forEach(x => x.classList.toggle("on", x.dataset.tx === tipoX)); });
+    const h = box.querySelector("#cr_hasta");
+    h.addEventListener("change", () => { const d = parseDate(h.value); if (h.value && !d) { say("Vigencia hasta: fecha inválida."); return; } h.value = d || ""; hastaX = h.value; SS("hasta_" + solicitud, hastaX); });
+    box.querySelector("#cr_xq").onclick = () => { const l = box.querySelector("#cr_xlist"); l.hidden = !l.hidden; if (!l.hidden) renderXList(); };
+  }
+  const bloque = x => [x.estado || "Pendiente", x.sol, x.desde, x.hasta, x.dia, x.usuario || usuario].join("\t");
+  const copy = (txt, msg) => navigator.clipboard.writeText(txt).then(() => toast(msg), () => toast("No pude copiar al portapapeles."));
+  function renderXList() {
+    const l = box.querySelector("#cr_xlist"), q = LS("xq", []);
+    const vis = q.filter(x => !x.ok);
+    l.innerHTML = vis.length ? vis.map(x => `<div class="row" style="grid-template-columns:1fr auto auto auto"><span>${esc(x.sol)} · ${esc(x.cuil)} · <b>${x.tipo === "emp" ? "Emp" : "Reemp"}</b> <small style="color:#999">${esc(x.dia)}</small></span>
+      <button class="b" data-xb="${esc(x.sol)}">Bloque</button><button class="b" data-xf="${esc(x.sol)}">Fecha planilla</button><button class="b" data-xok="${esc(x.sol)}" title="Ya lo pegué">✓</button></div>`).join("") : `<p class="hint">No hay nada pendiente de pasar.</p>`;
+    const find = sol => LS("xq", []).find(x => x.sol === sol);
+    l.querySelectorAll("[data-xb]").forEach(b => b.onclick = () => { const x = find(b.dataset.xb); copy(bloque(x), `📋 Bloque ${x.tipo === "emp" ? "Emp" : "Reemp"} de ${x.cuil}: pegalo en "Estado ${x.tipo === "emp" ? "empadronamiento" : "reempadronamiento"}"`); });
+    l.querySelectorAll("[data-xf]").forEach(b => b.onclick = () => { const x = find(b.dataset.xf); copy(x.fp || "", `📋 Fecha planilla ${x.fp || "(vacía)"}: va en "fecha planilla" y en "Planilla Vigente" (análisis)`); });
+    l.querySelectorAll("[data-xok]").forEach(b => b.onclick = () => { const q2 = LS("xq", []); const x = q2.find(y => y.sol === b.dataset.xok); if (x) x.ok = true; SS("xq", q2); renderXList(); box.querySelector("#cr_xq").textContent = `📊 Excel pendientes (${q2.filter(y => !y.ok).length})`; });
+  }
+  let ciclo = 0;
+  window.__cr.onEnviar = () => {
+    const fpv = parseDate((box.querySelector("#cr_fp") || {}).value) || LS("fp_" + solicitud, "");
+    const desde = vigDesde(), hasta = hastaX || masUnAnio(desde);
+    const x = { sol: solicitud, cuil: cuilPage, tipo: tipoX, estado: "Pendiente", desde, hasta, fp: fpv, dia: fmt(new Date()), usuario };
+    const q = LS("xq", []).filter(y => y.sol !== solicitud); q.push(x); SS("xq", q.slice(-300));
+    ciclo = 1;
+    copy(bloque(x), `📋 Copiado para el Excel: bloque ${x.tipo === "emp" ? "Emp" : "Reemp"}${fpv ? "" : " (ojo: sin fecha de planilla)"} · Alt+C = fecha planilla`);
+    const b = box.querySelector("#cr_xq"); if (b) b.textContent = `📊 Excel pendientes (${q.filter(y => !y.ok).length})`;
+  };
+  // Alt+C alterna: bloque → fecha de planilla → bloque…
+  window.__cr.excel = () => {
+    const q = LS("xq", []); const x = q.find(y => y.sol === solicitud) || q.filter(y => !y.ok).slice(-1)[0];
+    if (!x) { toast("Todavía no enviaste ninguno a revisión."); return; }
+    if (ciclo % 2 === 0) copy(bloque(x), `📋 Bloque ${x.tipo === "emp" ? "Emp" : "Reemp"} (${x.cuil}) · Alt+C = fecha planilla`);
+    else copy(x.fp || "", `📋 Fecha planilla ${x.fp || "(vacía)"} · va en "fecha planilla" y en "Planilla Vigente"`);
+    ciclo++;
+  };
   function copiarLog() {
     const hoy = fmt(new Date());
     const rows = LS("log", []).filter(x => x.dia === hoy);
@@ -481,12 +544,15 @@
 
   box.addEventListener("keydown", e => {
     if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); aplicar(); }
+    else if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); const o = box.querySelector(`[data-tx="${tipoX === "emp" ? "reemp" : "emp"}"]`); if (o) o.click(); }
     else if (e.altKey && MODELOS[e.key]) { e.preventDefault(); modelo = +e.key; SS("modelo", modelo); render(); focusRow(0); }
     else if (e.key === "Escape") box.hidden = true;
     e.stopPropagation();
   });
   window.__cr.ver = async otra => { const f = await abrirPlanilla(cuilPage, otra); if (f) { archivo = f; const vi = rowInput("hc"); if (vi) vi.value = f.name; } };
   render();
+  // Si vengo del Alta de este mismo CUIL, la fecha de planilla ya la sé
+  if (!box.querySelector("#cr_fp").value && pend && pend.cuil === cuilPage && pend.fp) { box.querySelector("#cr_fp").value = pend.fp; SS("fp_" + solicitud, pend.fp); }
   if (editable && cuilPage) window.__cr.ver(false);
   if (!box.querySelector("#cr_fp").value) box.querySelector("#cr_fp").focus(); else focusRow(0);
 })();
