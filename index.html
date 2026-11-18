@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Armador de PDF</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
     --bg:#f4f5f7; --panel:#fff; --ink:#1d2330; --muted:#6b7280; --line:#e3e6eb;
@@ -650,6 +648,7 @@ body.dsopen .modal{right:400px}
 <ul>
 <li><b>Dirección:</b> klasito7.github.io/armador-pdf. Se abre en <b>Chrome</b> (o Edge) en la PC del trabajo.</li>
 <li><b>Nada se sube a internet:</b> la página lee y escribe en tus carpetas. Los originales nunca se modifican.</li>
+<li><b>Arranque rápido:</b> la página aparece al instante; las herramientas de PDF se bajan solas en segundo plano. Si abrís un PDF en el primer segundo, espera un instante y sigue. La carpeta Firmados se revisa cada 30 s solo si la programación está prendida o hay envíos esperando firma.</li>
 <li><b>Lo que cargás queda en ese Chrome de esa PC:</b> fechas, observaciones, listas, pendientes, cierres. Para pasarlo a otra PC se usa la copia de seguridad (ver Configuración).</li>
 <li><b>Dos apartados:</b> Diabetes y Hs extras, cada uno con sus carpetas, formato de nombre, listas y métricas (azul = Diabetes, violeta = Hs extras).</li>
 <li><b>Después de una actualización:</b> recargá con <b>Ctrl + F5</b>.</li>
@@ -984,16 +983,26 @@ body.dsopen .modal{right:400px}
 (() => {
   // Los PDF se leen en un proceso aparte del navegador (Web Worker) para que la pantalla no se trabe.
   // El worker se baja del CDN y se arranca desde la propia página; si algo falla, pdf.js usa su modo normal.
-  const PDF_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
-  const pdfWorkerReady = (async () => {
-    try {
-      const r = await fetch(PDF_WORKER);
-      if (!r.ok) return;
-      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([await r.text()], { type: "text/javascript" }));
-    } catch (e) { console.warn("Worker de PDF no disponible, sigue en modo normal", e); }
-  })();
-  const { PDFDocument, degrees } = PDFLib;
+  // Las librerías de PDF (pdf-lib y pdf.js, ~1 MB) se bajan en segundo plano: la página aparece al instante
+  // y recién se esperan cuando hacen falta (abrir un PDF o armar uno).
+  const CDN = "https://cdnjs.cloudflare.com/ajax/libs/";
+  const PDF_WORKER = CDN + "pdf.js/3.11.174/pdf.worker.min.js";
+  let PDFDocument, degrees, libsP = null, pdfWorkerReady = Promise.resolve();
+  function libs() {
+    if (!libsP) libsP = Promise.all([loadScript(CDN + "pdf-lib/1.17.1/pdf-lib.min.js"), loadScript(CDN + "pdf.js/3.11.174/pdf.min.js")]).then(() => {
+      ({ PDFDocument, degrees } = PDFLib);
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+      pdfWorkerReady = (async () => {
+        try {
+          const r = await fetch(PDF_WORKER);
+          if (!r.ok) return;
+          pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([await r.text()], { type: "text/javascript" }));
+        } catch (e) { console.warn("Worker de PDF no disponible, sigue en modo normal", e); }
+      })();
+    }).catch(e => { libsP = null; throw e; });   // si falló (sin internet), se reintenta la próxima vez
+    return libsP;
+  }
+  setTimeout(() => libs().catch(() => {}), 1500);   // se precargan apenas la página está tranquila
   const $ = id => document.getElementById(id);
   const HAS_FS = "showDirectoryPicker" in window;
   const natural = (a, b) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" });
@@ -1430,6 +1439,11 @@ body.dsopen .modal{right:400px}
   async function tickAuto() {
     try {
       if (!outDir) return;
+      // Sin programación prendida y sin envíos esperando firma no hace falta leer la carpeta Firmados cada 30 s
+      if (!auto.on && $("hdlg").hidden) {
+        const pend = ((await kvGet(pk("envios"))) || []).some(e => !e.firmado && Date.now() - e.ts < 2 * 24 * 3600 * 1000);
+        if (!pend) return;
+      }
       const { envios, now } = await renderEnvios();
       // avisos de demora (una vez por archivo)
       const tarde = envios.filter(e => !e.firmado && now - e.ts > auto.alerta * 60000 && !avisados.has(e.name));
@@ -1847,6 +1861,7 @@ body.dsopen .modal{right:400px}
   }
 
   async function addPdf(f) {
+    await libs();
     await Promise.race([pdfWorkerReady, new Promise(r => setTimeout(r, 4000))]);
     const bytes = new Uint8Array(await f.arrayBuffer());
     const pdfjs = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
@@ -2228,6 +2243,7 @@ body.dsopen .modal{right:400px}
     return Array.from({ length: n }, (_, i) => i === 0 ? base : `${stem} (${i + 1}).pdf`);
   }
   async function buildPdf(chosen, say = setStatus, label = "") {
+    await libs();
     const out = await PDFDocument.create();
     const libDocs = {}, sizeMode = $("pageSize").value;
     const compress = $("pdfMode").value === "compress";
