@@ -298,6 +298,7 @@ body.dsopen .modal{right:400px}
 .dsop b{color:var(--accent);margin-right:3px}.dsop.on{background:var(--accent);color:#fff;border-color:var(--accent)}.dsop.on b{color:#fff}
 .dsfoot{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line)}
 #dsState.ok{color:#2a9d6a;font-weight:600}
+.dssec{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--accent);margin:8px 4px 2px}.dssec span{text-transform:none;font-weight:400;color:var(--muted)}
 .dshint{padding:0 12px 10px;margin:0}
 .alist{max-height:220px;overflow:auto;font-size:12.5px}.alist div{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #8882}
 .alist .ok{color:#2a9d6a}.alist .wait{color:#c88a00}.alist .bad{color:#d33}
@@ -3809,10 +3810,15 @@ body.dsopen .modal{right:400px}
     return "";
   }
   const dsFilled = (f, v) => v && (f.type === "combo" || f.type === "multiple" ? (v.sel || []).length : String(v.v || "").trim());
+  // Obligatorios: los requisitos. Los datos básicos (diagnóstico, médico…) son opcionales:
+  // en un reempadronamiento ya están en SURGE
+  const DS_REQ = DS_FIELDS.filter(f => !f.basico);
   function dsProgress(s) {
     const d = surgeData[sidOf(s)]; if (!d) return null;
-    const n = DS_FIELDS.filter(f => dsFilled(f, d.vals[f.k]) && !dsCheck(f, d.vals[f.k].v)).length;
-    return n ? { n, total: DS_FIELDS.length, ok: n === DS_FIELDS.length } : null;
+    const okF = f => dsFilled(f, d.vals[f.k]) && !dsCheck(f, d.vals[f.k].v);
+    const n = DS_REQ.filter(okF).length, nb = DS_FIELDS.filter(f => f.basico && okF(f)).length;
+    const malBasico = DS_FIELDS.some(f => f.basico && dsFilled(f, d.vals[f.k]) && dsCheck(f, d.vals[f.k].v));
+    return n || nb ? { n, total: DS_REQ.length, ok: n === DS_REQ.length && !malBasico, basicos: nb } : null;
   }
   function dsRender() {
     if (!current) return;
@@ -3829,7 +3835,7 @@ body.dsopen .modal{right:400px}
       else inp = `<input class="dsv" data-i="${i}" value="${escapeHtml(v.v || "")}" placeholder="${f.type === "numero" ? f.min + "–" + f.max : f.type === "fecha" ? "año o ddmmaa" : ""}" ${f.type === "matricula" ? 'list="dsMeds"' : ""}>`;
       const date = f.basico ? "<span></span>" : `<input class="dsd" data-i="${i}" placeholder="fecha planilla" value="${escapeHtml(v.d || "")}">`;
       const ops = f.ops && !f.basico || f.k === "tipomat" ? `<div class="dsops">${f.ops.map((o, j) => `<span class="dsop ${sel.has(j) ? "on" : ""}" data-i="${i}" data-o="${j}"><b>${dsKeyOf(f, j)}</b>${escapeHtml(o)}</span>`).join("")}</div>` : "";
-      return `<div class="dsrow ${err ? "bad" : ""}" data-row="${i}"><div class="dslbl">${escapeHtml(f.label)}${err ? ` <em>${err}</em>` : ""}</div>${inp}${date}${ops}</div>`;
+      return `${i === 0 ? '<div class="dssec">Datos básicos <span>(opcionales: solo para altas nuevas)</span></div>' : i === 4 ? '<div class="dssec">Requisitos</div>' : ""}<div class="dsrow ${err ? "bad" : ""}" data-row="${i}"><div class="dslbl">${escapeHtml(f.label)}${err ? ` <em>${err}</em>` : ""}</div>${inp}${date}${ops}</div>`;
     }).join("");
     $("dsMeds").innerHTML = Object.entries(dsMedicos).map(([m, x]) => `<option value="${escapeHtml(m)}">${escapeHtml(x.nombre)}</option>`).join("");
     const p = dsProgress(current);
@@ -3920,13 +3926,14 @@ body.dsopen .modal{right:400px}
       const d = surgeData[sidOf(s)], p = dsProgress(s);
       if (!d || !p) continue;
       const por = [];
-      if (!p.ok) por.push(`faltan ${p.total - p.n} datos (${DS_FIELDS.filter(f => !dsFilled(f, d.vals[f.k]) || dsCheck(f, (d.vals[f.k] || {}).v)).map(f => f.label).slice(0, 3).join(", ")}${p.total - p.n > 3 ? "…" : ""})`);
+      if (!p.ok) { const mal = DS_FIELDS.filter(f => f.basico ? dsFilled(f, d.vals[f.k]) && dsCheck(f, d.vals[f.k].v) : !dsFilled(f, d.vals[f.k]) || dsCheck(f, (d.vals[f.k] || {}).v)).map(f => f.label); por.push(`faltan o están mal ${mal.length} datos (${mal.slice(0, 3).join(", ")}${mal.length > 3 ? "…" : ""})`); }
       if (!cuilOf(s)) por.push("sin CUIL en la Lista de nombres");
       if (!noteOf(s).fp) por.push("sin fecha de planilla");
       if (por.length) { faltan.push(`${s.name}: ${por.join(" · ")}`); continue; }
       const req = {};
       for (const f of DS_FIELDS) {
         const v = d.vals[f.k] || {};
+        if (f.basico && !dsFilled(f, v)) continue;
         req[f.k] = f.type === "combo" || f.type === "multiple" ? { sel: (v.sel || []).map(j => f.ops[j]), d: v.d || "" } : { v: f.type === "fecha" ? dsDate(v.v) : f.type === "numero" ? String(Number(String(v.v).replace(",", "."))) : String(v.v).trim(), d: v.d || "" };
       }
       const [y, m, dd] = noteOf(s).fp.split("-");

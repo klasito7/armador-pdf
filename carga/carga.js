@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v10";
+  const VER = "v11";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -338,8 +338,10 @@
       const mat = box.querySelector("#cr_mat").value.trim(), med = box.querySelector("#cr_med").value.trim(), tmat = box.querySelector("#cr_tmat").value.trim();
       if (tmat && !/^[12]$/.test(tmat)) { say("Tipo de matrícula: 1 Nacional o 2 Provincial."); return; }
       if (fdiag) { const i = document.querySelector('input[placeholder="Ingrese fecha diagnóstico"]'); if (i) setPicker(i, fdiag); v.$set(v.abm, "fecha_diagnostico", fdiag); }
-      if (med) v.$set(v.abm, "nombre_matriculado", med);
-      if (mat) v.$set(v.abm, "matricula_prescriptor", mat);
+      // además del modelo, escribo en los campos de la página (por si SURGE los toma del campo)
+      const escribir = (ph, val) => { const i = document.querySelector(`input[placeholder="${ph}"]`); if (i && val) { i.value = val; i.dispatchEvent(new Event("input", { bubbles: true })); i.dispatchEvent(new Event("change", { bubbles: true })); } };
+      if (med) { v.$set(v.abm, "nombre_matriculado", med); escribir("Ingrese nombre matriculado", med); }
+      if (mat) { v.$set(v.abm, "matricula_prescriptor", mat); escribir("Ingrese matricula prescriptor", mat); }
       if (tmat) { v.$set(v.abm, "tipo_matricula_id", tmat); const sels = document.querySelectorAll("select.select2-hidden-accessible"); const s = [...sels].find(x => [...x.options].some(o => /nacional/i.test(o.text))); if (s && $) $(s).val(tmat).trigger("change"); }
       if (mat && med) { medicos[mat] = { nombre: med, tipo: tmat || "1" }; SS("medicos", medicos); }
       say("✓ Completado. Revisá y apretá Guardar.", true);
@@ -366,6 +368,11 @@
         return;
       }
       const q = rec.req || {};
+      if (!(q.fdiag || {}).v || !(q.medico || {}).v || !(q.matricula || {}).v) {
+        const c0 = cola(); c0[rec.cuil].estado = "alta"; setCola(c0);
+        say(`✓ ${nomS || rec.cuil} coincide. En el Armador no cargaste los datos básicos de este socio: completá diagnóstico, médico y matrícula acá en SURGE y apretá Guardar (Ctrl+S). Después tocá el favorito y sigue solo con los requisitos.`, true);
+        return;
+      }
       box.querySelector("#cr_fdiag").value = (q.fdiag || {}).v || "";
       box.querySelector("#cr_mat").value = (q.matricula || {}).v || "";
       box.querySelector("#cr_med").value = (q.medico || {}).v || "";
