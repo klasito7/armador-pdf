@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v9";
+  const VER = "v10";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -55,6 +55,13 @@
   st.textContent = `
 #crp{position:fixed;top:60px;right:10px;width:400px;max-height:calc(100vh - 70px);overflow:auto;z-index:99999;background:#fff;border:2px solid #f0a020;border-radius:10px;box-shadow:0 8px 30px #0004;font:13px/1.35 system-ui,Segoe UI,Arial;color:#222;padding:10px}
 #crp[hidden]{display:none}
+#crp h3{cursor:move;user-select:none}
+#cr_pill{position:fixed;right:10px;top:60px;z-index:99999;background:#f0a020;color:#fff;border-radius:18px;padding:6px 12px;font:600 13px system-ui;cursor:pointer;box-shadow:0 4px 14px #0004}
+#cr_pill[hidden]{display:none}
+#crp .cola{background:#fff6e5;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:12.5px}
+#crp .cola b{color:#c77800}
+#crp textarea{width:100%;font:12px monospace;margin-top:4px}
+#crp .cd{font-weight:700;color:#c77800}
 #crp h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
 #crp .x{border:0;background:none;font-size:16px;cursor:pointer}
 #crp .top{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #eee}
@@ -127,12 +134,72 @@
     if (b && !b.closest("#crp") && /^enviar a revisi/.test(btnTxt(b)) && window.__cr && window.__cr.onEnviar) window.__cr.onEnviar();
   }, true);
 
-  window.__cr = { toggle() { box.hidden = !box.hidden; if (!box.hidden) focusFirst(); } };
+  // Minimizar (no se cierra) y mover arrastrando el título; la posición se recuerda
+  const pill = document.createElement("div"); pill.id = "cr_pill"; pill.hidden = true; pill.textContent = "⚡ Carga rápida"; document.body.appendChild(pill);
+  const minimizar = () => { box.hidden = true; pill.hidden = false; };
+  const restaurar = () => { box.hidden = false; pill.hidden = true; focusFirst(); };
+  pill.onclick = restaurar;
+  const pos = LS("pos", null);
+  if (pos) { box.style.left = Math.min(pos.x, innerWidth - 120) + "px"; box.style.top = Math.max(0, Math.min(pos.y, innerHeight - 60)) + "px"; box.style.right = "auto"; }
+  box.addEventListener("mousedown", e => {
+    const h = e.target.closest("h3"); if (!h || e.target.closest("button")) return;
+    e.preventDefault();
+    const r0 = box.getBoundingClientRect(), dx = e.clientX - r0.left, dy = e.clientY - r0.top;
+    const mv = ev => { box.style.left = Math.max(0, Math.min(ev.clientX - dx, innerWidth - 80)) + "px"; box.style.top = Math.max(0, Math.min(ev.clientY - dy, innerHeight - 40)) + "px"; box.style.right = "auto"; };
+    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); const r1 = box.getBoundingClientRect(); SS("pos", { x: Math.round(r1.left), y: Math.round(r1.top) }); };
+    addEventListener("mousemove", mv); addEventListener("mouseup", up);
+  });
+  window.__cr = { toggle() { box.hidden ? restaurar() : minimizar(); } };
+
+  /* ---------- Cola de datos que vienen del Armador ---------- */
+  const cola = () => LS("cola", {});
+  const setCola = c => SS("cola", c);
+  const normN = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z ,]/g, " ").replace(/\s+/g, " ").trim();
+  // ¿El nombre que trae SURGE es el mismo socio? Alcanza con que coincida el apellido
+  const mismoSocio = (a, b) => { a = normN(a); b = normN(b); if (!a || !b) return true; const ap = x => x.split(",")[0].trim().split(" ")[0]; return a.includes(ap(b)) || b.includes(ap(a)); };
+  function pegarCola(txt) {
+    const i = txt.indexOf("CARGARAPIDA:"); if (i < 0) return -1;
+    let recs; try { recs = JSON.parse(txt.slice(i + 12).trim()); } catch (e) { return -1; }
+    const c = cola(); let n = 0;
+    for (const r of recs) { if (!r.cuil) continue; const prev = c[r.cuil]; c[r.cuil] = { ...r, estado: prev && prev.estado !== "pendiente" ? prev.estado : "pendiente", sol: prev && prev.sol || "", t: Date.now() }; n++; }
+    setCola(c); return n;
+  }
+  const pendientes = () => Object.values(cola()).filter(r => r.estado === "pendiente").sort((a, b) => a.t - b.t);
+  function colaHtml() {
+    const c = Object.values(cola()), p = c.filter(r => r.estado === "pendiente").length, b = c.filter(r => r.estado === "borrador").length;
+    return `<div class="cola">📥 Cola del Armador: <b>${p}</b> por cargar · ${b} en borrador <button class="b" id="cr_pegar" style="padding:1px 8px">Pegar datos</button>
+      <div id="cr_pegarBox" hidden><textarea id="cr_pegarTxt" rows="3" placeholder="Ctrl + V acá lo que copiaste con 📋 Datos para SURGE"></textarea></div></div>`;
+  }
+  function wireCola(after) {
+    const b = box.querySelector("#cr_pegar"); if (!b) return;
+    b.onclick = () => { const x = box.querySelector("#cr_pegarBox"); x.hidden = !x.hidden; if (!x.hidden) box.querySelector("#cr_pegarTxt").focus(); };
+    box.querySelector("#cr_pegarTxt").addEventListener("input", e => {
+      const n = pegarCola(e.target.value);
+      if (n < 0) { say("Eso no es lo que copia el Armador (📋 Datos para SURGE)."); return; }
+      say(`📥 ${n} socio${n === 1 ? "" : "s"} en la cola.`, true); after && after();
+    });
+  }
+  // Cuenta regresiva antes de apretar un botón de SURGE (Esc la cancela)
+  let cancelado = false;
+  addEventListener("keydown", e => { if (e.key === "Escape") cancelado = true; }, true);
+  function cuenta(seg, txt) {
+    cancelado = false;
+    return new Promise(res => {
+      let n = seg; const m = box.querySelector(".msg");
+      const t = setInterval(() => {
+        if (cancelado) { clearInterval(t); say("⏸ Cancelado. Seguí a mano o tocá ▶ de nuevo."); res(false); return; }
+        if (n <= 0) { clearInterval(t); res(true); return; }
+        if (m) { m.className = "msg ok"; m.innerHTML = `${esc(txt)} en <span class="cd">${n}</span>… (Esc cancela)`; }
+        n--;
+      }, 1000);
+    });
+  }
+  const esperar = (cond, ms) => new Promise(res => { const t0 = Date.now(); const t = setInterval(() => { if (cond()) { clearInterval(t); res(true); } else if (Date.now() - t0 > ms) { clearInterval(t); res(false); } }, 300); });
   const focusFirst = () => setTimeout(() => { const i = box.querySelector("[data-first]") || box.querySelector("input"); if (i) i.focus(); }, 30);
 
   if (!mode) {
     box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>`;
-    box.querySelector("[data-close]").onclick = () => box.hidden = true;
+    box.querySelector("[data-close]").onclick = minimizar;
     return;
   }
 
@@ -210,11 +277,12 @@
           <label>Tipo matrícula</label><input id="cr_tmat" placeholder="1 Nacional · 2 Provincial">
         </div>
       </div>
+      ${colaHtml()}
       <div class="msg"></div>
-      <div class="btns"><button class="b p" id="cr_go">Completar <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_ver">📄 Ver planilla <kbd>Alt+P</kbd></button></div>
+      <div class="btns"><button class="b p" id="cr_auto" hidden>▶ Cargar el siguiente de la cola</button><button class="b" id="cr_go">Completar <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_ver">📄 Ver planilla <kbd>Alt+P</kbd></button></div>
       <p class="hint"><kbd>Ctrl+S</kbd> Siguiente / Guardar · <kbd>F2</kbd> pestaña siguiente (<kbd>Shift+F2</kbd> anterior) · <kbd>Alt+P</kbd> ver la planilla firmada.<br>Paso 1: fecha de planilla y CUIL → Completar → <b>Siguiente</b>. Paso 2: diagnóstico y médico → Completar → apretá <b>Guardar</b>. Mínimo permitido: ${esc(minFecha)}.</p>`;
     const altaDe = s => {
-      const d = toDate(s); d.setFullYear(d.getFullYear() - 1);
+      const d = toDate(s); d.setFullYear(d.getFullYear() - 1); d.setDate(1);   // siempre el 01 del mes
       let alta = fmt(d), aviso = "";
       if (minFecha && toDate(alta) < toDate(minFecha)) { alta = minFecha; aviso = " (límite)"; }
       return [alta, aviso];
@@ -277,14 +345,46 @@
       say("✓ Completado. Revisá y apretá Guardar.", true);
     };
     box.querySelector("#cr_go").onclick = go;
+    // Automático con la cola: alta → Siguiente → chequeo de nombre → paso 2 → Guardar (queda en Borrador)
+    const autoBtn = box.querySelector("#cr_auto");
+    const updAuto = () => { const p = pendientes(); autoBtn.hidden = !p.length || v.can_completar_resto; if (p.length) autoBtn.textContent = `▶ Cargar el siguiente de la cola (${p[0].cuil}${p[0].nombre ? " · " + p[0].nombre : ""})`; };
+    wireCola(updAuto); updAuto();
+    autoBtn.onclick = async () => {
+      const rec = pendientes()[0]; if (!rec) return;
+      autoBtn.hidden = true;
+      box.querySelector("#cr_fp").value = rec.fp; box.querySelector("#cr_cuil").value = rec.cuil; upd();
+      go();
+      if (!(await cuenta(2, "Siguiente"))) return;
+      const sig = boton("siguiente"); if (!sig) { say("No encuentro el botón Siguiente."); return; }
+      sig.click();
+      if (!(await esperar(() => v.can_completar_resto, 20000))) { say("⚠ SURGE no dejó pasar a la segunda parte. Fijate el mensaje en la página (¿el CUIL está en la obra social?, ¿la fecha?)."); return; }
+      upd();
+      await new Promise(r0 => setTimeout(r0, 600));
+      const nomS = (v.abm.beneficiario && v.abm.beneficiario.nombre) || (document.querySelector("input[disabled]") || {}).value || "";
+      if (rec.nombre && !mismoSocio(nomS, rec.nombre)) {
+        say(`⚠ OJO: SURGE dice "${nomS}" y en el Armador es "${rec.nombre}". Revisá que sea el mismo socio; si está bien, apretá Completar y Guardar a mano.`);
+        return;
+      }
+      const q = rec.req || {};
+      box.querySelector("#cr_fdiag").value = (q.fdiag || {}).v || "";
+      box.querySelector("#cr_mat").value = (q.matricula || {}).v || "";
+      box.querySelector("#cr_med").value = (q.medico || {}).v || "";
+      box.querySelector("#cr_tmat").value = ((q.tipomat || {}).sel || [])[0] === "Provincial" ? "2" : "1";
+      go();
+      if (!(await cuenta(3, `✓ ${nomS || rec.cuil} coincide. Guardar`))) return;
+      const g = boton("guardar"); if (!g) { say("No encuentro el botón Guardar."); return; }
+      const c = cola(); c[rec.cuil].estado = "alta"; setCola(c);
+      g.click();
+      say("Guardando… Cuando abra el empadronamiento, tocá el favorito ⚡ y sigue solo con los requisitos.", true);
+    };
     window.__cr.ver = otra => abrirPlanilla(box.querySelector("#cr_cuil").value || (document.querySelector('input[placeholder="Ingrese cuil beneficiario"]') || {}).value, otra);
     box.querySelector("#cr_ver").onclick = e => window.__cr.ver(e.shiftKey);
     box.addEventListener("keydown", e => {
       if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); go(); }
       else if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); const ins = [...box.querySelectorAll("input")].filter(i => i.offsetParent); const n = ins[ins.indexOf(e.target) + 1]; if (n) n.focus(); else go(); }
-      else if (e.key === "Escape") box.hidden = true;
+      else if (e.key === "Escape") minimizar();
     });
-    box.querySelector("[data-close]").onclick = () => box.hidden = true;
+    box.querySelector("[data-close]").onclick = minimizar;
     if (!fp) { const l = LS("fp_last", ""); if (l) { box.querySelector("#cr_fp").value = l; upd(); } }
     focusFirst();
     return;
@@ -328,6 +428,7 @@
       <div id="cr_rows">${defs.map(rowHtml).join("")}</div>
       ${excelHtml()}
       <div class="msg"></div>
+      ${colaHtml()}
       <div class="btns"><button class="b p" id="cr_go">Completar en SURGE <kbd>Ctrl+Enter</kbd></button><button class="b" id="cr_ver">📄 Ver planilla <kbd>Alt+P</kbd></button><button class="b" id="cr_log">📋 Copiar registro de hoy</button><button class="b" id="cr_clear">Limpiar</button></div>
       <p class="hint">Enter = siguiente · Tab = fecha del valor (vacía = la de planilla; <kbd>2023</kbd> = 01/01/2023) · opciones con las teclas · <kbd>0</kbd> = "no presenta/ninguna" · después <b>Guardar todo</b>.<br><kbd>Ctrl+S</kbd> Guardar todo (en Datos básicos: Guardar) · <kbd>Ctrl+Shift+S</kbd> dos veces = Enviar a revisión · <kbd>F2</kbd> / <kbd>Shift+F2</kbd> cambiar de pestaña · <kbd>Alt+P</kbd> ver la planilla firmada.</p>`;
     wire(defs);
@@ -353,7 +454,7 @@
 
   function wire(defs) {
     box.insertAdjacentHTML("beforeend", `<datalist id="cr_meds">${medicoList()}</datalist>`);
-    box.querySelector("[data-close]").onclick = () => box.hidden = true;
+    box.querySelector("[data-close]").onclick = minimizar;
     const fpI = box.querySelector("#cr_fp");
     fpI.addEventListener("change", () => { const f = parseDate(fpI.value); if (f) { fpI.value = f; SS("fp_" + solicitud, f); SS("fp_last", f); } else if (fpI.value) say("Fecha de planilla inválida."); });
     fpI.addEventListener("keydown", e => { if (e.key === "Enter" && !e.ctrlKey) { e.preventDefault(); fpI.dispatchEvent(new Event("change")); focusRow(0); } });
@@ -399,6 +500,7 @@
     });
     box.querySelector("#cr_go").onclick = aplicar;
     box.querySelector("#cr_log").onclick = copiarLog;
+    wireCola(() => { const b = box.querySelector("#cr_pegarBox"); });
     wireExcel();
     box.querySelector("#cr_ver").onclick = e => window.__cr.ver(e.shiftKey);
     box.querySelector("#cr_clear").onclick = () => { for (const k of Object.keys(state)) delete state[k]; archivo = null; save(); render(); focusRow(0); };
@@ -432,12 +534,12 @@
   /* ---------- Pasar todo a SURGE ---------- */
   function aplicar() {
     const fpI = box.querySelector("#cr_fp"); const fpv = parseDate(fpI.value);
-    if (!fpv) { say("Cargá la fecha de planilla (arriba)."); fpI.focus(); return; }
-    if (!editable) { say("Este empadronamiento no se puede editar."); return; }
+    if (!fpv) { say("Cargá la fecha de planilla (arriba)."); fpI.focus(); return false; }
+    if (!editable) { say("Este empadronamiento no se puede editar."); return false; }
     const defs = fieldDefs(); let bad = 0, n = 0;
     const rows = [...box.querySelectorAll(".row")];
     defs.forEach((f, i) => { if (f.type === "numero" || f.type === "fecha") if (!check(f, (state[f.k] || {}).v, rows[i])) bad++; });
-    if (bad) { say(`Hay ${bad} dato(s) para corregir (en rojo).`); return; }
+    if (bad) { say(`Hay ${bad} dato(s) para corregir (en rojo).`); return false; }
     for (const f of defs) {
       const s = state[f.k] || {};
       const fecha = s.d || fpv;
@@ -469,6 +571,7 @@
     if (prev >= 0) log[prev] = rec; else log.push(rec);
     SS("log", log.slice(-500));
     say(`✓ Completé ${n} requisito(s)${nb ? " y los datos básicos" : ""}. Revisá y apretá Guardar${nb ? " (datos básicos) y" : ""} Guardar todo.`, true);
+    return true;
   }
   // Los calendarios de SURGE no se redibujan solos: les paso la fecha nueva para que se vea
   function syncFechas() {
@@ -546,13 +649,46 @@
   box.addEventListener("keydown", e => {
     if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); aplicar(); }
     else if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); const o = box.querySelector(`[data-tx="${tipoX === "emp" ? "reemp" : "emp"}"]`); if (o) o.click(); }
-    else if (e.key === "Escape") box.hidden = true;
+    else if (e.key === "Escape") minimizar();
     e.stopPropagation();
   });
   window.__cr.ver = async otra => { const f = await abrirPlanilla(cuilPage, otra); if (f) { archivo = f; const vi = rowInput("hc"); if (vi) vi.value = f.name; } };
   render();
   // Si vengo del Alta de este mismo CUIL, la fecha de planilla ya la sé
   if (!box.querySelector("#cr_fp").value && pend && pend.cuil === cuilPage && pend.fp) { box.querySelector("#cr_fp").value = pend.fp; SS("fp_" + solicitud, pend.fp); }
-  if (editable && cuilPage) window.__cr.ver(false);
+  // Si este CUIL viene en la cola del Armador: completa todo, adjunta la planilla y aprieta Guardar todo
+  const recCola = cola()[cuilPage];
+  async function autoEdit(rec) {
+    const defs = fieldDefs(), q = rec.req || {};
+    const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    for (const f of defs) {
+      const x = q[f.k]; if (!x) continue;
+      const st = state[f.k] = {};
+      if (f.type === "combo" || f.type === "multiple") st.sel = (x.sel || []).map(t => f.ops.findIndex(o => norm(o.txt) === norm(t))).filter(j => j >= 0);
+      else st.v = x.v || "";
+      if (x.d) st.d = x.d;
+    }
+    save();
+    render();
+    box.querySelector("#cr_fp").value = rec.fp; SS("fp_" + solicitud, rec.fp);
+    const f = await abrirPlanilla(cuilPage);
+    if (f) { archivo = f; const vi = rowInput("hc"); if (vi) vi.value = f.name; }
+    else { say("⚠ No encontré la planilla firmada de este CUIL en Firmados: adjuntala a mano (Enter en Resumen de Historia Clínica) y apretá Guardar todo."); aplicar(); return; }
+    if (!aplicar()) return;
+    if (!(await cuenta(3, "✓ Todo completo. Guardar todo"))) return;
+    let g = boton("guardar todo");
+    if (!g) { const t = pestanas().find(x => /requisitos/i.test(x.innerText)); if (t) { t.click(); await new Promise(r0 => setTimeout(r0, 800)); g = boton("guardar todo"); } }
+    if (!g) { say("No encuentro el botón Guardar todo: andá a la pestaña Requisitos y apretá Ctrl+S."); return; }
+    g.click();
+    await new Promise(r0 => setTimeout(r0, 5000));
+    const errores = v.abm_requisitos.filter(x => x.error && (typeof x.error === "string" ? x.error : Object.keys(x.error).length)).map(x => x.requisito.nombre);
+    if (errores.length) { say("⚠ SURGE marcó error en: " + errores.join(", ") + ". Revisalos."); return; }
+    const c = cola(); if (c[cuilPage]) { c[cuilPage].estado = "borrador"; c[cuilPage].sol = solicitud; setCola(c); }
+    const quedan = pendientes().length;
+    say(`✓ Guardado en Borrador. Revisá cada pestaña y mandalo con Ctrl+Shift+S (dos veces).` + (quedan ? ` Quedan ${quedan} en la cola.` : ""), true);
+    if (quedan) { const b = document.createElement("button"); b.className = "b p"; b.textContent = "▶ Siguiente de la cola"; b.onclick = () => { location.href = "/admin/empadronamientos/create"; }; box.querySelector(".btns").prepend(b); }
+  }
+  if (editable && recCola && recCola.estado !== "borrador") autoEdit(recCola);
+  else if (editable && cuilPage) window.__cr.ver(false);
   if (!box.querySelector("#cr_fp").value) box.querySelector("#cr_fp").focus(); else focusRow(0);
 })();

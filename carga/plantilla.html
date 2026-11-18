@@ -24,6 +24,15 @@ kbd{background:#eee;border:1px solid #ccc;border-radius:3px;padding:0 5px;font-s
 <li><b>📋 Copiar registro de hoy</b>: Solicitud, CUIL, fecha de planilla y hora de los que completaste hoy, para pegar en el Excel.</li></ol>
 <h2>Ver la planilla firmada</h2>
 <p>La planilla firmada de ese CUIL se abre sola en una ventana a la izquierda: en el Alta al apretar Completar, y en Editar/Reempadronar al abrir el panel. <kbd>Alt</kbd>+<kbd>P</kbd> la vuelve a abrir; <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> para elegir otra carpeta de Firmados. La primera vez Chrome te pide permiso para la carpeta y para abrir ventanas emergentes en SURGE: aceptá los dos. <b>Si se esconde atrás de SURGE</b> al hacer clic en el formulario: no está cerrada, quedó detrás. Poné SURGE en la mitad derecha con <kbd>Win</kbd>+<kbd>→</kbd> (o mandá la planilla al otro monitor si tenés dos): la próxima vez se abre donde la dejaste. <kbd>Alt</kbd>+<kbd>P</kbd> la trae adelante.</p>
+<h2>Automático con los datos del Armador</h2>
+<ol><li>En el Armador, mientras analizás, apretá <kbd>D</kbd> en el socio y tipeá los datos de la planilla (mismo orden que SURGE, con la planilla en grande al lado).</li>
+<li>En el Armador: <b>📋 Datos para SURGE</b> copia los socios completos (con CUIL y fecha de planilla).</li>
+<li>En SURGE, Alta: tocá el favorito → <b>Pegar datos</b> → <kbd>Ctrl</kbd>+<kbd>V</kbd>. Queda la cola.</li>
+<li><b>▶ Cargar el siguiente de la cola</b>: pone Diabetes, CUIL y fecha de alta (01 del mes, un año antes de la planilla), aprieta Siguiente, <b>chequea que el nombre que trae SURGE sea el del socio</b>, completa médico y diagnóstico y aprieta Guardar. Antes de cada botón cuenta 2-3 segundos: <kbd>Esc</kbd> lo frena.</li>
+<li>Cuando abre el empadronamiento, tocá el favorito: completa los requisitos, adjunta la planilla firmada y aprieta <b>Guardar todo</b>. Queda en <b>Borrador</b>.</li>
+<li><b>Vos revisás y mandás a revisión</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> dos veces). Eso nunca lo hace solo. Después, <b>▶ Siguiente de la cola</b>.</li></ol>
+<p>Si algo no coincide (nombre distinto, dato fuera de rango, no encuentra la planilla, SURGE no deja pasar), se frena y te dice qué pasó.</p>
+<p>El panel se mueve arrastrando el título y queda donde lo dejaste. ✕ o <kbd>Esc</kbd> lo achican a un botón "⚡ Carga rápida": tocándolo vuelve.</p>
 <h2>Pasar al Excel compartido</h2>
 <ol><li>En el panel, abajo: <b>Empadronamiento</b> o <b>Reempadronamiento</b> (<kbd>Alt</kbd>+<kbd>R</kbd> cambia). Vigencia desde = fecha de alta de SURGE; vigencia hasta = un año después, o escribí la fecha de baja de la obra social.</li>
 <li>Al <b>Enviar a revisión</b> se copia solo el bloque: <code>Pendiente · Nro · Vigencia inicio · Vigencia fin · Fecha carga (hoy) · Gino</code>. En la hoja emp. y reemp. buscá el CUIL, parate en <b>Estado empadronamiento</b> (o <b>Estado reempadronamiento</b>) y <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
