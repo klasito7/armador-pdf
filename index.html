@@ -179,6 +179,13 @@
   .chip.listo{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
   .chip.firmado{background:color-mix(in srgb,#7a3fd1 18%,transparent);color:#7a3fd1}
   .chip.noapto{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+  .chip.incompleta{background:color-mix(in srgb,#8a63d2 20%,transparent);color:#8a63d2}
+  .rep{font-size:11px;padding:0 5px;border-radius:8px;margin-left:4px;white-space:nowrap}
+  .rep.reciente{background:color-mix(in srgb,#e8590c 18%,transparent);color:#e8590c}
+  .rep.viejo{background:color-mix(in srgb,#1c7ed6 15%,transparent);color:#1c7ed6}
+  .repbar{font-size:12.5px;padding:6px 8px;margin:4px 0;border-radius:8px;background:color-mix(in srgb,#e8590c 12%,transparent);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .repbar button{font-size:12px;padding:2px 8px}
+  #socioRep{font-size:12.5px;margin:2px 0 4px}
 
   main{flex:1;overflow:auto;padding:14px 20px 150px;min-width:0}
   .setup{max-width:680px;margin:30px auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
@@ -329,10 +336,12 @@
         <button data-f="all" class="on">Todos</button>
         <button data-f="pend">Pendientes</button>
         <button data-f="noapto">No aptos</button>
+        <button data-f="incompleta">Incompletos</button>
         <button data-f="listo">Listos</button>
         <button data-f="firmado">Firmados</button>
       </div>
       <div class="counts" id="counts"></div>
+      <div class="repbar" id="repBar" hidden></div>
       <div class="exportbar" id="namesBar" hidden>
         <button id="namesBtn" title="Pegá DNI y nombre desde tu Excel: cada carpeta toma su nombre sola">👥 Lista de nombres <span class="badge" id="namesCount" hidden>0</span></button>
         <button id="clasifBtn" title="Importar el reporte del Bot Planillas (clasificacion_*.csv)">🤖 Importar clasificador</button>
@@ -372,9 +381,11 @@
         <span class="person" id="socioPerson" hidden></span>
         <span class="chip" id="socioChip" hidden></span>
         <button id="toggleNoApto" hidden>⚠️ Marcar no apto</button>
+        <button id="toggleIncomp" hidden title="Socio con documentación incompleta: queda registrado con la fecha de hoy como fecha de análisis">🧩 Doc. incompleta</button>
         <button id="reloadSocio" hidden title="Vuelve a leer la carpeta (ej. si agregaste archivos)">↻ Recargar carpeta</button>
         <button id="nextPend" hidden>Siguiente pendiente ▶</button>
       </div>
+      <div id="socioRep" hidden></div>
 
       <div class="socio-notes" id="socioNotes" hidden>
         <label>📅 Fecha planilla <input type="date" id="fechaPlanilla"></label>
@@ -522,6 +533,13 @@
   <p id="qPrev"></p>
   <div class="frow"><button class="primary" id="qOk">Guardar <kbd>Enter</kbd></button><button id="qCancel">Cancelar <kbd>Esc</kbd></button></div>
 </div></div>
+<div class="fdlg" id="hilg" hidden><div class="fbox daybox">
+  <h3>🔁 Sumar historial desde el Excel</h3>
+  <p class="label">Copiá de la hoja <b>análisis</b> (o emp. y reemp.) las columnas con su <b>encabezado</b>: DNI, CUIL, NOMBRE, Fecha de analisis y Planilla Vigente / fecha planilla. Podés copiar la hoja entera.</p>
+  <textarea id="hiText" rows="8" style="width:100%" placeholder="Pegá acá (Ctrl + V)"></textarea>
+  <p id="hiInfo" class="label"></p>
+  <div class="frow"><button class="primary" id="hiOk">Sumar</button><button id="hiCancel">Cancelar</button></div>
+</div></div>
 <div class="fdlg" id="hdlg" hidden><div class="fbox qbox">
   <h3>📤 Mandar a firmar</h3>
   <p id="hInfo"></p>
@@ -656,6 +674,8 @@
 <h3>Cierre del día, listado y métricas</h3>
 <ul>
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
+<li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
+<li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
 <li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
 <li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
 <li><b>Métricas:</b> listos y editadas hoy, avance de la tanda, objetivo y cuántos por día hábil.</li>
@@ -862,6 +882,9 @@
     <label class="cfgchk"><input type="checkbox" id="set_openFirst"> Abrir la primera hoja en grande al pasar al siguiente</label>
     <h4>📅 Fecha de planilla</h4>
     <label class="cfgchk"><input type="checkbox" id="set_requireFp"> No dejar guardar sin fecha de planilla</label>
+    <h4>🔁 Historial de socios</h4>
+    <p class="label">Sirve para avisar cuando un socio ya pasó antes. Se llena solo con lo que guardás o marcás incompleto. Para sumar lo viejo:</p>
+    <button id="histPaste" class="b">📋 Pegar desde el Excel</button> <span id="histCount" class="label"></span>
     <h4>📤 Envío a firma</h4>
     <label class="cfgchk"><input type="checkbox" id="set_hold"> Retener: guardar en "en espera" y mandar a firmar de a tandas</label>
     <button id="set_holdPick" class="b">📁 Carpeta de espera: elegir…</button>
@@ -1379,16 +1402,52 @@
     if (isFirmado(s)) return "firmado";
     if (isListo(s) || noteOf(s).fp) return "listo";   // con fecha de planilla cargada, cuenta como listo
     if (flags[flagKey(s)] === "noapto") return "noapto";
+    if (flags[flagKey(s)] === "incompleta") return "incompleta";
     return "pend";
   }
-  const CHIP = { pend: "Pendiente", listo: "✓ Listo", noapto: "⚠ No apto", firmado: "✍ Firmado" };
+  const CHIP = { pend: "Pendiente", listo: "✓ Listo", noapto: "⚠ No apto", firmado: "✍ Firmado", incompleta: "🧩 Incompleta" };
+
+  /* ---------- Historial de socios (para avisar repetidos) ---------- */
+  // hist[dni] = [{d: fecha de análisis (aaaa-mm-dd), tipo: "listo" | "incompleta", fp, cuil, nombre, scope}]
+  let hist = {};
+  const DIAS_VIGENCIA = 335;   // una planilla de menos de ~11 meses todavía sirve: repetirla es raro
+  function addHist(sx, tipo) {
+    if (!sx || !sx.dni) return;
+    const nt = noteOf(sx), d = isoDay(new Date()), scope = scopeOf(sx);
+    const arr = (hist[sx.dni] = (hist[sx.dni] || []).filter(e => !(e.d === d && e.scope === scope)));
+    arr.push({ d, tipo, fp: nt.fp || "", cuil: cuilOf(sx) || "", nombre: personName(sx) || "", scope });
+    kvSet(pk("hist"), hist);
+  }
+  function delHistHoy(sx, tipo) {
+    const d = isoDay(new Date()), scope = scopeOf(sx);
+    if (!hist[sx.dni]) return;
+    hist[sx.dni] = hist[sx.dni].filter(e => !(e.d === d && e.scope === scope && e.tipo === tipo));
+    if (!hist[sx.dni].length) delete hist[sx.dni];
+    kvSet(pk("hist"), hist);
+  }
+  // Lo de otras tandas: {ult, reciente} o null
+  function repInfo(sx) {
+    const prev = (hist[sx.dni] || []).filter(e => e.scope !== scopeOf(sx));
+    if (!prev.length) return null;
+    const ult = prev.slice().sort((a, b) => (a.d < b.d ? -1 : 1)).pop();
+    const ref = ult.fp || ult.d;
+    const dias = (Date.now() - new Date(ref + "T12:00").getTime()) / 864e5;
+    return { prev, ult, reciente: ult.tipo === "listo" && dias < DIAS_VIGENCIA };
+  }
+  const repTxt = i => i.ult.tipo === "incompleta" ? `antes incompleta (${fmtFecha(i.ult.d)})` :
+    `ya listo ${fmtFecha(i.ult.d)}${i.ult.fp ? " · planilla " + fmtFecha(i.ult.fp) : ""}${i.reciente ? "" : " · vencida"}`;
+  const salteado = sx => settings.hideRep && statusOf(sx) === "pend" && (repInfo(sx) || {}).reciente;
 
   function renderSocios() {
     const q = $("search").value.trim().toLowerCase();
     const box = $("socios"); box.innerHTML = "";
-    const c = { pend: 0, listo: 0, noapto: 0, firmado: 0 };
+    const c = { pend: 0, listo: 0, noapto: 0, firmado: 0, incompleta: 0 };
+    let nRec = 0, nViejo = 0, nOcultos = 0;
     for (const s of socios) {
       const st = statusOf(s); c[st]++;
+      const ri = repInfo(s);
+      if (ri && st === "pend") { if (ri.reciente) nRec++; else nViejo++; }
+      if (salteado(s)) { nOcultos++; continue; }
       if (filter !== "all" && st !== filter) continue;
       const nom = personName(s) || (usesTok("nombre") ? fieldVal(s, "nombre") : "");
       if (q && !(s.name + " " + nom).toLowerCase().includes(q)) continue;
@@ -1400,11 +1459,21 @@
       const nt = noteOf(s);
       const ne = editsOf(s).reduce((a, e) => a + e.pages.length, 0);
       row.querySelector("small").textContent = [tandaSel === "__all" && s.tanda ? "📂 " + s.tanda : "", nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
+      if (ri) { const b = document.createElement("span"); b.className = "rep " + (ri.reciente ? "reciente" : "viejo"); b.textContent = "🔁 " + repTxt(ri); b.title = "Historial: " + ri.prev.map(e => `${fmtFecha(e.d)} ${e.tipo === "listo" ? "listo" : "incompleta"}${e.fp ? " (planilla " + fmtFecha(e.fp) + ")" : ""} en ${e.scope}`).join(" · "); row.querySelector("small").appendChild(b); }
       row.onclick = () => openSocio(s);
       box.appendChild(row);
     }
     if (typeof renderMetrics === "function") setTimeout(renderMetrics, 0);
-    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos · ${c.listo} listos${c.firmado ? ` · ${c.firmado} firmados` : ""}` : "";
+    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos${c.incompleta ? ` · ${c.incompleta} incompletos` : ""} · ${c.listo} listos${c.firmado ? ` · ${c.firmado} firmados` : ""}` : "";
+    const rb = $("repBar");
+    rb.hidden = !(nRec || nOcultos || nViejo);
+    if (!rb.hidden) {
+      rb.innerHTML = (settings.hideRep && nOcultos ? `🔁 ${nOcultos} repetido${nOcultos === 1 ? "" : "s"} salteado${nOcultos === 1 ? "" : "s"} (ya listos con planilla vigente).` :
+        nRec ? `⚠ ${nRec} ya ${nRec === 1 ? "lo hiciste" : "los hiciste"} con planilla vigente.` : "") +
+        (nViejo ? ` <span class="rep viejo">${nViejo} vuelven (vencida o incompleta)</span>` : "") +
+        ((nRec || nOcultos) ? ` <button id="repToggle">${settings.hideRep ? "Mostrar todos" : "Saltear repetidos"}</button>` : "");
+      const t = $("repToggle"); if (t) t.onclick = () => { settings.hideRep = !settings.hideRep; kvSet("settings", settings); renderSocios(); };
+    }
     if (current) updateSocioHead();
   }
   $("search").addEventListener("input", renderSocios);
@@ -1422,7 +1491,8 @@
     $("setup").hidden = true; $("pickHint").hidden = true; $("work").hidden = false; $("footer").hidden = false;
     current = s;
     const isSocio = !!s;
-    $("toggleNoApto").hidden = $("reloadSocio").hidden = $("nextPend").hidden = !isSocio;
+    $("toggleNoApto").hidden = $("toggleIncomp").hidden = $("reloadSocio").hidden = $("nextPend").hidden = !isSocio;
+    if (!isSocio) $("socioRep").hidden = true;
     $("socioChip").hidden = !isSocio;
     $("socioNotes").hidden = !isSocio;
     $("socioTitle").textContent = isSocio ? s.name : "Archivos sueltos";
@@ -1436,6 +1506,10 @@
     const st = statusOf(current);
     const chip = $("socioChip"); chip.className = "chip " + st; chip.textContent = CHIP[st];
     $("toggleNoApto").textContent = flags[flagKey(current)] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
+    $("toggleIncomp").textContent = flags[flagKey(current)] === "incompleta" ? "↩ Quitar incompleta" : "🧩 Doc. incompleta";
+    const ri = repInfo(current);
+    $("socioRep").hidden = !ri;
+    if (ri) { $("socioRep").innerHTML = `<span class="rep ${ri.reciente ? "reciente" : "viejo"}">🔁 ${escapeHtml(repTxt(ri))}</span> ` + escapeHtml(ri.prev.map(e => `${fmtFecha(e.d)}: ${e.tipo === "listo" ? "listo" : "incompleta"}${e.fp ? " (planilla " + fmtFecha(e.fp) + ")" : ""} en ${e.scope}`).join(" · ")); }
     const nt = noteOf(current);
     if (document.activeElement !== $("fechaPlanilla")) $("fechaPlanilla").value = nt.fp || "";
     if (document.activeElement !== $("obs")) $("obs").value = nt.obs || "";
@@ -1640,6 +1714,14 @@
     return used.size;
   }
   $("reloadSocio").onclick = () => current && openSocio(current);
+  $("toggleIncomp").onclick = async () => {
+    if (!current) return;
+    const fk = flagKey(current);
+    if (flags[fk] === "incompleta") { delete flags[fk]; delHistHoy(current, "incompleta"); unlogIncompleta(current); }
+    else { flags[fk] = "incompleta"; addHist(current, "incompleta"); logIncompleta(current); toast("🧩 Marcado con documentación incompleta · fecha de análisis " + fmtFecha(isoDay(new Date()))); }
+    await kvSet(pk("flags"), flags); renderSocios();
+    if (flags[fk] === "incompleta" && settings.autoNext) setTimeout(goNextAuto, 250);
+  };
   $("toggleNoApto").onclick = async () => {
     if (!current) return;
     const fk = flagKey(current);
@@ -1649,7 +1731,7 @@
   function nextPending() {
     const idx = current ? socios.findIndex(x => sidOf(x) === sidOf(current)) : -1;
     const order = [...socios.slice(idx + 1), ...socios.slice(0, idx + 1)];
-    return order.find(x => statusOf(x) === "pend" && (!current || sidOf(x) !== sidOf(current)));
+    return order.find(x => statusOf(x) === "pend" && !salteado(x) && (!current || sidOf(x) !== sidOf(current)));
   }
   $("nextPend").onclick = () => { const n = nextPending(); if (n) openSocio(n); else setStatus("No quedan pendientes. 🎉", "ok"); };
 
@@ -2849,7 +2931,7 @@
   // Tecla E (configurable): abrir en Photopea la hoja abierta / bajo el mouse + las elegidas con Ctrl+clic
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "photopea")) return;
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["edlg", "fdlg", "qdlg", "nmlg", "daylg", "hdlg"].some(id => !$(id).hidden) || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["edlg", "fdlg", "qdlg", "nmlg", "daylg", "hdlg", "hilg"].some(id => !$(id).hidden) || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault();
     const list = edTargetItems();
     if (!list.length) { toast("Pasá el mouse por la hoja (o abrila en grande) y apretá " + KL("photopea") + "."); return; }
@@ -3039,6 +3121,20 @@
     dayLog = dayLog.filter(r => r.ts > cut);
     kvSet(pk("daylog"), dayLog);
     updateDayCount();
+    addHist(current, "listo");
+  }
+  // Incompleta: va al cierre del día como "Doc. incompleta", con hoy como fecha de análisis
+  function logIncompleta(sx) {
+    const nt = noteOf(sx), today = isoDay(new Date());
+    dayLog = dayLog.filter(r => !(r.socio === sx.name && r.root === scopeOf(sx) && r.estado === "Doc. incompleta" && isoDay(new Date(r.ts)) === today));
+    dayLog.push({ ts: Date.now(), root: scopeOf(sx), socio: sx.name, dni: sx.dni, file: "", part: 0, fp: nt.fp || "",
+      nombre: personName(sx) || (usesTok("nombre") ? fieldVal(sx, "nombre") : ""), tipo: nt.tipo || "", periodo: nt.periodo || "", obs: nt.obs || "", estado: "Doc. incompleta" });
+    kvSet(pk("daylog"), dayLog); updateDayCount();
+  }
+  function unlogIncompleta(sx) {
+    const today = isoDay(new Date());
+    dayLog = dayLog.filter(r => !(r.socio === sx.name && r.root === scopeOf(sx) && r.estado === "Doc. incompleta" && isoDay(new Date(r.ts)) === today));
+    kvSet(pk("daylog"), dayLog); updateDayCount();
   }
   function updateDayCount() {
     const t = isoDay(new Date()), n = savesIn(t, t).length;
@@ -3050,7 +3146,7 @@
     if (showNames()) cols.push(["Nombre y apellido", r => r.nombre]);
     if (usesTok("tipo")) cols.push(["Tipo", r => r.tipo]);
     if (usesTok("periodo")) cols.push(["Período", r => r.periodo]);
-    cols.push(["Fecha planilla", r => fmtFecha(r.fp)], ["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs]);
+    cols.push(["Fecha planilla", r => fmtFecha(r.fp)], ["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs], ["Fecha análisis", r => r.ts ? fmtFecha(isoDay(new Date(r.ts))) : ""]);
     return cols;
   }
   // Repartir: lo hecho se pasa al Excel de a una tanda por día (del más viejo al más nuevo)
@@ -3217,6 +3313,36 @@
     }
     return { names, cuils };
   }
+  // Historial desde el Excel compartido: necesita encabezados
+  function parseHist(txt) {
+    const lines = txt.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2 || !lines[0].includes("\t")) return { rows: [], err: "Copiá también la fila de encabezados." };
+    const nrm = h => h.replace(/"/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    const head = lines[0].split("\t").map(nrm);
+    const find = (...opts) => { for (const o of opts) { const i = head.findIndex(h => h === o || h.startsWith(o)); if (i >= 0) return i; } return -1; };
+    const iD = find("dni"), iC = find("cuil"), iN = find("nombre"), iA = find("fecha de analisis", "fecha carga empadronamiento", "fecha carga reempadronamiento"), iP = find("planilla vigente", "fecha planilla vigente", "fecha planilla");
+    if (iD < 0 && iC < 0) return { rows: [], err: "No encuentro la columna DNI o CUIL en el encabezado." };
+    const fecha = v => {
+      v = String(v || "").trim(); let m;
+      if ((m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/))) { let y = +m[3]; if (y < 100) y += 2000; return `${y}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`; }
+      if ((m = v.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[0];
+      if (/^\d{5}$/.test(v)) { const d = new Date(Date.UTC(1899, 11, 30) + +v * 864e5); return d.toISOString().slice(0, 10); }   // número de serie de Excel
+      return "";
+    };
+    const rows = [];
+    for (const l of lines.slice(1)) {
+      const c = l.split("\t");
+      const cuil = iC >= 0 ? (c[iC] || "").replace(/\D/g, "") : "";
+      let dni = iD >= 0 ? (c[iD] || "").replace(/\D/g, "") : "";
+      if (!dni && cuil.length === 11) dni = cuil.slice(2, 10);
+      if (!dni) continue;
+      dni = String(+dni);
+      const fp = iP >= 0 ? fecha(c[iP]) : "", d = (iA >= 0 ? fecha(c[iA]) : "") || fp;
+      if (!d) continue;   // sin ninguna fecha no sirve para saber si es repetido
+      rows.push({ dni, cuil: cuil.length === 11 && String(+cuil.slice(2, 10)) === dni ? cuil : "", nombre: iN >= 0 ? (c[iN] || "").trim() : "", d, fp });
+    }
+    return { rows, err: rows.length ? "" : "No encontré filas con DNI y alguna fecha (análisis o planilla)." };
+  }
   // Un CUIL vale solo si sus 8 números del medio son ese DNI (en el padrón, a los familiares
   // a veces les figura el CUIL del titular)
   function cuilDeOtro(res) {
@@ -3259,6 +3385,26 @@
     $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` + (got.malos.length ? ` ⚠ ${got.malos.length} CUIL ignorado${got.malos.length === 1 ? "" : "s"} porque no corresponde${got.malos.length === 1 ? "" : "n"} a su DNI (familiar con el CUIL del titular): ${got.malos.slice(0, 5).join(", ")}${got.malos.length > 5 ? "…" : ""}.` : "") : "Pegá las filas copiadas de Excel.";
   });
   $("nmCancel").onclick = () => { $("nmlg").hidden = true; };
+  const histN = () => Object.keys(hist).length;
+  $("histPaste").onclick = () => { $("hiText").value = ""; $("hiInfo").textContent = `Ahora hay ${histN()} socios en el historial.`; $("hilg").hidden = false; setTimeout(() => $("hiText").focus(), 30); };
+  $("hiText").addEventListener("input", () => { const g = parseHist($("hiText").value); $("hiInfo").textContent = g.err || `Reconocí ${g.rows.length} filas con DNI y fecha.`; });
+  $("hiCancel").onclick = () => { $("hilg").hidden = true; };
+  $("hiOk").onclick = async () => {
+    const g = parseHist($("hiText").value);
+    if (g.err) { $("hiInfo").textContent = g.err; return; }
+    let n = 0;
+    for (const r of g.rows) {
+      const arr = (hist[r.dni] = hist[r.dni] || []);
+      if (arr.some(e => e.d === r.d && e.scope === "Excel")) continue;
+      // con planilla = ya se hizo; sin planilla = se analizó pero no tenía (cuenta como incompleta)
+      arr.push({ d: r.d, tipo: r.fp ? "listo" : "incompleta", fp: r.fp, cuil: r.cuil, nombre: r.nombre, scope: "Excel" }); n++;
+      if (r.cuil && !cuilMap[r.dni]) cuilMap[r.dni] = r.cuil;
+      if (r.nombre && !namesMap[r.dni]) namesMap[r.dni] = r.nombre;
+    }
+    await kvSet(pk("hist"), hist); await kvSet(pk("cuils"), cuilMap); await kvSet(pk("names"), namesMap);
+    $("hilg").hidden = true; renderSocios(); $("histCount").textContent = `${histN()} socios en el historial`;
+    toast(`🔁 Sumadas ${n} filas al historial (${histN()} socios).`);
+  };
   $("nmlg").addEventListener("pointerdown", e => { if (e.target === $("nmlg")) $("nmlg").hidden = true; });
   $("nmOk").onclick = async () => {
     const got = parseNames($("nmText").value);
@@ -3338,6 +3484,7 @@
   /* Panel de configuración */
   let capturing = null;
   function renderCfg() {
+    $("histCount").textContent = `${Object.keys(hist).length} socios en el historial`;
     const box = $("cfgKeys"); box.innerHTML = "";
     for (const [a, label] of KEY_ACTIONS) {
       const row = document.createElement("div"); row.className = "cfgrow";
@@ -3392,7 +3539,7 @@
   });
 
   /* Opciones generales */
-  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true, hold: false, holdN: 10 };
+  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true, hold: false, holdN: 10, hideRep: false };
   async function goNextAuto() {
     const n = nextPending();
     if (!n) { toast("🎉 No quedan pendientes en esta fecha."); return; }
@@ -3436,7 +3583,7 @@
   // Enter (o la tecla elegida): cerrar la hoja en grande o la vista previa
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "closePreview")) return;
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["fdlg", "edlg", "qdlg", "nmlg", "daylg", "hdlg"].some(id => !$(id).hidden)) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["fdlg", "edlg", "qdlg", "nmlg", "daylg", "hdlg", "hilg"].some(id => !$(id).hidden)) return;
     if (modal.classList.contains("show")) { e.preventDefault(); e.stopPropagation(); if (zPurpose) return; modal.classList.remove("show"); }
     else if (pv.classList.contains("show")) { e.preventDefault(); e.stopPropagation(); closePreview(); }
   }, true);
@@ -3516,6 +3663,16 @@
     cuilMap = (await kvGet(pk("cuils"))) || {};
     tandaSel = (await kvGet(pk("tanda"))) || "";
     dayLog = (await kvGet(pk("daylog"))) || []; updateDayCount();
+    hist = (await kvGet(pk("hist"))) || null;
+    if (!hist) {   // primera vez: arma el historial con lo guardado en los últimos meses
+      hist = {};
+      for (const r of dayLog) if (r.dni) {
+        const d = isoDay(new Date(r.ts)), tipo = r.estado === "Doc. incompleta" ? "incompleta" : "listo";
+        const arr = (hist[r.dni] = hist[r.dni] || []);
+        if (!arr.some(e => e.d === d && e.scope === r.root)) arr.push({ d, tipo, fp: r.fp || "", cuil: cuilMap[r.dni] || "", nombre: r.nombre || "", scope: r.root });
+      }
+      kvSet(pk("hist"), hist);
+    }
     editLog = (await kvGet(pk("editlog"))) || [];
     goal = (await kvGet(pk("goal"))) || defaultGoal();
     tandasDone = (await kvGet(pk("tandasDone"))) || {};
