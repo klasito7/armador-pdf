@@ -3331,18 +3331,19 @@ body.dsopen .modal{right:400px}
     const iN = find("apellido y nombre", "nombre beneficiario", "nombre y apellido", "apellido, nombre", "nombre");
     const iD = find("numero de documento", "dni consultado", "dni", "nro documento", "documento");
     if (iC < 0 && iN < 0) return null;
-    const names = {}, cuils = {};
+    const names = {}, cuils = {}, stats = { filas: lines.length - 1, sinDni: 0, repetidos: 0 }, vistos = new Set();
     for (const l of lines.slice(1)) {
       const c = l.split(sep).map(x => x.replace(/"/g, "").trim());
       const cuil = iC >= 0 ? (c[iC] || "").replace(/\D/g, "") : "";
       let dni = iD >= 0 ? (c[iD] || "").replace(/\D/g, "") : "";
       if (!dni && cuil.length === 11) dni = String(+cuil.slice(2, 10));
-      if (!dni) continue;
+      if (!dni) { stats.sinDni++; continue; }
       dni = String(+dni);
+      if (vistos.has(dni)) stats.repetidos++; else vistos.add(dni);
       if (iN >= 0 && c[iN] && /[a-záéíóúñ]/i.test(c[iN])) names[dni] = c[iN].replace(/\s+/g, " ");
       if (cuil.length === 11) cuils[dni] = cuil;
     }
-    return { names, cuils };
+    return { names, cuils, stats };
   }
   // Historial desde el Excel compartido: necesita encabezados
   function parseHist(txt) {
@@ -3384,9 +3385,10 @@ body.dsopen .modal{right:400px}
   function parseNames(txt) {
     const byHead = parseByHeader(txt);
     if (byHead && (Object.keys(byHead.names).length || Object.keys(byHead.cuils).length)) return cuilDeOtro(byHead);
-    const names = {}, cuils = {};
+    const names = {}, cuils = {}, stats = { filas: 0, sinDni: 0, repetidos: 0 }, vistos = new Set();
     for (const raw of txt.split(/\r?\n/)) {
       let line = raw.replace(/"/g, " ").trim(); if (!line) continue;
+      stats.filas++;
       let cuil = "", dni = "";
       // CUIL: 11 números, con o sin guiones (20-16749332-4)
       line = line.replace(/(?<!\d)(\d{2})[-\s.]?(\d{7,8})[-\s.]?(\d)(?!\d)/, (m0, a, b, c) => {
@@ -3397,12 +3399,13 @@ body.dsopen .modal{right:400px}
       // DNI: 7 u 8 números (puede tener puntos)
       line = line.replace(/(?<![\d-])(\d{1,2}\.?\d{3}\.?\d{3})(?![\d-])/, m0 => { dni = m0.replace(/\D/g, ""); return " "; });
       if (!dni && cuil) dni = String(+cuil.slice(2, 10));
-      if (!dni) continue;
+      if (!dni) { stats.sinDni++; continue; }
+      if (vistos.has(String(+dni))) stats.repetidos++; else vistos.add(String(+dni));
       const nom = line.replace(/[\t;|]+/g, " ").replace(/^[\s,\-]+|[\s,\-]+$/g, "").replace(/\s+/g, " ").trim();
       if (nom && /[a-záéíóúñ]/i.test(nom)) names[dni] = nom;
       if (cuil) cuils[dni] = cuil;
     }
-    return cuilDeOtro({ names, cuils });
+    return cuilDeOtro({ names, cuils, stats });
   }
   function updateNamesUi() {
     const n = new Set([...Object.keys(namesMap), ...Object.keys(cuilMap)]).size;
@@ -3413,7 +3416,8 @@ body.dsopen .modal{right:400px}
   $("nmText").addEventListener("input", () => {
     const got = parseNames($("nmText").value), dnis = new Set([...Object.keys(got.names), ...Object.keys(got.cuils)]);
     const match = socios.filter(s => dnis.has(s.dni)).length;
-    $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` + (got.malos.length ? ` ⚠ ${got.malos.length} CUIL ignorado${got.malos.length === 1 ? "" : "s"} porque no corresponde${got.malos.length === 1 ? "" : "n"} a su DNI (familiar con el CUIL del titular): ${got.malos.slice(0, 5).join(", ")}${got.malos.length > 5 ? "…" : ""}.` : "") : "Pegá las filas copiadas de Excel.";
+    const stx = got.stats ? ` (de ${got.stats.filas} filas: ${got.stats.repetidos} DNI repetidos${got.stats.sinDni ? `, ${got.stats.sinDni} sin DNI` : ""})` : "";
+    $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas${stx} (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` + (got.malos.length ? ` ⚠ ${got.malos.length} CUIL ignorado${got.malos.length === 1 ? "" : "s"} porque no corresponde${got.malos.length === 1 ? "" : "n"} a su DNI (familiar con el CUIL del titular): ${got.malos.slice(0, 5).join(", ")}${got.malos.length > 5 ? "…" : ""}.` : "") : "Pegá las filas copiadas de Excel.";
   });
   $("nmCancel").onclick = () => { $("nmlg").hidden = true; };
   const histN = () => Object.keys(hist).length;
