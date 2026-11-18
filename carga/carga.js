@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v8";
+  const VER = "v9";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -300,7 +300,10 @@
   let archivo = null;
 
   function fieldDefs() {
-    return MODELOS[modelo].orden.map(k => {
+    // Mismo orden que SURGE: Datos básicos y después los requisitos tal como los muestra la página
+    const RK = Object.fromEntries(Object.entries(R).map(([k, id]) => [id, k]));
+    const orden = ["fdiag", "medico", "matricula", "tipomat", ...v.abm_requisitos.map(x => RK[x.requisito && x.requisito.id]).filter(Boolean)];
+    return orden.map(k => {
       if (R[k]) {
         const r = reqs(R[k]); if (!r) return null;
         const t = r.requisito.type, x = r.extra || r.requisito.extra || {};
@@ -320,7 +323,6 @@
     const defs = fieldDefs();
     box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <small style="font-weight:400;color:#888">solicitud ${esc(solicitud)}</small><button class="x" data-close>✕</button></h3>
       <div class="top">${fpInput}
-        <label>Modelo</label><div>${Object.entries(MODELOS).map(([n, m]) => `<span class="op ${+n === +modelo ? "on" : ""}" data-mod="${n}"><b>Alt+${n}</b>${esc(m.nombre)}</span>`).join(" ")}</div>
       </div>
       ${editable ? "" : `<p class="msg">Este empadronamiento no se puede editar (aceptado o pendiente). Abrí uno en Borrador, Rechazado o Reempadronar.</p>`}
       <div id="cr_rows">${defs.map(rowHtml).join("")}</div>
@@ -352,7 +354,6 @@
   function wire(defs) {
     box.insertAdjacentHTML("beforeend", `<datalist id="cr_meds">${medicoList()}</datalist>`);
     box.querySelector("[data-close]").onclick = () => box.hidden = true;
-    box.querySelectorAll("[data-mod]").forEach(el => el.onclick = () => { modelo = +el.dataset.mod; SS("modelo", modelo); render(); focusRow(0); });
     const fpI = box.querySelector("#cr_fp");
     fpI.addEventListener("change", () => { const f = parseDate(fpI.value); if (f) { fpI.value = f; SS("fp_" + solicitud, f); SS("fp_last", f); } else if (fpI.value) say("Fecha de planilla inválida."); });
     fpI.addEventListener("keydown", e => { if (e.key === "Enter" && !e.ctrlKey) { e.preventDefault(); fpI.dispatchEvent(new Event("change")); focusRow(0); } });
@@ -545,7 +546,6 @@
   box.addEventListener("keydown", e => {
     if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); aplicar(); }
     else if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); const o = box.querySelector(`[data-tx="${tipoX === "emp" ? "reemp" : "emp"}"]`); if (o) o.click(); }
-    else if (e.altKey && MODELOS[e.key]) { e.preventDefault(); modelo = +e.key; SS("modelo", modelo); render(); focusRow(0); }
     else if (e.key === "Escape") box.hidden = true;
     e.stopPropagation();
   });
