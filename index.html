@@ -579,7 +579,7 @@
 </div></div>
 <div id="infoPanel" class="sidepanel">
   <div class="edhead"><h3>ℹ Info</h3><button id="infoClose">✕</button></div>
-  <div class="infotabs"><button data-t="manual" class="on">Manual de uso</button><button data-t="guia">Guía diaria</button></div>
+  <div class="infotabs"><button data-t="manual" class="on">Manual de uso</button><button data-t="guia">Guía diaria</button><button data-t="procesos">Procesos</button></div>
   <div class="infobody">
     <div id="info_manual">
       <p class="infolink">Versión editable: <a href="https://claude.ai/artifact/17VFdqduucTfAmdrAvHyvq" target="_blank" rel="noopener">Armador de PDF — Manual de uso</a></p>
@@ -681,7 +681,7 @@
 <li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
 <li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
 <li><b>Fecha de planilla:</b> si está prendido (viene así), no deja guardar en Listos un socio sin fecha de planilla.</li>
-<li><b>Envío a firma (Retener):</b> lo guardado queda en <code>_en_espera</code> dentro de Listos (cuenta como Listo). Con <b>📤 Mandar a firmar</b> (barra de la izquierda) elegís cuántas pasar a la carpeta de listos; van las más viejas primero.</li>
+<li><b>Envío a firma (Retener):</b> lo guardado queda en una carpeta de espera aparte, que elegís vos fuera de la de listos (cuenta como Listo). Con <b>📤 Mandar a firmar</b> (barra de la izquierda) elegís cuántas pasar a la carpeta de listos; van las más viejas primero.</li>
 <li><b>Automático:</b> en el mismo cartel, "Pasar N cada M min, solo de X a Y h" (el intervalo varía ±20 %) → ▶ Arrancar. Necesita la pestaña abierta y la PC prendida. <b>Seguimiento:</b> mira en Firmados si cada uno volvió con _signed y avisa si alguno tarda más de los minutos que elijas.</li>
 <li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
 <li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
@@ -819,6 +819,34 @@
 </ul>
 
     </div>
+    <div id="info_procesos" hidden>
+<p class="infolink">Las herramientas que se usan alrededor del Armador, en el orden del circuito. Los .bat y .py van todos en la misma carpeta; los favoritos van en la barra de Chrome.</p>
+<h3>1 · Altas nuevas <span class="label">ejecutar_altas.bat</span></h3>
+<p><b>Cuándo:</b> cuando llega por mail el Excel de Altas nuevas.</p>
+<p><b>Qué hace:</b> cruza las altas con el Excel compartido (análisis y emp. y reemp.), saltea vigentes, en trámite y jubilados, vuelve a consultar los "no desregula" y "baja Swiss", corre el Buscador Padrón y separa los que hoy tienen Swiss.</p>
+<p><b>Deja:</b> carpeta <code>altas</code> con <code>dnis_sgi.txt</code>, <code>lista_nombres.txt</code> y <code>altas_FECHA.xlsx</code> (hojas Swiss, Otra OS, Revisar, Revisar CUIL).</p>
+<h3>2 · Buscador Padrón SSS <span class="label">bot_padron.py</span></h3>
+<p><b>Cuándo:</b> para saber qué obra social tiene cada DNI. Lo corre solo Altas nuevas; también se usa suelto con un <code>dnis.txt</code>.</p>
+<p><b>Qué hace:</b> consulta uno por uno en el padrón de la SSSalud. Si se corta, al volver a correrlo sigue donde quedó. Avisa "OJO CUIL" cuando a un familiar le figura el CUIL del titular.</p>
+<p><b>Deja:</b> <code>resultados/resultados_FECHA_Usuario.txt</code> (separado por tabulaciones, se pega en Excel o en la Lista de nombres).</p>
+<h3>3 · Exportar SURGE <span class="label">favorito</span></h3>
+<p><b>Cuándo:</b> antes del cruce, con SURGE abierto y logueado.</p>
+<p><b>Deja:</b> <code>export_surge_completo_FECHA.csv</code> en Descargas. No abrirlo con Excel.</p>
+<h3>4 · Cruce SURGE con la base <span class="label">ejecutar_cruce.bat</span></h3>
+<p><b>Qué hace:</b> compara el export de SURGE con el Excel compartido.</p>
+<p><b>Deja:</b> <code>cruce_surge_FECHA.xlsx</code> con Vencimientos (a quién reempadronar), Diferencias, Seguimiento (borradores, pendientes, rechazados) y Nros sin anotar.</p>
+<h3>5 · Docs SGI <span class="label">favorito</span></h3>
+<p><b>Cuándo:</b> en SGI (red o VPN), con la lista de DNI (de Altas o del cruce).</p>
+<p><b>Deja:</b> <code>docs_sgi_FECHA.zip</code> con una carpeta por DNI y <code>resumen.csv</code> ("Sin archivos" / "DNI no encontrado").</p>
+<h3>6 · Bot Planillas <span class="label">ejecutar_clasificador.bat</span></h3>
+<p><b>Qué hace:</b> clasifica la documentación bajada de cada socio y arma el reporte, con el CUIL en el nombre.</p>
+<p><b>Deja:</b> el reporte .xlsx y un .csv al lado para <b>Importar clasificador</b> en el Armador.</p>
+<h3>7 · Armador de PDF <span class="label">esta página</span></h3>
+<p>Revisar cada socio, fecha de planilla, armar el PDF, Retener / Mandar a firmar, Cierre del día. Ver Manual de uso.</p>
+<h3>8 · Carga rápida <span class="label">favorito en SURGE</span></h3>
+<p><b>Qué hace:</b> panel de teclado arriba de SURGE: alta (fecha de alta y CUIL), requisitos en el orden de la planilla, planilla firmada al costado (Alt+P), atajos (Ctrl+S, Ctrl+Shift+S, F2) y bloque para el Excel compartido (Alt+C).</p>
+<p><b>Instalar o actualizar:</b> <a href="carga.html" target="_blank">página de instalación</a> (la versión tiene que coincidir con la del favorito).</p>
+    </div>
   </div>
 </div>
 <div id="cfgPanel" class="sidepanel">
@@ -836,7 +864,8 @@
     <label class="cfgchk"><input type="checkbox" id="set_requireFp"> No dejar guardar sin fecha de planilla</label>
     <h4>📤 Envío a firma</h4>
     <label class="cfgchk"><input type="checkbox" id="set_hold"> Retener: guardar en "en espera" y mandar a firmar de a tandas</label>
-    <p class="label">Lo guardado queda en la subcarpeta <b>_en_espera</b> dentro de listos y cuenta como Listo. Con <b>📤 Mandar a firmar</b> pasás la cantidad que elijas a la carpeta de listos.</p>
+    <button id="set_holdPick" class="b">📁 Carpeta de espera: elegir…</button>
+    <p class="label">Elegí (o creá) una carpeta <b>aparte</b>, por ejemplo "En espera", fuera de la de listos/para firmar. Lo guardado queda ahí y ya cuenta como Listo. Con <b>📤 Mandar a firmar</b> pasás la cantidad que elijas a la carpeta de listos, a mano o en automático.</p>
     <h4>✍ Firmados</h4>
     <p class="edhint">Un PDF firmado cuenta solo si se firmó después de que dejaste listo a ese socio en el Armador (así no se confunden con los del año pasado). Si el Armador no tiene registro de ese socio, se toman los firmados de los últimos:</p>
     <label class="cfgchk"><input type="number" id="set_signDays" min="1" max="365" style="width:70px"> días</label>
@@ -1043,7 +1072,7 @@
     return false;
   }
   $("reconnect").onclick = async () => {
-    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); if (signDir) await signDir.requestPermission({ mode: "read" }); } catch (e) {}
+    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); if (holdDir) await hasPerm(holdDir, true); if (signDir) await signDir.requestPermission({ mode: "read" }); } catch (e) {}
     await refreshAll();
   };
 
@@ -1183,14 +1212,14 @@
     listos = new Set(); listosMap = new Map();
     if (ok === undefined) ok = outDir && await hasPerm(outDir, false);
     enEspera = [];
-    if (ok) for await (const [name, h] of outDir.entries()) {
-      if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
-      else if (name === ESPERA) for await (const [n2, h2] of h.entries()) if (h2.kind === "file") { listos.add(n2.toLowerCase()); listosMap.set(n2.toLowerCase(), n2); enEspera.push(h2); }
-    }
+    if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
+    // La carpeta de espera está aparte (fuera de listos, así la autofirma no la toca); lo que hay ahí cuenta como Listo
+    if (holdDir && (await holdDir.queryPermission({ mode: "readwrite" })) === "granted")
+      for await (const [n2, h2] of holdDir.entries()) if (h2.kind === "file" && /\.pdf$/i.test(n2)) { listos.add(n2.toLowerCase()); listosMap.set(n2.toLowerCase(), n2); enEspera.push(h2); }
     updateHoldUi();
   }
-  // Envío a firma por tandas: lo guardado queda en listos/_en_espera hasta que lo mandás
-  const ESPERA = "_en_espera";
+  // Envío a firma por tandas: lo guardado queda en la carpeta "En espera" (aparte) hasta que lo mandás
+  let holdDir = null;
   let enEspera = [];
   let auto = { on: false, k: 3, min: 20, desde: 6, hasta: 15, alerta: 60, next: 0 };
   function updateHoldUi() {
@@ -1198,9 +1227,25 @@
     $("holdBtn").hidden = !(settings.hold || n || auto.on);
     $("holdCount").textContent = n;
   }
-  async function esperaDir() { return outDir.getDirectoryHandle(ESPERA, { create: true }); }
+  async function esperaDir() {
+    if (!holdDir) throw new Error("Elegí la carpeta de espera en ⚙ Configuración → Envío a firma.");
+    if (!(await hasPerm(holdDir, true))) throw new Error("Sin permiso en la carpeta de espera.");
+    return holdDir;
+  }
+  async function pickHold() {
+    try {
+      const h = await window.showDirectoryPicker({ id: "espera" + (prof === "diabetes" ? "" : "-" + prof), mode: "readwrite" });
+      if (outDir && await h.isSameEntry(outDir)) { toast("La carpeta de espera tiene que ser distinta de la de listos (para firmar)."); return false; }
+      if (signDir && await h.isSameEntry(signDir)) { toast("La carpeta de espera tiene que ser distinta de la de Firmados."); return false; }
+      holdDir = h; await kvSet(pk("holdDir"), h);
+      await refreshListos(); renderSocios(); renderHoldPick();
+      return true;
+    } catch (e) { if (e.name !== "AbortError") toast("No pude usar esa carpeta: " + e.message); return false; }
+  }
+  function renderHoldPick() { $("set_holdPick").textContent = "📁 Carpeta de espera: " + (holdDir ? holdDir.name : "elegir…"); }
   $("holdBtn").onclick = async () => {
     if (!outDir || !(await hasPerm(outDir, true))) { toast("Sin permiso en la carpeta de listos."); return; }
+    if (holdDir) await hasPerm(holdDir, true);
     await refreshListos();
     const n = enEspera.length;
     $("hInfo").textContent = n ? `En espera: ${n} archivo${n === 1 ? "" : "s"}.` : "No hay nada en espera.";
@@ -1265,6 +1310,7 @@
   }));
   $("aToggle").onclick = async () => {
     if (!auto.on && !(await hasPerm(outDir, true))) { toast("Sin permiso en la carpeta de listos."); return; }
+    if (!auto.on && !(holdDir && await hasPerm(holdDir, true))) { toast("Elegí la carpeta de espera en ⚙ Configuración."); return; }
     auto.on = !auto.on; auto.next = auto.on ? Date.now() : 0; saveAuto(); renderAuto();
     if (auto.on) tickAuto();
   };
@@ -1297,7 +1343,7 @@
       const tarde = envios.filter(e => !e.firmado && now - e.ts > auto.alerta * 60000 && !avisados.has(e.name));
       if (tarde.length) { tarde.forEach(e => avisados.add(e.name)); toast(`⚠ ${tarde.length} sin firmar hace más de ${auto.alerta} min: ${tarde.slice(0, 3).map(e => e.name).join(", ")}${tarde.length > 3 ? "…" : ""}. ¿Está corriendo la autofirma?`, { sticky: true }); }
       if (!auto.on || now < auto.next || !enHorario(new Date(now))) { renderAuto(); return; }
-      if ((await outDir.queryPermission({ mode: "readwrite" })) !== "granted") { renderAuto(); $("aInfo").textContent = "⚠ Chrome pidió permiso de nuevo: tocá 📤 Mandar a firmar y después ▶ para seguir."; auto.on = false; saveAuto(); return; }
+      if ((await outDir.queryPermission({ mode: "readwrite" })) !== "granted" || !holdDir || (await holdDir.queryPermission({ mode: "readwrite" })) !== "granted") { renderAuto(); $("aInfo").textContent = "⚠ Chrome pidió permiso de nuevo: tocá 📤 Mandar a firmar y después ▶ para seguir."; auto.on = false; saveAuto(); return; }
       await refreshListos();
       if (enEspera.length) {
         const { ok } = await moverAFirma(auto.k);
@@ -2101,7 +2147,8 @@
     }
     if (!(await hasPerm(outDir, true))) { say("Sin permiso para guardar en la carpeta de listos.", "err"); return false; }
     const names = partNames(base, pdfs.length), saved = [];
-    const dest = settings.hold ? await esperaDir() : outDir;
+    let dest = outDir;
+    if (settings.hold) { try { dest = await esperaDir(); } catch (e) { say(e.message, "err"); return false; } }
     for (let i = 0; i < pdfs.length; i++) {
       const existe = await fileExists(dest, names[i]) || (settings.hold && await fileExists(outDir, names[i]));
       if (existe && !confirm(`Ya existe "${names[i]}" en la carpeta de listos${settings.hold ? " o en espera" : ""}.\n¿Lo reemplazo?`)) continue;
@@ -2113,7 +2160,7 @@
     renderSocios();
     if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
     if (settings.hold) { await refreshListos(); renderSocios(); }
-    say(`✓ Guardado en "${outDir.name}${settings.hold ? "/" + ESPERA : ""}": ${saved.join(", ")}`, "ok");
+    say(`✓ Guardado en "${settings.hold ? holdDir.name + " (en espera)" : outDir.name}": ${saved.join(", ")}`, "ok");
     if (settings.autoNext) setTimeout(goNextAuto, 250);
     return true;
   }
@@ -3360,8 +3407,12 @@
     for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) { if (el.type === "checkbox") el.checked = !!settings[k]; else el.value = settings[k]; } }
   }
   for (const k of ["autoNext", "autoNextQ", "openFirst", "requireFp", "hold"]) {
-    $("set_" + k).addEventListener("change", () => { settings[k] = $("set_" + k).checked; kvSet("settings", settings); if (k === "hold") updateHoldUi(); });
+    $("set_" + k).addEventListener("change", async () => {
+      settings[k] = $("set_" + k).checked; kvSet("settings", settings);
+      if (k === "hold") { if (settings.hold && !holdDir && !(await pickHold())) { settings.hold = false; $("set_hold").checked = false; kvSet("settings", settings); } updateHoldUi(); }
+    });
   }
+  $("set_holdPick").onclick = () => pickHold();
   $("set_signDays").addEventListener("change", () => {
     settings.signDays = Math.max(1, parseInt($("set_signDays").value) || 30); $("set_signDays").value = settings.signDays;
     kvSet("settings", settings); renderSocios();
@@ -3374,7 +3425,7 @@
   document.querySelector(".infotabs").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     document.querySelectorAll(".infotabs button").forEach(x => x.classList.toggle("on", x === b));
-    $("info_manual").hidden = b.dataset.t !== "manual"; $("info_guia").hidden = b.dataset.t !== "guia";
+    ["manual", "guia", "procesos"].forEach(t => { $("info_" + t).hidden = b.dataset.t !== t; });
     document.querySelector(".infobody").scrollTop = 0;
   });
   function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); $("cfgPanel").classList.add("show"); }
@@ -3473,6 +3524,7 @@
     rootDir = outDir = null;
     signDir = null;
     if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; signDir = (await kvGet(pk("signDir"))) || null; }
+    holdDir = HAS_FS ? (await kvGet(pk("holdDir"))) || null : null; renderHoldPick();
     await loadAuto();
     $("search").value = "";
     updateTplPreview();
