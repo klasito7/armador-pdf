@@ -719,7 +719,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
-<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo.</li>
+<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
 <li><b>🧾 Datos SURGE (tecla D):</b> panel a la derecha para tipear los datos de la planilla en el mismo orden que SURGE, con la planilla en grande al lado (RePág / AvPág cambian de hoja). Fecha al lado del valor con Tab (2023 = 01/01/2023; vacía = la de planilla). En la lista: 🧾 n/20 o 🧾 datos ✓. <b>📋 Datos para SURGE</b> (barra izquierda) copia los completos con CUIL y fecha de planilla para Carga rápida.</li>
 <li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
 <li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
@@ -4012,7 +4012,11 @@ body.dsopen .modal{right:400px}
 
   /* ================= 📊 Master Diabetes: qué hacer con cada socio según el Excel compartido ================= */
   // Lector de .xlsx propio (un .xlsx es un zip con XML): no sube nada, todo queda en esta PC
-  async function leerXlsx(buf) {
+  const mNorm = h => String(h ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const mNormSrc = "const mNorm = " + mNorm.toString() + ";";
+  // Lector de .xlsx. Corre en un proceso aparte (Web Worker) para que la página no se trabe con Excels grandes.
+  // necesita: listas de encabezados; solo se leen enteras las hojas que tengan alguna de esas listas completa.
+  async function leerXlsxCore(buf, necesita) {
     const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder();
     let eocd = -1;
     for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
@@ -4032,40 +4036,72 @@ body.dsopen .modal{right:400px}
       const ds = new DecompressionStream("deflate-raw");
       return await new Response(new Blob([data]).stream().pipeThrough(ds)).text();
     };
-    const xmlDec = t => t.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, c) => String.fromCharCode(+c)).replace(/&amp;/g, "&");
+    const xmlDec = t => t.indexOf("&") < 0 ? t : t.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, c) => String.fromCharCode(+c)).replace(/&amp;/g, "&");
+    const textos = x => { let o = ""; for (const m of x.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)) o += m[1]; return xmlDec(o); };
     const ssXml = await leer("xl/sharedStrings.xml") || "";
-    const ss = [...ssXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => xmlDec([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join("")));
+    const ss = [...ssXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => textos(m[1]));
     const wb = await leer("xl/workbook.xml"), rels = await leer("xl/_rels/workbook.xml.rels") || "";
     const attr = (tag, a) => (tag.match(new RegExp("\\s" + a + '="([^"]*)"')) || [])[1] || "";
     const relMap = Object.fromEntries([...rels.matchAll(/<Relationship\b[^>]*>/g)].map(m => [attr(m[0], "Id"), attr(m[0], "Target")]));
+    const sirve = rows => !necesita || rows.slice(0, 10).some(r => { const h = r.map(v => mNorm(v)); return necesita.some(req => req.every(x => h.includes(x))); });
     const hojas = [];
     for (const sm of wb.matchAll(/<sheet\b[^>]*>/g)) {
-      const m = [null, attr(sm[0], "name"), attr(sm[0], "r:id")];
-      let tg = relMap[m[2]] || ""; tg = tg.replace(/^\/?xl\//, ""); const path = "xl/" + tg;
-      const xml = await leer(path); if (!xml) continue;
+      let tg = relMap[attr(sm[0], "r:id")] || ""; tg = tg.replace(/^\/?xl\//, "");
+      const xml = await leer("xl/" + tg); if (!xml) continue;
+      // Se recorre fila por fila con indexOf (lineal): Excel guarda las filas vacías con formato como <row .../>
+      // y una expresión regular sobre todo el texto se quedaba colgada con eso.
       const rows = [];
-      for (const rm of xml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)) {
-        const row = [];
-        for (const cm of rm[1].matchAll(/<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
-          let col = 0; for (const ch of cm[1]) col = col * 26 + ch.charCodeAt(0) - 64;
-          const t = (cm[2].match(/t="([^"]+)"/) || [])[1], inner = cm[3] || "";
+      let i = xml.indexOf("<sheetData"); const finData = xml.indexOf("</sheetData>");
+      let mirado = false;
+      while (i >= 0) {
+        const j = xml.indexOf("<row", i); if (j < 0 || (finData >= 0 && j > finData)) break;
+        const e = xml.indexOf(">", j); if (e < 0) break;
+        if (xml.charCodeAt(e - 1) === 47) { i = e + 1; continue; }   // <row .../> vacía
+        const f = xml.indexOf("</row>", e); if (f < 0) break;
+        const body = xml.slice(e + 1, f); i = f + 6;
+        const row = []; let col = 0, hay = false;
+        for (const cm of body.matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+          const at = cm[1], inner = cm[2] || "";
+          const r = at.match(/\br="([A-Z]+)/);
+          if (r) { col = 0; for (const ch of r[1]) col = col * 26 + ch.charCodeAt(0) - 64; } else col++;
+          if (!inner) continue;
+          const t = (at.match(/\bt="([^"]+)"/) || [])[1];
           const v = (inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
-          let val = "";
+          let val;
           if (t === "s") val = ss[+v] ?? "";
-          else if (t === "inlineStr") val = xmlDec([...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join(""));
+          else if (t === "inlineStr") val = textos(inner);
           else if (t === "str" || t === "e") val = xmlDec(v || "");
           else if (t === "b") val = v === "1";
           else val = v == null ? "" : +v;
-          row[col - 1] = val;
+          if (val === "") continue;
+          row[col - 1] = val; hay = true;
         }
+        if (!hay) continue;
         rows.push(row);
+        if (!mirado && rows.length >= 10) { mirado = true; if (!sirve(rows)) break; }   // hoja que no interesa: no se lee entera
       }
-      hojas.push({ name: xmlDec(m[1]), rows });
+      if (!sirve(rows)) continue;
+      hojas.push({ name: xmlDec(attr(sm[0], "name")), rows });
     }
     return hojas;
   }
+  let xlsxWorker = null, xlsxN = 0; const xlsxPend = new Map();
+  function leerXlsx(buf, necesita) {
+    try {
+      if (!xlsxWorker) {
+        const src = mNormSrc + "\n" + leerXlsxCore.toString() + "\nonmessage = async e => { const id = e.data.id; try { postMessage({ id, ok: await leerXlsxCore(e.data.buf, e.data.necesita) }); } catch (err) { postMessage({ id, err: String(err && err.message || err) }); } };";
+        xlsxWorker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+      }
+    } catch (e) { return leerXlsxCore(buf, necesita); }   // sin worker: se lee en la página, igual que antes
+    const w = xlsxWorker, id = ++xlsxN;
+    return new Promise((ok, bad) => {
+      xlsxPend.set(id, { ok, bad, buf, necesita });
+      w.onmessage = e => { const q = xlsxPend.get(e.data.id); if (!q) return; xlsxPend.delete(e.data.id); e.data.err ? q.bad(new Error(e.data.err)) : q.ok(e.data.ok); };
+      w.onerror = e => { e.preventDefault(); xlsxWorker = null; w.terminate(); for (const [k, q] of xlsxPend) { xlsxPend.delete(k); leerXlsxCore(q.buf, q.necesita).then(q.ok, q.bad); } };
+      w.postMessage({ id, buf, necesita });
+    });
+  }
 
-  const mNorm = h => String(h ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
   function mFecha(v) {
     if (v == null || v === "") return null;
     if (typeof v === "number" && v > 20000 && v < 80000) { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
@@ -4084,7 +4120,8 @@ body.dsopen .modal{right:400px}
       const h = (rows[i] || []).map(mNorm);
       if (requeridas.every(r => h.includes(r))) {
         const idx = {}; h.forEach((x, j) => { if (x && !(x in idx)) idx[x] = j; });
-        const get = (row, ...names) => { for (const n of names) { const j = idx[mNorm(n)]; if (j != null && row[j] !== undefined && row[j] !== "") return row[j]; } return ""; };
+        const nk = new Map(), key = n => { let k = nk.get(n); if (k === undefined) nk.set(n, k = mNorm(n)); return k; };
+        const get = (row, ...names) => { for (const n of names) { const j = idx[key(n)]; if (j != null && row[j] !== undefined && row[j] !== "") return row[j]; } return ""; };
         return { body: rows.slice(i + 1), get };
       }
     }
@@ -4271,7 +4308,7 @@ body.dsopen .modal{right:400px}
   function tandaDe(k) { const L = mstData.G[k] || []; return L.slice(0, Math.max(0, (mstCupos[k] || 0) - hechosHoy(k))); }
   async function cargarBase(file) {
     try {
-      miBase = parseBase(/\.xls[xm]$/i.test(file.name) ? await leerXlsx(await file.arrayBuffer()) : await (async () => { const buf = await file.arrayBuffer(); let t = new TextDecoder("utf-8").decode(buf); if (t.includes("\uFFFD")) t = new TextDecoder("windows-1252").decode(buf); return t; })());
+      miBase = parseBase(/\.xls[xm]$/i.test(file.name) ? await leerXlsx(await file.arrayBuffer(), [["dni", "fecha planilla", "estado"]]) : await (async () => { const buf = await file.arrayBuffer(); let t = new TextDecoder("utf-8").decode(buf); if (t.includes("\uFFFD")) t = new TextDecoder("windows-1252").decode(buf); return t; })());
       $("mstInfo").textContent += ` · mi base: ${file.name} (${miBase.length} filas)`;
       if (mstData) mstRender(); else toast("Elegí también el Excel compartido para comparar.");
     } catch (e) { toast("No pude leer tu base: " + (e.message || e)); }
@@ -4358,7 +4395,7 @@ body.dsopen .modal{right:400px}
     $("mstInfo").textContent = `Leyendo ${file.name}…`;
     try {
       const t0 = performance.now();
-      mstData = mstClasificar(await leerXlsx(await file.arrayBuffer()));
+      mstData = mstClasificar(await leerXlsx(await file.arrayBuffer(), [["estado actual"], ["estado empadronamiento", "nro empadronamiento"]]));
       $("mstInfo").textContent = `${file.name} · modificado ${new Date(file.lastModified).toLocaleString("es-AR")} · hojas: ${mstData.hojas.join(" y ")} · leído en ${((performance.now() - t0) / 1000).toFixed(1)} s`;
       mstRender();
     } catch (e) { console.error(e); $("mstInfo").textContent = "No pude leer el Excel: " + (e.message || e); }
