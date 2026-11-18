@@ -88,6 +88,12 @@
   .keybtn{min-width:96px;font:700 13px ui-monospace,Consolas,monospace}
   .keybtn.cap{background:var(--warn);color:#fff;border-color:var(--warn)}
   #cfgReset{margin-top:14px}
+  .dsmot{color:#b45309;margin-top:2px}
+  .mstmot{width:100%;min-width:180px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit}
+  .mstmots{margin:4px 0 8px;font-size:13px}
+  .cfgbody details{border:1px solid var(--line);border-radius:10px;padding:6px 12px;margin:0 0 10px}
+  .cfgbody summary{cursor:pointer;font-weight:700;padding:6px 0;font-size:14.5px}
+  .cfgbody details h4{margin:10px 0 4px;font-size:13px;opacity:.85}
   .cfgchk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:5px 0}
   .cfgchk input{margin-top:3px}
   #mtPanel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:55;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
@@ -719,6 +725,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
+<li><b>🔴 Motivos de rechazo:</b> en el grupo Rechazados del Master cada fila tiene <b>Motivo del rechazo</b>: escribís lo que puso la SSS (te sugiere los que ya usaste). Arriba de la tabla se ven los más repetidos del último año, y en 🧾 Datos SURGE (tecla D) aparecen los 3 más comunes para revisarlos antes de cargar.</li>
 <li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
 <li><b>🧾 Datos SURGE (tecla D):</b> panel a la derecha para tipear los datos de la planilla en el mismo orden que SURGE, con la planilla en grande al lado (RePág / AvPág cambian de hoja). Fecha al lado del valor con Tab (2023 = 01/01/2023; vacía = la de planilla). En la lista: 🧾 n/20 o 🧾 datos ✓. <b>📋 Datos para SURGE</b> (barra izquierda) copia los completos con CUIL y fecha de planilla para Carga rápida.</li>
 <li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
@@ -743,10 +750,12 @@ body.dsopen .modal{right:400px}
 <li><b>Ctrl+Enter</b> pasa todo a la página y avisa lo que esté fuera de rango. <b>Copiar registro de hoy</b>: solicitud, CUIL, fecha de planilla y hora.</li>
 </ul>
 <h3>Configuración</h3>
+<p>Está ordenada en bloques que se abren y cierran: 📄 Armar y guardar · 📤 Firma · 🔁 Historial · 💾 Copia de seguridad · ⌨ Atajos (cerrado, abajo de todo).</p>
 <ul>
-<li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
-<li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
 <li><b>Fecha de planilla:</b> si está prendido (viene así), no deja guardar en Listos un socio sin fecha de planilla.</li>
+<li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
+<li><b>Copia automática:</b> elegís una vez una carpeta tuya ("Copias Armador", fuera de las de trabajo) y el Armador guarda solo un archivo por día (armador-copia-AAAA-MM-DD.json) con lo último: cada 10 minutos si cambiaste algo y al cambiar de ventana. Deja los últimos 14 días. Si Chrome pide permiso de nuevo, se reactiva con 🔓 Reconectar carpetas o 💾 Guardar copia ahora. Para recuperar: 📂 Importar configuración y elegís el archivo del día.</li>
+<li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
 <li><b>Envío a firma (Retener):</b> lo guardado queda en una carpeta de espera aparte, que elegís vos fuera de la de listos (cuenta como Listo). Con <b>📤 Mandar a firmar</b> (barra de la izquierda) elegís cuántas pasar a la carpeta de listos; van las más viejas primero.</li>
 <li><b>Automático:</b> en el mismo cartel, "Pasar N cada M min, solo de X a Y h" (el intervalo varía ±20 %) → ▶ Arrancar. Necesita la pestaña abierta y la PC prendida. <b>Seguimiento:</b> mira en Firmados si cada uno volvió con _signed y avisa si alguno tarda más de los minutos que elijas.</li>
 <li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
@@ -929,10 +938,10 @@ body.dsopen .modal{right:400px}
   <div id="mstCards"></div>
   <div class="mstbar"><h3 id="mstTitulo"></h3><button id="mstCopyDni">📋 Copiar DNI</button><button id="mstCopyTabla">📋 Copiar tabla</button></div>
   <div class="msttanda" id="mstTanda" hidden></div>
-  <div id="mstTabla"></div>
+  <div id="mstTabla"></div><datalist id="mstMotList"></datalist>
 </div>
 <div id="dsPanel">
-  <div class="dshead"><div><h3>🧾 Datos SURGE</h3><div id="dsTitle"></div><div id="dsFp" class="label"></div></div><button id="dsClose">✕</button></div>
+  <div class="dshead"><div><h3>🧾 Datos SURGE</h3><div id="dsTitle"></div><div id="dsFp" class="label"></div><div id="dsMot" class="label dsmot" hidden></div></div><button id="dsClose">✕</button></div>
   <div id="dsRows"></div><datalist id="dsMeds"></datalist>
   <div class="dsfoot"><span id="dsState"></span><button class="primary" id="dsDone">Listo</button></div>
   <p class="label dshint">Enter = siguiente · Tab = fecha que figura al lado (vacía = la de planilla; <b>2023</b> = 01/01/2023) · opciones con su tecla, <b>0</b> = no presenta / ninguna · Backspace borra · Esc cierra · D abre/cierra. La planilla se abre en grande al lado: <b>RePág / AvPág</b> cambian de hoja sin salir del campo.</p>
@@ -940,30 +949,40 @@ body.dsopen .modal{right:400px}
 <div id="cfgPanel" class="sidepanel">
   <div class="edhead"><h3>⚙ Configuración</h3><button id="cfgClose">✕</button></div>
   <div class="cfgbody">
-    <h4>⌨ Atajos de teclado</h4>
-    <p class="edhint">Tocá la tecla de una acción y apretá la nueva. Si ya la usaba otra acción, se intercambian. Esc cancela.</p>
-    <div id="cfgKeys"></div>
-    <button id="cfgReset" class="danger">Restablecer atajos originales</button>
-    <h4>▶ Uno tras otro</h4>
+    <details open><summary>📄 Armar y guardar</summary>
+    <label class="cfgchk"><input type="checkbox" id="set_requireFp"> No dejar guardar sin fecha de planilla</label>
     <label class="cfgchk"><input type="checkbox" id="set_autoNext"> Al guardar, pasar solo al siguiente pendiente</label>
     <label class="cfgchk"><input type="checkbox" id="set_autoNextQ"> Al cargar la fecha con la tecla de fecha a mano, pasar al siguiente</label>
     <label class="cfgchk"><input type="checkbox" id="set_openFirst"> Abrir la primera hoja en grande al pasar al siguiente</label>
-    <h4>📅 Fecha de planilla</h4>
-    <label class="cfgchk"><input type="checkbox" id="set_requireFp"> No dejar guardar sin fecha de planilla</label>
-    <h4>🔁 Historial de socios</h4>
-    <p class="label">Sirve para avisar cuando un socio ya pasó antes. Se llena solo con lo que guardás o marcás incompleto. Para sumar lo viejo:</p>
-    <button id="histPaste" class="b">📋 Pegar desde el Excel</button> <span id="histCount" class="label"></span>
-    <h4>📤 Envío a firma</h4>
+    </details>
+    <details open><summary>📤 Firma</summary>
+    <h4>Envío a firma</h4>
     <label class="cfgchk"><input type="checkbox" id="set_hold"> Retener: guardar en "en espera" y mandar a firmar de a tandas</label>
     <button id="set_holdPick" class="b">📁 Carpeta de espera: elegir…</button>
     <p class="label">Elegí (o creá) una carpeta <b>aparte</b>, por ejemplo "En espera", fuera de la de listos/para firmar. Lo guardado queda ahí y ya cuenta como Listo. Con <b>📤 Mandar a firmar</b> pasás la cantidad que elijas a la carpeta de listos, a mano o en automático.</p>
-    <h4>✍ Firmados</h4>
+    <h4>Firmados</h4>
     <p class="edhint">Un PDF firmado cuenta solo si se firmó después de que dejaste listo a ese socio en el Armador (así no se confunden con los del año pasado). Si el Armador no tiene registro de ese socio, se toman los firmados de los últimos:</p>
     <label class="cfgchk"><input type="number" id="set_signDays" min="1" max="365" style="width:70px"> días</label>
-    <h4>💾 Copia de seguridad</h4>
-    <p class="edhint">Guarda todo lo cargado (fechas, observaciones, listas de nombres y CUIL, Para editar, cierres, métricas, objetivo, atajos) de los dos apartados en un archivo. Sirve si se borra Chrome o cambiás de PC. Las carpetas no viajan: después de importar elegilas de nuevo.</p>
+    </details>
+    <details open><summary>🔁 Historial de socios</summary>
+    <p class="label">Sirve para avisar cuando un socio ya pasó antes. Se llena solo con lo que guardás o marcás incompleto. Para sumar lo viejo:</p>
+    <button id="histPaste" class="b">📋 Pegar desde el Excel</button> <span id="histCount" class="label"></span>
+    </details>
+    <details open><summary>💾 Copia de seguridad</summary>
+    <p class="edhint">Guarda todo lo cargado (fechas, observaciones, listas de nombres y CUIL, Para editar, cierres, historial, datos para SURGE, envíos, métricas, atajos) de los dos apartados. Sirve si se borra Chrome o cambiás de PC. Las carpetas no viajan: después de importar elegilas de nuevo.</p>
+    <h4>Automática</h4>
+    <p class="edhint">Elegí una carpeta tuya (por ejemplo "Copias Armador", fuera de las de trabajo). Mientras el Armador está abierto, guarda solo una copia por día con lo último (cada 10 minutos si cambiaste algo) y deja las de los últimos 14 días.</p>
+    <button id="bkPick" class="b">📁 Carpeta de copias: elegir…</button> <button id="bkNow" class="b" hidden>💾 Guardar copia ahora</button>
+    <p id="bkInfo" class="label"></p>
+    <h4>A mano</h4>
     <div class="frow"><button id="cfgExport">💾 Exportar configuración</button><button id="cfgImport">📂 Importar configuración</button></div>
     <input type="file" id="cfgFile" accept=".json,application/json" hidden>
+    </details>
+    <details><summary>⌨ Atajos de teclado</summary>
+    <p class="edhint">Tocá la tecla de una acción y apretá la nueva. Si ya la usaba otra acción, se intercambian. Esc cancela.</p>
+    <div id="cfgKeys"></div>
+    <button id="cfgReset" class="danger">Restablecer atajos originales</button>
+    </details>
   </div>
 </div>
 <div id="mtPanel" class="sidepanel">
@@ -1022,7 +1041,9 @@ body.dsopen .modal{right:400px}
     try { const db = await openDb(); return await new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
     catch (e) { return undefined; }
   }
+  let bkDirty = false;   // hubo cambios desde la última copia automática
   async function kvSet(k, v) {
+    if (k !== "bkLast") bkDirty = true;
     try { const db = await openDb(); await new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
     catch (e) { console.warn("No se pudo guardar", k, e); }
   }
@@ -1173,7 +1194,8 @@ body.dsopen .modal{right:400px}
     return false;
   }
   $("reconnect").onclick = async () => {
-    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); if (holdDir) await hasPerm(holdDir, true); if (signDir) await signDir.requestPermission({ mode: "read" }); } catch (e) {}
+    try { await hasPerm(rootDir, true); await hasPerm(outDir, true); if (holdDir) await hasPerm(holdDir, true); if (signDir) await signDir.requestPermission({ mode: "read" }); if (bkDir) await bkPerm(true); } catch (e) {}
+    renderBk(); autoBackup(false);
     await refreshAll();
   };
 
@@ -3620,19 +3642,61 @@ body.dsopen .modal{right:400px}
   }, true);
   /* Copia de seguridad: exportar / importar */
   const isHandle = v => typeof FileSystemHandle !== "undefined" && v instanceof FileSystemHandle;
+  async function backupJson() {
+    const all = await kvAll(), data = {}, carpetas = {};
+    for (const [k, v] of Object.entries(all)) {
+      if (isHandle(v)) carpetas[k] = v.name; else if (k !== "bkLast") data[k] = v;
+    }
+    return JSON.stringify({ app: "armador-pdf", version: 1, exportado: new Date().toISOString(), carpetas, data }, null, 1);
+  }
   $("cfgExport").onclick = async () => {
     try {
-      const all = await kvAll(), data = {}, carpetas = {};
-      for (const [k, v] of Object.entries(all)) {
-        if (isHandle(v)) carpetas[k] = v.name; else data[k] = v;
-      }
-      const payload = { app: "armador-pdf", version: 1, exportado: new Date().toISOString(), carpetas, data };
       const d = new Date(), name = `armador-config-${isoDay(d)}.json`;
-      const json = JSON.stringify(payload, null, 1);
+      const json = await backupJson();
       downloadBytes(new TextEncoder().encode(json), name, "application/json");
       toast(`💾 Configuración exportada: ${name}. Guardala en un lugar seguro (tiene nombres y DNI).`);
     } catch (e) { toast("No pude exportar: " + e.message); }
   };
+
+  /* Copia automática: un archivo por día en la carpeta elegida (se reescribe con lo último), quedan los últimos 14 */
+  let bkDir = null;
+  const BK_RE = /^armador-copia-\d{4}-\d{2}-\d{2}\.json$/;
+  async function bkPerm(pedir) {
+    if (!bkDir) return false;
+    try { if ((await bkDir.queryPermission({ mode: "readwrite" })) === "granted") return true; return pedir ? (await bkDir.requestPermission({ mode: "readwrite" })) === "granted" : false; } catch (e) { return false; }
+  }
+  async function renderBk() {
+    const last = await kvGet("bkLast"), ok = await bkPerm(false);
+    $("bkPick").textContent = "📁 Carpeta de copias: " + (bkDir ? bkDir.name : "elegir…");
+    $("bkNow").hidden = !bkDir;
+    $("bkInfo").textContent = !bkDir ? "Sin carpeta elegida: no se hacen copias automáticas." : !ok ? "⚠ Chrome pide permiso de nuevo: tocá 💾 Guardar copia ahora (o 🔓 Reconectar carpetas)." : last ? `Última copia: ${new Date(last).toLocaleString("es-AR")}` : "Todavía no se guardó ninguna.";
+  }
+  async function autoBackup(force) {
+    if (!bkDir || (!force && !bkDirty)) return false;
+    if (!(await bkPerm(!!force))) { renderBk(); return false; }
+    try {
+      const json = await backupJson();
+      const fh = await bkDir.getFileHandle(`armador-copia-${isoDay(new Date())}.json`, { create: true });
+      const w = await fh.createWritable(); await w.write(json); await w.close();
+      bkDirty = false; await kvSet("bkLast", Date.now());
+      const viejas = [];
+      for await (const [n, h] of bkDir.entries()) if (h.kind === "file" && BK_RE.test(n)) viejas.push(n);
+      viejas.sort().reverse().slice(14).forEach(n => bkDir.removeEntry(n).catch(() => {}));
+      renderBk(); return true;
+    } catch (e) { console.warn("Copia automática", e); $("bkInfo").textContent = "⚠ No pude guardar la copia: " + e.message; return false; }
+  }
+  $("bkPick").onclick = async () => {
+    try {
+      const h = await window.showDirectoryPicker({ id: "copias", mode: "readwrite" });
+      for (const [d, nom] of [[rootDir, "socios"], [outDir, "listos"], [signDir, "firmados"], [holdDir, "espera"]]) if (d && await h.isSameEntry(d)) { toast(`Elegí otra carpeta: esa es la de ${nom}.`); return; }
+      bkDir = h; await kvSet("bkDir", h); bkDirty = true;
+      if (await autoBackup(true)) toast("💾 Copia guardada. Desde ahora se guarda sola todos los días.");
+    } catch (e) { if (e.name !== "AbortError") toast("No pude usar esa carpeta: " + e.message); }
+  };
+  $("bkNow").onclick = async () => { bkDirty = true; if (await autoBackup(true)) toast("💾 Copia guardada."); };
+  kvGet("bkDir").then(h => { if (h) { bkDir = h; bkDirty = true; } renderBk(); setTimeout(() => autoBackup(false), 5000); });
+  setInterval(() => autoBackup(false), 10 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) autoBackup(false); });
   $("cfgImport").onclick = () => $("cfgFile").click();
   $("cfgFile").addEventListener("change", async e => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -3687,7 +3751,7 @@ body.dsopen .modal{right:400px}
     ["manual", "guia", "procesos"].forEach(t => { $("info_" + t).hidden = b.dataset.t !== t; });
     document.querySelector(".infobody").scrollTop = 0;
   });
-  function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); $("cfgPanel").classList.add("show"); }
+  function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); renderBk(); $("cfgPanel").classList.add("show"); }
   function closeCfg() { capturing = null; $("cfgPanel").classList.remove("show"); }
   $("cfgOpen").onclick = () => $("cfgPanel").classList.contains("show") ? closeCfg() : openCfg();
   $("cfgClose").onclick = closeCfg;
@@ -3882,6 +3946,8 @@ body.dsopen .modal{right:400px}
     const fpTxt = nt.fp ? fmtFecha(nt.fp) : "sin fecha de planilla";
     $("dsTitle").textContent = `${current.name}${personName(current) ? " · " + personName(current) : ""}`;
     $("dsFp").textContent = "📅 " + fpTxt + (cuilOf(current) ? " · CUIL " + cuilOf(current) : " · ⚠ sin CUIL");
+    const tm = topMotivos(3); $("dsMot").hidden = !tm.length;
+    $("dsMot").textContent = tm.length ? "⚠ Rechazos más comunes: " + tm.map(m => m.t).join(" · ") : "";
     $("dsRows").innerHTML = DS_FIELDS.map((f, i) => {
       const v = d.vals[f.k] || {};
       const sel = new Set(v.sel || []);
@@ -4359,8 +4425,27 @@ body.dsopen .modal{right:400px}
       $("mstTandaCopy").onclick = async () => { const tl2 = tandaDe(k); await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tFecha planilla\tEstado\tDetalle", ...tl2.map(x => [x.dni, x.cuil, x.nombre, mFmt(x.fp), x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 Tanda de hoy copiada (${tl2.length}).`); };
       $("mstTandaOk").onclick = () => { const tl2 = tandaDe(k); tl2.forEach(x => { mstPasados[k][x.dni] = hoyIso(); }); const lim = isoDay(new Date(Date.now() - 90 * 864e5)); for (const g of ["mi_an", "mi_surge"]) for (const [d, f] of Object.entries(mstPasados[g])) if (f < lim) delete mstPasados[g][d]; kvSet("mstPasados", mstPasados); toast(`✓ ${tl2.length} marcados como pasados hoy.`); mstRender(); };
     }
-    $("mstTabla").innerHTML = L.length ? `<table><tr><th>DNI</th><th>CUIL</th><th>Nombre</th><th>Analista</th><th>Estado actual</th><th>Detalle</th><th>SURGE</th></tr>${L.slice(0, max).map(x => `<tr class="${tanda.has(x.dni) ? "hoy" : ""}"><td>${x.dni}</td><td>${x.cuil || ""}</td><td>${escapeHtml(x.nombre || "")}</td><td>${escapeHtml(x.analista || "")}</td><td>${escapeHtml(x.estadoActual || "")}</td><td>${escapeHtml(x.det || "")}</td><td>${mstLink(k, x)}</td></tr>`).join("")}</table>${L.length > max ? `<p class="label">Mostrando ${max} de ${L.length}. "Copiar tabla" copia todos.</p>` : ""}` : `<p class="label">No hay socios en este grupo. 🎉</p>`;
+    const conMot = k === "rechazado";
+    const tops = conMot ? topMotivos() : [];
+    if (conMot) $("mstMotList").innerHTML = topMotivos(30).map(m => `<option value="${escapeHtml(m.t)}">`).join("");
+    const motCel = x => { const n = nroDe(x); return n ? `<td><input class="mstmot" list="mstMotList" data-mot="${n}" data-dni="${x.dni}" placeholder="¿Por qué lo rechazaron?" value="${escapeHtml((motivos[n] || {}).motivo || "")}"></td>` : "<td></td>"; };
+    $("mstTabla").innerHTML = (conMot ? `<p class="label mstmots">${tops.length ? "🔁 Motivos más repetidos (último año): " + tops.map(m => `<b>${escapeHtml(m.t)}</b> (${m.n})`).join(" · ") : "Anotá en cada rechazo el motivo que puso la SSS: así se ve cuál se repite y el Armador te lo recuerda al tipear los datos (tecla D)."}</p>` : "") + (L.length ? `<table><tr><th>DNI</th><th>CUIL</th><th>Nombre</th><th>Analista</th><th>Estado actual</th><th>Detalle</th>${conMot ? "<th>Motivo del rechazo</th>" : ""}<th>SURGE</th></tr>${L.slice(0, max).map(x => `<tr class="${tanda.has(x.dni) ? "hoy" : ""}"><td>${x.dni}</td><td>${x.cuil || ""}</td><td>${escapeHtml(x.nombre || "")}</td><td>${escapeHtml(x.analista || "")}</td><td>${escapeHtml(x.estadoActual || "")}</td><td>${escapeHtml(x.det || "")}</td>${conMot ? motCel(x) : ""}<td>${mstLink(k, x)}</td></tr>`).join("")}</table>${L.length > max ? `<p class="label">Mostrando ${max} de ${L.length}. "Copiar tabla" copia todos.</p>` : ""}` : `<p class="label">No hay socios en este grupo. 🎉</p>`);
   }
+  /* Motivos de rechazo de la SSS: se anotan por solicitud en el grupo Rechazados y se cuentan los más repetidos */
+  let motivos = {};
+  kvGet("motivos").then(v => { motivos = v || {}; });
+  const motNorm = t => mNorm(t).replace(/[.;,]+$/, "");
+  function topMotivos(n = 5) {
+    const desde = Date.now() - 365 * 864e5, c = new Map();
+    for (const m of Object.values(motivos)) if (m.motivo && m.ts >= desde) { const k = motNorm(m.motivo); const x = c.get(k) || { t: m.motivo, n: 0 }; x.n++; c.set(k, x); }
+    return [...c.values()].sort((a, b) => b.n - a.n).slice(0, n);
+  }
+  $("mstTabla").addEventListener("change", e => {
+    const i = e.target.closest("[data-mot]"); if (!i) return;
+    const n = i.dataset.mot, t = i.value.trim();
+    if (t) motivos[n] = { dni: i.dataset.dni, motivo: t, ts: (motivos[n] && motivos[n].ts) || Date.now() }; else delete motivos[n];
+    kvSet("motivos", motivos); mstShow(mstSel);
+  });
   $("mstCards").addEventListener("click", e => { const b = e.target.closest(".mstcard"); if (b) mstShow(b.dataset.g); });
   /* Abrir en SURGE: reempadronar = /admin/extender_empadronamiento/<nº de la solicitud vencida> (crea la solicitud nueva);
      ver o seguir uno = /admin/empadronamientos/<nº>/edit */
