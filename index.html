@@ -340,6 +340,7 @@
         <button id="saveList" title="Guarda el listado como .csv (se abre con Excel)">💾 Guardar listado</button>
       </div>
       <div class="exportbar">
+        <button id="holdBtn" hidden title="Planillas guardadas que todavía no pasaron a la carpeta de listos (para firmar)">📤 Mandar a firmar <span class="badge" id="holdCount">0</span></button>
         <button id="dayBtn" title="Lo que guardaste hoy, para pegar en tu Excel">🌙 Cierre del día <span class="badge" id="dayCount" hidden>0</span></button>
       </div>
     </div>
@@ -518,6 +519,13 @@
   <p id="qPrev"></p>
   <div class="frow"><button class="primary" id="qOk">Guardar <kbd>Enter</kbd></button><button id="qCancel">Cancelar <kbd>Esc</kbd></button></div>
 </div></div>
+<div class="fdlg" id="hdlg" hidden><div class="fbox qbox">
+  <h3>📤 Mandar a firmar</h3>
+  <p id="hInfo"></p>
+  <label>¿Cuántas paso ahora? <input type="number" id="hN" min="1" style="width:70px"></label>
+  <p class="label">Pasan las más viejas primero, de "en espera" a la carpeta de listos (para firmar).</p>
+  <div class="frow"><button class="primary" id="hOk">Mandar <kbd>Enter</kbd></button><button id="hCancel">Cancelar <kbd>Esc</kbd></button></div>
+</div></div>
 <div class="fdlg" id="daylg" hidden><div class="fbox daybox">
   <h3>🌙 Cierre del día <span id="dayProf" class="label"></span></h3>
   <div class="frow dayopts">
@@ -660,6 +668,7 @@
 <li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
 <li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
 <li><b>Fecha de planilla:</b> si está prendido (viene así), no deja guardar en Listos un socio sin fecha de planilla.</li>
+<li><b>Envío a firma (Retener):</b> lo guardado queda en <code>_en_espera</code> dentro de Listos (cuenta como Listo). Con <b>📤 Mandar a firmar</b> (barra de la izquierda) elegís cuántas pasar a la carpeta de listos; van las más viejas primero.</li>
 <li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
 <li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
 </ul>
@@ -763,6 +772,7 @@
 <h3>Fin del día (últimos 20 minutos)</h3>
 <ol>
 <li><b>Cierre del día</b> → Sumar pendientes → <b>Copiar para Excel</b> → pegar en el Excel compartido.</li>
+<li>Con Retener prendido: <b>📤 Mandar a firmar</b> → cantidad de la tanda → Enter. Lo demás queda en espera para después.</li>
 <li>Si hiciste más de lo que pasás por día: <b>Repartir</b> (tanda de 20-25) → Copiar → pegar → <b>✓ Ya los pegué</b>. Lo que queda sale en los días siguientes.</li>
 <li><b>Guardar .txt</b> del cierre.</li>
 <li>Revisar <b>Para editar</b> y anotar lo pendiente.</li>
@@ -809,6 +819,9 @@
     <label class="cfgchk"><input type="checkbox" id="set_openFirst"> Abrir la primera hoja en grande al pasar al siguiente</label>
     <h4>📅 Fecha de planilla</h4>
     <label class="cfgchk"><input type="checkbox" id="set_requireFp"> No dejar guardar sin fecha de planilla</label>
+    <h4>📤 Envío a firma</h4>
+    <label class="cfgchk"><input type="checkbox" id="set_hold"> Retener: guardar en "en espera" y mandar a firmar de a tandas</label>
+    <p class="label">Lo guardado queda en la subcarpeta <b>_en_espera</b> dentro de listos y cuenta como Listo. Con <b>📤 Mandar a firmar</b> pasás la cantidad que elijas a la carpeta de listos.</p>
     <h4>✍ Firmados</h4>
     <p class="edhint">Un PDF firmado cuenta solo si se firmó después de que dejaste listo a ese socio en el Armador (así no se confunden con los del año pasado). Si el Armador no tiene registro de ese socio, se toman los firmados de los últimos:</p>
     <label class="cfgchk"><input type="number" id="set_signDays" min="1" max="365" style="width:70px"> días</label>
@@ -1154,8 +1167,53 @@
   async function refreshListos(ok) {
     listos = new Set(); listosMap = new Map();
     if (ok === undefined) ok = outDir && await hasPerm(outDir, false);
-    if (ok) for await (const [name, h] of outDir.entries()) if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
+    enEspera = [];
+    if (ok) for await (const [name, h] of outDir.entries()) {
+      if (h.kind === "file") { listos.add(name.toLowerCase()); listosMap.set(name.toLowerCase(), name); }
+      else if (name === ESPERA) for await (const [n2, h2] of h.entries()) if (h2.kind === "file") { listos.add(n2.toLowerCase()); listosMap.set(n2.toLowerCase(), n2); enEspera.push(h2); }
+    }
+    updateHoldUi();
   }
+  // Envío a firma por tandas: lo guardado queda en listos/_en_espera hasta que lo mandás
+  const ESPERA = "_en_espera";
+  let enEspera = [];
+  function updateHoldUi() {
+    const n = enEspera.length;
+    $("holdBtn").hidden = !(settings.hold || n);
+    $("holdCount").textContent = n;
+  }
+  async function esperaDir() { return outDir.getDirectoryHandle(ESPERA, { create: true }); }
+  $("holdBtn").onclick = async () => {
+    if (!outDir || !(await hasPerm(outDir, true))) { toast("Sin permiso en la carpeta de listos."); return; }
+    await refreshListos();
+    const n = enEspera.length;
+    if (!n) { toast("No hay nada en espera."); return; }
+    $("hInfo").textContent = `En espera: ${n} archivo${n === 1 ? "" : "s"}.`;
+    $("hN").max = n; $("hN").value = Math.min(n, settings.holdN || 10);
+    $("hdlg").hidden = false; setTimeout(() => { $("hN").focus(); $("hN").select(); }, 30);
+  };
+  $("hCancel").onclick = () => { $("hdlg").hidden = true; };
+  $("hdlg").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("hOk").click(); } else if (e.key === "Escape") { e.preventDefault(); $("hdlg").hidden = true; } });
+  $("hOk").onclick = async () => {
+    const want = Math.max(1, Math.floor(+$("hN").value || 0));
+    settings.holdN = want; kvSet("settings", settings);
+    $("hOk").disabled = true;
+    try {
+      const ed = await esperaDir();
+      const files = await Promise.all(enEspera.map(async h => ({ h, f: await h.getFile() })));
+      files.sort((a, b) => a.f.lastModified - b.f.lastModified);
+      let ok = 0, salt = 0;
+      for (const { h, f } of files.slice(0, want)) {
+        if (await fileExists(outDir, h.name)) { salt++; continue; }   // no piso lo que ya está para firmar
+        await writeFile(outDir, h.name, await f.arrayBuffer());
+        await ed.removeEntry(h.name); ok++;
+      }
+      $("hdlg").hidden = true;
+      await refreshListos(); renderSocios();
+      toast(`📤 ${ok} pasado${ok === 1 ? "" : "s"} a "${outDir.name}" · quedan ${enEspera.length} en espera` + (salt ? ` · ${salt} salteado${salt === 1 ? "" : "s"} (ya estaba en listos)` : ""));
+    } catch (e) { console.error(e); toast("No pude moverlos: " + (e.message || e)); }
+    finally { $("hOk").disabled = false; }
+  };
 
   function isListoWith(s) {
     if (VAR_RE.test(tpl)) {
@@ -1949,16 +2007,19 @@
     }
     if (!(await hasPerm(outDir, true))) { say("Sin permiso para guardar en la carpeta de listos.", "err"); return false; }
     const names = partNames(base, pdfs.length), saved = [];
+    const dest = settings.hold ? await esperaDir() : outDir;
     for (let i = 0; i < pdfs.length; i++) {
-      if (await fileExists(outDir, names[i]) && !confirm(`Ya existe "${names[i]}" en la carpeta de listos.\n¿Lo reemplazo?`)) continue;
-      await writeFile(outDir, names[i], pdfs[i]);
+      const existe = await fileExists(dest, names[i]) || (settings.hold && await fileExists(outDir, names[i]));
+      if (existe && !confirm(`Ya existe "${names[i]}" en la carpeta de listos${settings.hold ? " o en espera" : ""}.\n¿Lo reemplazo?`)) continue;
+      await writeFile(dest, names[i], pdfs[i]);
       logSave(names[i], pdfs.length > 1 ? i + 1 : 0);
       listos.add(names[i].toLowerCase()); listosMap.set(names[i].toLowerCase(), names[i]); saved.push(`${names[i]} (${fmtSize(pdfs[i].length)})`);
     }
     if (current && flags[flagKey(current)] && isListo(current)) { delete flags[flagKey(current)]; kvSet(pk("flags"), flags); }
     renderSocios();
     if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
-    say(`✓ Guardado en "${outDir.name}": ${saved.join(", ")}`, "ok");
+    if (settings.hold) { await refreshListos(); renderSocios(); }
+    say(`✓ Guardado en "${outDir.name}${settings.hold ? "/" + ESPERA : ""}": ${saved.join(", ")}`, "ok");
     if (settings.autoNext) setTimeout(goNextAuto, 250);
     return true;
   }
@@ -2647,7 +2708,7 @@
   // Tecla E (configurable): abrir en Photopea la hoja abierta / bajo el mouse + las elegidas con Ctrl+clic
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "photopea")) return;
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["edlg", "fdlg", "qdlg", "nmlg", "daylg"].some(id => !$(id).hidden) || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["edlg", "fdlg", "qdlg", "nmlg", "daylg", "hdlg"].some(id => !$(id).hidden) || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault();
     const list = edTargetItems();
     if (!list.length) { toast("Pasá el mouse por la hoja (o abrila en grande) y apretá " + KL("photopea") + "."); return; }
@@ -3190,7 +3251,7 @@
   });
 
   /* Opciones generales */
-  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true };
+  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true, hold: false, holdN: 10 };
   async function goNextAuto() {
     const n = nextPending();
     if (!n) { toast("🎉 No quedan pendientes en esta fecha."); return; }
@@ -3204,8 +3265,8 @@
   function renderSettings() {
     for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) { if (el.type === "checkbox") el.checked = !!settings[k]; else el.value = settings[k]; } }
   }
-  for (const k of ["autoNext", "autoNextQ", "openFirst", "requireFp"]) {
-    $("set_" + k).addEventListener("change", () => { settings[k] = $("set_" + k).checked; kvSet("settings", settings); });
+  for (const k of ["autoNext", "autoNextQ", "openFirst", "requireFp", "hold"]) {
+    $("set_" + k).addEventListener("change", () => { settings[k] = $("set_" + k).checked; kvSet("settings", settings); if (k === "hold") updateHoldUi(); });
   }
   $("set_signDays").addEventListener("change", () => {
     settings.signDays = Math.max(1, parseInt($("set_signDays").value) || 30); $("set_signDays").value = settings.signDays;
@@ -3230,7 +3291,7 @@
   // Enter (o la tecla elegida): cerrar la hoja en grande o la vista previa
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "closePreview")) return;
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["fdlg", "edlg", "qdlg", "nmlg", "daylg"].some(id => !$(id).hidden)) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["fdlg", "edlg", "qdlg", "nmlg", "daylg", "hdlg"].some(id => !$(id).hidden)) return;
     if (modal.classList.contains("show")) { e.preventDefault(); e.stopPropagation(); if (zPurpose) return; modal.classList.remove("show"); }
     else if (pv.classList.contains("show")) { e.preventDefault(); e.stopPropagation(); closePreview(); }
   }, true);
