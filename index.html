@@ -286,7 +286,10 @@
 #mstPanel[hidden]{display:none}
 .msthead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.msthead h2{margin:0 8px 0 0}.msthead #mstClose{margin-left:auto}
 #mstResumen{font-size:14px}
-#mstCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:8px}
+#mstCards{display:flex;flex-direction:column;gap:6px;max-height:42vh;overflow:auto}
+.mstsec h4{margin:2px 0 4px;font-size:13px}
+.mstgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px}
+.mstfilt{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.mstfilt select{font-size:14px;padding:3px 6px}
 .mstcard span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
 .mstcard{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:8px 10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:13px}
 .mstcard b{font-size:20px}.mstcard.vacia{opacity:.5}.mstcard.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
@@ -711,7 +714,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
-<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. ↻ Actualizar vuelve a leer el mismo archivo.</li>
+<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. ↻ Actualizar vuelve a leer el mismo archivo.</li>
 <li><b>🧾 Datos SURGE (tecla D):</b> panel a la derecha para tipear los datos de la planilla en el mismo orden que SURGE, con la planilla en grande al lado (RePág / AvPág cambian de hoja). Fecha al lado del valor con Tab (2023 = 01/01/2023; vacía = la de planilla). En la lista: 🧾 n/20 o 🧾 datos ✓. <b>📋 Datos para SURGE</b> (barra izquierda) copia los completos con CUIL y fecha de planilla para Carga rápida.</li>
 <li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
 <li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
@@ -916,7 +919,7 @@ body.dsopen .modal{right:400px}
     <button class="primary" id="mstReload">↻ Actualizar</button><button id="mstPick">📂 Elegir Excel compartido</button><input type="file" id="mstFile" accept=".xlsx,.xlsm" hidden>
     <span id="mstInfo" class="label">Elegí el Excel compartido (.xlsx). Se lee acá en tu PC: no se sube a ningún lado.</span>
     <button id="mstClose">✕</button></div>
-  <div id="mstResumen"></div>
+  <div class="mstfilt"><label>👤 Analista <select id="mstAnalista"><option value="">Todos los analistas</option></select></label> <span id="mstResumen"></span></div>
   <div id="mstCards"></div>
   <div class="mstbar"><h3 id="mstTitulo"></h3><button id="mstCopyDni">📋 Copiar DNI</button><button id="mstCopyTabla">📋 Copiar tabla</button></div>
   <div id="mstTabla"></div>
@@ -4064,22 +4067,34 @@ body.dsopen .modal{right:400px}
     return null;
   }
 
-  const MST_GRUPOS = [
-    ["rechazado", "🔴 Rechazados", "Corregir y reenviar"],
-    ["borrador", "🔴 Borradores", "Revisar y enviar a revisión"],
-    ["unclick", "🟠 Reempadronar a 1 click", "Vencido y la planilla cargada sirve (es de 3 meses antes del vencimiento o más nueva)"],
-    ["buscar", "🟠 Vencidos: buscar planilla nueva", "La planilla que hay es vieja; ya debería haber una nueva en SGI"],
-    ["aempadronar", "🟡 A empadronar", "Tienen planilla: cargar en SURGE"],
-    ["aanalizar", "🟡 A analizar", "Bajar documentación y analizar"],
-    ["sindoc", "🔵 Sin documentación: volver a buscar", "Ya pasó el tiempo para que haya planilla nueva"],
-    ["prontos", "⚪ Vencen en los próximos 30 días", "Todavía no se puede hacer nada; preparar planilla si la actual no va a servir"],
-    ["esperando", "⚪ Esperando documentación", "Sin planilla nueva todavía: se vuelve a buscar en la fecha indicada"],
-    ["pendiente", "⚪ Enviados (pendiente de revisión)", "Esperar respuesta de la SSS"],
-    ["vigente", "✅ Vigentes", "Empadronados o reempadronados al día: nada que hacer hasta que venzan"],
-    ["norecup", "⚫ No recuperables", "Baja, jubilado o no desregula: no se gestionan"],
-    ["inconsistente", "⚠ Revisar en el Excel", "Lo que dice ESTADO ACTUAL no coincide con la hoja emp. y reemp."]
+  // Grupos separados por hoja: análisis (ESTADO ACTUAL) y emp. y reemp. (estado del último ciclo)
+  const MST_SECCIONES = [
+    ["📋 Análisis", [
+      ["an_aanalizar", "🟡 A analizar", "ESTADO ACTUAL a analizar (o vacío): bajar documentación y analizar"],
+      ["an_sindoc", "🔵 Sin documentación: volver a buscar", "Ya pasó el tiempo para que haya planilla nueva"],
+      ["an_esperando", "⚪ Sin documentación: esperando", "Se vuelve a buscar desde la fecha indicada (un año después de la última planilla o 30 días después del análisis)"],
+      ["an_aempadronar", "🟡 A empadronar", "ESTADO ACTUAL a empadronar: cargar en SURGE"],
+      ["an_areempadronar", "🟡 A reempadronar", "ESTADO ACTUAL a reempadronar"],
+      ["an_hecho", "✅ Empadronados / reempadronados", "ESTADO ACTUAL empadronado o reempadronado"],
+      ["an_norecup", "⚫ No recuperables", "No recuperable, jubilado, no desregula o baja Swiss"],
+      ["an_otro", "❔ Otros estados", "ESTADO ACTUAL con un valor que no reconozco"]
+    ]],
+    ["🗂 Empadronamientos y reempadronamientos", [
+      ["rechazado", "🔴 Rechazados", "Corregir y reenviar"],
+      ["borrador", "🔴 Borradores", "Revisar y enviar a revisión"],
+      ["unclick", "🟠 Reempadronar a 1 click", "Vencido y la planilla cargada sirve (es de 3 meses antes del vencimiento o más nueva)"],
+      ["buscar", "🟠 Vencidos: buscar planilla nueva", "La planilla que hay es vieja y ya debería haber una nueva en SGI"],
+      ["esperando", "⚪ Vencidos: esperando planilla", "Planilla vieja, pero todavía no pasó un año: buscar desde la fecha indicada"],
+      ["prontos", "⚪ Vencen en los próximos 30 días", "Todavía no se puede hacer nada; dice si la planilla va a servir"],
+      ["pendiente", "⚪ Enviados (pendiente de revisión)", "Esperar respuesta de la SSS"],
+      ["vigente", "✅ Vigentes", "Al día: nada que hacer hasta que venzan"]
+    ]],
+    ["⚠ Revisar", [
+      ["inconsistente", "⚠ No coinciden las hojas", "ESTADO ACTUAL de análisis no coincide con emp. y reemp."]
+    ]]
   ];
-  let mstData = null;
+  const MST_GRUPOS = MST_SECCIONES.flatMap(([, g]) => g);
+  let mstData = null, mstAnalista = "";
 
   function mstClasificar(hojas) {
     let an = null, em = null;
@@ -4087,15 +4102,18 @@ body.dsopen .modal{right:400px}
       if (!an) an = mTabla(h.rows, ["estado actual"]);
       if (!em) em = mTabla(h.rows, ["estado empadronamiento", "nro empadronamiento"]);   // la hoja análisis también tiene "estado empadronamiento"
     }
-    if (!an && !em) throw new Error("No encuentro las hojas de análisis (columna ESTADO ACTUAL) ni de emp. y reemp. (columna Estado empadronamiento).");
+    if (!an && !em) throw new Error("No encuentro las hojas de análisis (columna ESTADO ACTUAL) ni de emp. y reemp. (columnas Estado empadronamiento y Nro empadronamiento).");
     const P = {};
     const get = d => (P[d] = P[d] || { dni: d, cuil: "", nombre: "" });
+    const txt = v => String(v ?? "").trim();
     if (an) for (const r of an.body) {
       const d = mDni(an.get(r, "dni") || an.get(r, "cuil")); if (!d) continue;
       const x = get(d);
-      x.cuil = x.cuil || String(an.get(r, "cuil")).replace(/\D/g, "");
-      x.nombre = x.nombre || String(an.get(r, "nombre")).trim();
-      x.estadoActual = String(an.get(r, "estado actual")).trim();
+      x.cuil = x.cuil || txt(an.get(r, "cuil")).replace(/\D/g, "");
+      x.nombre = x.nombre || txt(an.get(r, "nombre"));
+      x.enAnalisis = true;
+      x.estadoActual = txt(an.get(r, "estado actual"));
+      x.analistaAn = txt(an.get(r, "analista"));
       x.analisis = mFecha(an.get(r, "fecha de analisis"));
       const fp = mFecha(an.get(r, "planilla vigente", "planilla vigente 26-02", "fecha planilla vigente 26-02", "fecha planilla vigente"));
       if (fp && (!x.fp || fp > x.fp)) x.fp = fp;
@@ -4104,59 +4122,88 @@ body.dsopen .modal{right:400px}
     if (em) for (const r of em.body) {
       const d = mDni(em.get(r, "dni") || em.get(r, "cuil")); if (!d) continue;
       const x = get(d);
-      x.cuil = x.cuil || String(em.get(r, "cuil")).replace(/\D/g, "");
-      x.nombre = x.nombre || String(em.get(r, "nombre")).trim();
-      const eRe = String(em.get(r, "estado reempadronamiento")).trim(), eEm = String(em.get(r, "estado empadronamiento")).trim();
-      const ciclo = eRe ? { tipo: "Reemp", estado: eRe, nro: em.get(r, "nro reempadronamiento"), desde: mFecha(em.get(r, "vigencia inicio re")), hasta: mFecha(em.get(r, "vigencia fin re")) }
-        : eEm ? { tipo: "Emp", estado: eEm, nro: em.get(r, "nro empadronamiento"), desde: mFecha(em.get(r, "vigencia inicio")), hasta: mFecha(em.get(r, "vigencia fin")) } : null;
-      if (ciclo && (!x.ciclo || (ciclo.hasta || 0) > (x.ciclo.hasta || 0))) x.ciclo = ciclo;
+      x.cuil = x.cuil || txt(em.get(r, "cuil")).replace(/\D/g, "");
+      x.nombre = x.nombre || txt(em.get(r, "nombre"));
+      const eRe = txt(em.get(r, "estado reempadronamiento")), eEm = txt(em.get(r, "estado empadronamiento"));
+      const ciclo = eRe ? { tipo: "Reemp", estado: eRe, nro: em.get(r, "nro reempadronamiento"), hasta: mFecha(em.get(r, "vigencia fin re")) }
+        : eEm ? { tipo: "Emp", estado: eEm, nro: em.get(r, "nro empadronamiento"), hasta: mFecha(em.get(r, "vigencia fin")) } : null;
+      if (ciclo && (!x.ciclo || (ciclo.hasta || 0) > (x.ciclo.hasta || 0))) { x.ciclo = ciclo; x.analistaEm = txt(em.get(r, "analista")) || txt(em.get(r, eRe ? "usuario2" : "usuario")); }
       const fp = mFecha(em.get(r, "fecha planilla")); if (fp && (!x.fp || fp > x.fp)) x.fp = fp;
       const ob = [em.get(r, "observaciones"), em.get(r, "observaciones2"), em.get(r, "obs2")].filter(Boolean).join(" · ");
       if (ob) x.obsEmp = ob;
     }
     const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     const en30 = new Date(hoy.getTime() + 30 * 864e5);
-    const G = Object.fromEntries(MST_GRUPOS.map(([k]) => [k, []]));
+    const filas = [];   // {g, x, det, analista}
+    const add = (g, x, det, analista) => filas.push({ g, x, det, analista: analista || "" });
     for (const x of Object.values(P)) {
       const ea = mNorm(x.estadoActual), c = x.ciclo, es = c ? mNorm(c.estado) : "";
       const todo = mNorm([x.obs, x.obsEmp].join(" "));
-      const sirve = vto => x.fp && x.fp >= mAddM(vto, -3);          // planilla de 3 meses antes del vencimiento o más nueva
+      const sirve = vto => x.fp && x.fp >= mAddM(vto, -3);
       const proxDoc = () => { const a = x.fp ? mAddM(x.fp, 12) : null, b = x.analisis ? new Date(x.analisis.getTime() + 30 * 864e5) : null; return a && b ? (a > b ? a : b) : a || b; };
-      let g, det = "";
-      if (ea.includes("no recuperable") || /jubilad|no desregula|baja swiss/.test(todo)) { g = "norecup"; det = x.estadoActual || x.obs || x.obsEmp; }
-      else if (es.includes("rechaz")) { g = "rechazado"; det = `${c.tipo} rechazado${c.nro ? " · nº " + c.nro : ""}`; }
-      else if (es.includes("borrador")) { g = "borrador"; det = `${c.tipo} en borrador${c.nro ? " · nº " + c.nro : ""}`; }
-      else if (es.includes("pendiente")) { g = "pendiente"; det = `${c.tipo} enviado${c.nro ? " · nº " + c.nro : ""}`; }
-      else if (c && c.hasta && (es.includes("acept") || es.includes("vencid"))) {
-        if (c.hasta >= hoy) {
-          if (c.hasta <= en30) { g = "prontos"; det = `vence ${mFmt(c.hasta)} · ` + (sirve(c.hasta) ? "la planilla sirve (a 1 click)" : "va a hacer falta planilla nueva"); }
-          else { g = "vigente"; det = `${c.tipo} hasta ${mFmt(c.hasta)}`; }
-        } else if (sirve(c.hasta)) { g = "unclick"; det = `venció ${mFmt(c.hasta)} · planilla ${mFmt(x.fp)}`; }
-        else { const pd = proxDoc(); if (pd && pd > hoy) { g = "esperando"; det = `venció ${mFmt(c.hasta)} · buscar desde ${mFmt(pd)}`; x.desde = pd; } else { g = "buscar"; det = `venció ${mFmt(c.hasta)} · planilla ${x.fp ? mFmt(x.fp) : "—"}`; } }
+      const noRec = ea.includes("no recuperable") || /jubilad|no desregula|baja swiss/.test(todo);
+      // --- hoja análisis
+      if (x.enAnalisis) {
+        const A = x.analistaAn || x.analistaEm;
+        if (noRec) add("an_norecup", x, x.estadoActual || x.obs, A);
+        else if (/sin doc/.test(todo) || ea.includes("sin doc")) { const pd = proxDoc(); if (pd && pd > hoy) add("an_esperando", x, `buscar desde ${mFmt(pd)}${x.analisis ? " · analizado " + mFmt(x.analisis) : ""}`, A); else add("an_sindoc", x, `sin documentación${x.analisis ? " · analizado " + mFmt(x.analisis) : ""}`, A); }
+        else if (ea.includes("a empadronar")) add("an_aempadronar", x, x.fp ? `planilla ${mFmt(x.fp)}` : "", A);
+        else if (ea.includes("a reempadronar")) add("an_areempadronar", x, x.fp ? `planilla ${mFmt(x.fp)}` : "", A);
+        else if (ea.includes("a analizar") || !ea) add("an_aanalizar", x, x.analisis ? `analizado ${mFmt(x.analisis)}` : "sin analizar", A);
+        else if (/empadronad/.test(ea)) add("an_hecho", x, x.estadoActual + (x.fp ? ` · planilla ${mFmt(x.fp)}` : ""), A);
+        else add("an_otro", x, x.estadoActual, A);
       }
-      else if (/sin doc/.test(todo) || ea.includes("sin doc")) { const pd = proxDoc(); if (pd && pd > hoy) { g = "esperando"; det = `sin documentación · buscar desde ${mFmt(pd)}`; x.desde = pd; } else { g = "sindoc"; det = `sin documentación${x.analisis ? " (analizado " + mFmt(x.analisis) + ")" : ""}`; } }
-      else if (ea.includes("a empadronar") || ea.includes("a reempadronar")) { g = "aempadronar"; det = (x.estadoActual || "") + (x.fp ? ` · planilla ${mFmt(x.fp)}` : ""); }
-      else if (ea.includes("a analizar") || !ea) { g = "aanalizar"; det = x.analisis ? `analizado ${mFmt(x.analisis)}` : "sin analizar"; }
-      else { g = "inconsistente"; det = `ESTADO ACTUAL "${x.estadoActual}" y en emp. y reemp.: ${c ? c.tipo + " " + c.estado : "nada"}`; }
-      // Incoherencias que conviene corregir aunque ya tengan grupo
-      if (g === "vigente" && ea && !/empadronad/.test(ea)) G.inconsistente.push({ ...x, det: `vigente en emp. y reemp. pero ESTADO ACTUAL dice "${x.estadoActual}"` });
-      x.det = det; G[g].push(x);
+      // --- hoja emp. y reemp.
+      if (c && !noRec) {
+        const A = x.analistaEm || x.analistaAn, nro = c.nro ? " · nº " + c.nro : "";
+        if (es.includes("rechaz")) add("rechazado", x, `${c.tipo} rechazado${nro}`, A);
+        else if (es.includes("borrador")) add("borrador", x, `${c.tipo} en borrador${nro}`, A);
+        else if (es.includes("pendiente")) add("pendiente", x, `${c.tipo} enviado${nro}`, A);
+        else if (c.hasta && (es.includes("acept") || es.includes("vencid"))) {
+          if (c.hasta >= hoy) {
+            if (c.hasta <= en30) add("prontos", x, `${c.tipo} vence ${mFmt(c.hasta)} · ` + (sirve(c.hasta) ? "la planilla sirve (a 1 click)" : "va a hacer falta planilla nueva"), A);
+            else add("vigente", x, `${c.tipo} hasta ${mFmt(c.hasta)}`, A);
+          } else if (sirve(c.hasta)) add("unclick", x, `${c.tipo} venció ${mFmt(c.hasta)} · planilla ${mFmt(x.fp)}`, A);
+          else { const pd = proxDoc(); if (pd && pd > hoy) add("esperando", x, `${c.tipo} venció ${mFmt(c.hasta)} · buscar desde ${mFmt(pd)}`, A); else add("buscar", x, `${c.tipo} venció ${mFmt(c.hasta)} · planilla ${x.fp ? mFmt(x.fp) : "—"}`, A); }
+        }
+        // las dos hojas no dicen lo mismo
+        const vigente = c.hasta && c.hasta >= hoy && es.includes("acept");
+        if (x.enAnalisis && !noRec) {
+          if (vigente && ea && !/empadronad/.test(ea)) add("inconsistente", x, `vigente en emp. y reemp. (${c.tipo} hasta ${mFmt(c.hasta)}) pero ESTADO ACTUAL dice "${x.estadoActual}"`, A);
+          else if (/empadronad/.test(ea) && !c.estado) add("inconsistente", x, `ESTADO ACTUAL "${x.estadoActual}" pero no hay estado en emp. y reemp.`, A);
+        }
+      } else if (x.enAnalisis && /empadronad/.test(ea) && !noRec) add("inconsistente", x, `ESTADO ACTUAL "${x.estadoActual}" pero no figura en emp. y reemp.`, x.analistaAn);
     }
-    for (const k in G) G[k].sort((a, b) => ((a.ciclo && a.ciclo.hasta) || a.desde || 0) - ((b.ciclo && b.ciclo.hasta) || b.desde || 0));
-    // ritmo del mes
-    const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-    const vencenMes = Object.values(P).filter(x => x.ciclo && x.ciclo.hasta && x.ciclo.hasta >= ini && x.ciclo.hasta <= fin).length;
-    const habiles = (() => { let n = 0; for (let d = new Date(hoy); d <= fin; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) n++; return n || 1; })();
-    const porHacer = G.rechazado.length + G.borrador.length + G.unclick.length + G.aempadronar.length;
-    return { G, total: Object.keys(P).length, vencenMes, habiles, porHacer, hojas: [an && "análisis", em && "emp. y reemp."].filter(Boolean) };
+    const analistas = [...new Set(filas.map(f => f.analista).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+    return { filas, P, total: Object.keys(P).length, analistas, hojas: [an && "análisis", em && "emp. y reemp."].filter(Boolean) };
   }
-
+  // Grupos con el filtro de analista aplicado
+  function mstGrupos() {
+    const G = Object.fromEntries(MST_GRUPOS.map(([k]) => [k, []]));
+    for (const f of mstData.filas) {
+      if (mstAnalista === "__sin" ? f.analista : mstAnalista && f.analista !== mstAnalista) continue;
+      G[f.g].push({ ...f.x, det: f.det, analista: f.analista });
+    }
+    for (const k in G) G[k].sort((a, b) => ((a.ciclo && a.ciclo.hasta) || 0) - ((b.ciclo && b.ciclo.hasta) || 0));
+    return G;
+  }
   function mstRender() {
     if (!mstData) return;
-    const { G, total, vencenMes, habiles, porHacer } = mstData;
-    $("mstResumen").innerHTML = `<b>${total}</b> socios · vencen este mes <b>${vencenMes}</b> · para cargar ya <b>${porHacer}</b> (≈ <b>${Math.ceil(porHacer / habiles)}</b> por día hábil hasta fin de mes)`;
-    $("mstCards").innerHTML = MST_GRUPOS.map(([k, t, desc]) => `<button class="mstcard ${G[k].length ? "" : "vacia"}" data-g="${k}" title="${escapeHtml(desc)}"><span>${t}</span><b>${G[k].length}</b></button>`).join("");
-    mstShow(mstSel || MST_GRUPOS.find(([k]) => G[k].length)?.[0] || "vigente");
+    const sel = $("mstAnalista");
+    sel.innerHTML = `<option value="">Todos los analistas</option>${mstData.analistas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("")}<option value="__sin">(sin analista)</option>`;
+    if (mstAnalista && ![...sel.options].some(o => o.value === mstAnalista)) mstAnalista = "";
+    sel.value = mstAnalista;
+    const G = mstGrupos();
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    const vistos = new Set(Object.values(G).flat().map(x => x.dni));
+    const vencenMes = [...vistos].filter(d => { const c = mstData.P[d].ciclo; return c && c.hasta && c.hasta >= ini && c.hasta <= fin; }).length;
+    let habiles = 0; for (let d = new Date(hoy); d <= fin; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) habiles++;
+    const porHacer = G.rechazado.length + G.borrador.length + G.unclick.length + G.an_aempadronar.length + G.an_areempadronar.length;
+    $("mstResumen").innerHTML = `<b>${vistos.size}</b> socios${mstAnalista ? " de <b>" + escapeHtml(mstAnalista === "__sin" ? "(sin analista)" : mstAnalista) + "</b>" : ""} · vencen este mes <b>${vencenMes}</b> · para cargar ya <b>${porHacer}</b> (≈ <b>${Math.ceil(porHacer / (habiles || 1))}</b> por día hábil hasta fin de mes)`;
+    $("mstCards").innerHTML = MST_SECCIONES.map(([tit, gs]) => `<div class="mstsec"><h4>${tit}</h4><div class="mstgrid">${gs.map(([k, t, desc]) => `<button class="mstcard ${G[k].length ? "" : "vacia"}" data-g="${k}" title="${escapeHtml(desc)}"><span>${t}</span><b>${G[k].length}</b></button>`).join("")}</div></div>`).join("");
+    mstData.G = G;
+    mstShow(mstSel && G[mstSel] ? mstSel : MST_GRUPOS.find(([k]) => G[k].length)?.[0] || "vigente");
   }
   let mstSel = "";
   function mstShow(k) {
@@ -4165,11 +4212,12 @@ body.dsopen .modal{right:400px}
     const [, t, desc] = MST_GRUPOS.find(g => g[0] === k), L = mstData.G[k];
     $("mstTitulo").innerHTML = `${t} <span class="label">${escapeHtml(desc)}</span>`;
     const max = 500;
-    $("mstTabla").innerHTML = L.length ? `<table><tr><th>DNI</th><th>CUIL</th><th>Nombre</th><th>Estado actual</th><th>Detalle</th></tr>${L.slice(0, max).map(x => `<tr><td>${x.dni}</td><td>${x.cuil || ""}</td><td>${escapeHtml(x.nombre || "")}</td><td>${escapeHtml(x.estadoActual || "")}</td><td>${escapeHtml(x.det || "")}</td></tr>`).join("")}</table>${L.length > max ? `<p class="label">Mostrando ${max} de ${L.length}. "Copiar tabla" copia todos.</p>` : ""}` : `<p class="label">No hay socios en este grupo. 🎉</p>`;
+    $("mstTabla").innerHTML = L.length ? `<table><tr><th>DNI</th><th>CUIL</th><th>Nombre</th><th>Analista</th><th>Estado actual</th><th>Detalle</th></tr>${L.slice(0, max).map(x => `<tr><td>${x.dni}</td><td>${x.cuil || ""}</td><td>${escapeHtml(x.nombre || "")}</td><td>${escapeHtml(x.analista || "")}</td><td>${escapeHtml(x.estadoActual || "")}</td><td>${escapeHtml(x.det || "")}</td></tr>`).join("")}</table>${L.length > max ? `<p class="label">Mostrando ${max} de ${L.length}. "Copiar tabla" copia todos.</p>` : ""}` : `<p class="label">No hay socios en este grupo. 🎉</p>`;
   }
   $("mstCards").addEventListener("click", e => { const b = e.target.closest(".mstcard"); if (b) mstShow(b.dataset.g); });
+  $("mstAnalista").addEventListener("change", () => { mstAnalista = $("mstAnalista").value; kvSet("mstAnalista", mstAnalista); mstRender(); });
   $("mstCopyDni").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(L.map(x => x.dni).join("\r\n")); toast(`📋 ${L.length} DNI copiados (uno por línea).`); };
-  $("mstCopyTabla").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
+  $("mstCopyTabla").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tAnalista\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.analista, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
   async function mstCargar(file) {
     $("mstInfo").textContent = `Leyendo ${file.name}…`;
     try {
@@ -4194,7 +4242,7 @@ body.dsopen .modal{right:400px}
     try { if ((await h.queryPermission({ mode: "read" })) !== "granted" && (await h.requestPermission({ mode: "read" })) !== "granted") return; await mstCargar(await h.getFile()); }
     catch (e) { toast("No pude volver a leer el Excel (¿lo moviste?). Elegilo de nuevo."); }
   };
-  $("mstOpen").onclick = async () => { $("mstPanel").hidden = false; if (!mstData) { const h = await kvGet("masterFile"); if (h) { $("mstInfo").textContent = "Tocá ↻ Actualizar para leer el Excel."; } } };
+  $("mstOpen").onclick = async () => { $("mstPanel").hidden = false; mstAnalista = (await kvGet("mstAnalista")) || ""; if (!mstData) { const h = await kvGet("masterFile"); if (h) { $("mstInfo").textContent = "Tocá ↻ Actualizar para leer el Excel."; } } };
   $("mstClose").onclick = () => { $("mstPanel").hidden = true; };
 
   (async function init() {
