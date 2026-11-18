@@ -297,6 +297,8 @@
 #mstTabla{flex:1;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
 #mstTabla table{border-collapse:collapse;width:100%;font-size:12.5px}#mstTabla th{position:sticky;top:0;background:var(--panel);text-align:left;border-bottom:2px solid var(--line);padding:5px 8px}
 #mstTabla td{border-bottom:1px solid var(--line);padding:4px 8px}
+.mstgo{font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid var(--accent);color:var(--accent);background:none;text-decoration:none;white-space:nowrap;cursor:pointer}
+.mstgo:hover{background:var(--accent);color:#fff}.mstgo.ya{border-color:#2a9d6a;color:#2a9d6a}
 #dsPanel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);z-index:60;box-shadow:-10px 0 30px rgba(0,0,0,.25);transform:translateX(105%);transition:transform .15s;display:flex;flex-direction:column}
 #dsPanel.show{transform:none}
 body.dsopen .modal{right:400px}
@@ -714,7 +716,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
-<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. ↻ Actualizar vuelve a leer el mismo archivo.</li>
+<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo.</li>
 <li><b>🧾 Datos SURGE (tecla D):</b> panel a la derecha para tipear los datos de la planilla en el mismo orden que SURGE, con la planilla en grande al lado (RePág / AvPág cambian de hoja). Fecha al lado del valor con Tab (2023 = 01/01/2023; vacía = la de planilla). En la lista: 🧾 n/20 o 🧾 datos ✓. <b>📋 Datos para SURGE</b> (barra izquierda) copia los completos con CUIL y fecha de planilla para Carga rápida.</li>
 <li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
 <li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
@@ -4212,9 +4214,32 @@ body.dsopen .modal{right:400px}
     const [, t, desc] = MST_GRUPOS.find(g => g[0] === k), L = mstData.G[k];
     $("mstTitulo").innerHTML = `${t} <span class="label">${escapeHtml(desc)}</span>`;
     const max = 500;
-    $("mstTabla").innerHTML = L.length ? `<table><tr><th>DNI</th><th>CUIL</th><th>Nombre</th><th>Analista</th><th>Estado actual</th><th>Detalle</th></tr>${L.slice(0, max).map(x => `<tr><td>${x.dni}</td><td>${x.cuil || ""}</td><td>${escapeHtml(x.nombre || "")}</td><td>${escapeHtml(x.analista || "")}</td><td>${escapeHtml(x.estadoActual || "")}</td><td>${escapeHtml(x.det || "")}</td></tr>`).join("")}</table>${L.length > max ? `<p class="label">Mostrando ${max} de ${L.length}. "Copiar tabla" copia todos.</p>` : ""}` : `<p class="label">No hay socios en este grupo. 🎉</p>`;
+    $("mstTabla").innerHTML = L.length ? `<table><tr><th>DNI</th><th>CUIL</th><th>Nombre</th><th>Analista</th><th>Estado actual</th><th>Detalle</th><th>SURGE</th></tr>${L.slice(0, max).map(x => `<tr><td>${x.dni}</td><td>${x.cuil || ""}</td><td>${escapeHtml(x.nombre || "")}</td><td>${escapeHtml(x.analista || "")}</td><td>${escapeHtml(x.estadoActual || "")}</td><td>${escapeHtml(x.det || "")}</td><td>${mstLink(k, x)}</td></tr>`).join("")}</table>${L.length > max ? `<p class="label">Mostrando ${max} de ${L.length}. "Copiar tabla" copia todos.</p>` : ""}` : `<p class="label">No hay socios en este grupo. 🎉</p>`;
   }
   $("mstCards").addEventListener("click", e => { const b = e.target.closest(".mstcard"); if (b) mstShow(b.dataset.g); });
+  /* Abrir en SURGE: reempadronar = /admin/extender_empadronamiento/<nº de la solicitud vencida> (crea la solicitud nueva);
+     ver o seguir uno = /admin/empadronamientos/<nº>/edit */
+  const SURGE = "https://surge.sssalud.gob.ar/admin";
+  const nroDe = x => { const n = x.ciclo && String(x.ciclo.nro ?? "").replace(/\.0+$/, "").replace(/\D/g, ""); return n || ""; };
+  let extendidos = {};
+  kvGet("extendidos").then(v => { extendidos = v || {}; });
+  function mstLink(k, x) {
+    const n = nroDe(x); if (!n) return "";
+    if (["unclick", "buscar", "esperando"].includes(k)) {
+      const ya = extendidos[n];
+      return `<button class="mstgo ${ya ? "ya" : ""}" data-ext="${n}" data-dni="${x.dni}" title="Abre SURGE para reempadronar (crea la solicitud nueva a partir de la nº ${n})">${ya ? "✓ abierto " + new Date(ya).toTimeString().slice(0, 5) : "↻ Reempadronar"}</button>`;
+    }
+    return `<a class="mstgo" href="${SURGE}/empadronamientos/${n}/edit" target="surge" title="Abrir la solicitud nº ${n} en SURGE">↗ Abrir nº ${n}</a>`;
+  }
+  $("mstTabla").addEventListener("click", async e => {
+    const b = e.target.closest("[data-ext]"); if (!b) return;
+    const n = b.dataset.ext;
+    if (extendidos[n] && !confirm(`Ya abriste el reempadronamiento de la solicitud ${n} (${new Date(extendidos[n]).toLocaleString("es-AR")}).\nSi lo abrís de nuevo, SURGE puede crear otra solicitud. ¿Abrir igual?`)) return;
+    if (!extendidos[n] && !confirm(`Se abre SURGE para reempadronar a partir de la solicitud ${n}.\nEso crea la solicitud nueva (queda en borrador hasta que la mandes). ¿Seguir?`)) return;
+    window.open(`${SURGE}/extender_empadronamiento/${n}`, "surge");
+    extendidos[n] = Date.now(); kvSet("extendidos", extendidos);
+    b.classList.add("ya"); b.textContent = "✓ abierto " + new Date().toTimeString().slice(0, 5);
+  });
   $("mstAnalista").addEventListener("change", () => { mstAnalista = $("mstAnalista").value; kvSet("mstAnalista", mstAnalista); mstRender(); });
   $("mstCopyDni").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(L.map(x => x.dni).join("\r\n")); toast(`📋 ${L.length} DNI copiados (uno por línea).`); };
   $("mstCopyTabla").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tAnalista\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.analista, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
