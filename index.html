@@ -274,6 +274,9 @@
   .exportbar{display:flex;gap:6px;flex-wrap:wrap}
   .exportbar button{min-width:0}
   .exportbar[hidden]{display:none}
+#holdBtn.auto{outline:2px solid #2a9d6a}
+.alist{max-height:220px;overflow:auto;font-size:12.5px}.alist div{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #8882}
+.alist .ok{color:#2a9d6a}.alist .wait{color:#c88a00}.alist .bad{color:#d33}
   .exportbar button{flex:1;font-size:12.5px;padding:5px 6px}
   .modal canvas{display:block;background:#fff;user-select:none;-webkit-user-drag:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .ztools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
@@ -525,6 +528,16 @@
   <label>¿Cuántas paso ahora? <input type="number" id="hN" min="1" style="width:70px"></label>
   <p class="label">Pasan las más viejas primero, de "en espera" a la carpeta de listos (para firmar).</p>
   <div class="frow"><button class="primary" id="hOk">Mandar <kbd>Enter</kbd></button><button id="hCancel">Cancelar <kbd>Esc</kbd></button></div>
+  <hr>
+  <h3>⏱ Automático</h3>
+  <p>Pasar <input type="number" id="aK" min="1" style="width:56px"> cada <input type="number" id="aMin" min="1" style="width:56px"> min,
+     solo de <input type="number" id="aDesde" min="0" max="23" style="width:50px"> a <input type="number" id="aHasta" min="1" max="24" style="width:50px"> h.</p>
+  <p class="label">El intervalo varía un poco cada vez (±20 %). Funciona con esta pestaña abierta y la PC prendida.</p>
+  <div class="frow"><button id="aToggle"></button></div>
+  <p id="aInfo" class="label"></p>
+  <h3>✍ Seguimiento</h3>
+  <p class="label">Se fija en la carpeta de Firmados si cada uno volvió con <code>_signed</code>. Avisa si alguno tarda más de <input type="number" id="aAlerta" min="5" style="width:56px"> min.</p>
+  <div id="aList" class="alist"></div>
 </div></div>
 <div class="fdlg" id="daylg" hidden><div class="fbox daybox">
   <h3>🌙 Cierre del día <span id="dayProf" class="label"></span></h3>
@@ -669,6 +682,7 @@
 <li><b>Uno tras otro:</b> al guardar (y opcional con Q) pasa al siguiente.</li>
 <li><b>Fecha de planilla:</b> si está prendido (viene así), no deja guardar en Listos un socio sin fecha de planilla.</li>
 <li><b>Envío a firma (Retener):</b> lo guardado queda en <code>_en_espera</code> dentro de Listos (cuenta como Listo). Con <b>📤 Mandar a firmar</b> (barra de la izquierda) elegís cuántas pasar a la carpeta de listos; van las más viejas primero.</li>
+<li><b>Automático:</b> en el mismo cartel, "Pasar N cada M min, solo de X a Y h" (el intervalo varía ±20 %) → ▶ Arrancar. Necesita la pestaña abierta y la PC prendida. <b>Seguimiento:</b> mira en Firmados si cada uno volvió con _signed y avisa si alguno tarda más de los minutos que elijas.</li>
 <li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
 <li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
 </ul>
@@ -773,6 +787,7 @@
 <ol>
 <li><b>Cierre del día</b> → Sumar pendientes → <b>Copiar para Excel</b> → pegar en el Excel compartido.</li>
 <li>Con Retener prendido: <b>📤 Mandar a firmar</b> → cantidad de la tanda → Enter. Lo demás queda en espera para después.</li>
+<li>O en automático: en <b>📤 Mandar a firmar</b> → ⏱ "Pasar N cada M min, de X a Y h" → ▶ Arrancar. Dejá la pestaña abierta. En Seguimiento ves cuáles volvieron con _signed y te avisa si alguno tarda.</li>
 <li>Si hiciste más de lo que pasás por día: <b>Repartir</b> (tanda de 20-25) → Copiar → pegar → <b>✓ Ya los pegué</b>. Lo que queda sale en los días siguientes.</li>
 <li><b>Guardar .txt</b> del cierre.</li>
 <li>Revisar <b>Para editar</b> y anotar lo pendiente.</li>
@@ -1177,9 +1192,10 @@
   // Envío a firma por tandas: lo guardado queda en listos/_en_espera hasta que lo mandás
   const ESPERA = "_en_espera";
   let enEspera = [];
+  let auto = { on: false, k: 3, min: 20, desde: 6, hasta: 15, alerta: 60, next: 0 };
   function updateHoldUi() {
     const n = enEspera.length;
-    $("holdBtn").hidden = !(settings.hold || n);
+    $("holdBtn").hidden = !(settings.hold || n || auto.on);
     $("holdCount").textContent = n;
   }
   async function esperaDir() { return outDir.getDirectoryHandle(ESPERA, { create: true }); }
@@ -1187,33 +1203,111 @@
     if (!outDir || !(await hasPerm(outDir, true))) { toast("Sin permiso en la carpeta de listos."); return; }
     await refreshListos();
     const n = enEspera.length;
-    if (!n) { toast("No hay nada en espera."); return; }
-    $("hInfo").textContent = `En espera: ${n} archivo${n === 1 ? "" : "s"}.`;
+    $("hInfo").textContent = n ? `En espera: ${n} archivo${n === 1 ? "" : "s"}.` : "No hay nada en espera.";
+    $("hOk").disabled = !n;
+    renderAuto(); renderEnvios();
     $("hN").max = n; $("hN").value = Math.min(n, settings.holdN || 10);
     $("hdlg").hidden = false; setTimeout(() => { $("hN").focus(); $("hN").select(); }, 30);
   };
   $("hCancel").onclick = () => { $("hdlg").hidden = true; };
   $("hdlg").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("hOk").click(); } else if (e.key === "Escape") { e.preventDefault(); $("hdlg").hidden = true; } });
+  // Pasa los `want` más viejos de en espera a listos. Devuelve {ok, salt}
+  async function moverAFirma(want) {
+    await refreshListos();
+    const ed = await esperaDir();
+    const files = await Promise.all(enEspera.map(async h => ({ h, f: await h.getFile() })));
+    files.sort((a, b) => a.f.lastModified - b.f.lastModified);
+    let ok = 0, salt = 0;
+    const envios = (await kvGet(pk("envios"))) || [];
+    for (const { h, f } of files.slice(0, want)) {
+      if (await fileExists(outDir, h.name)) { salt++; continue; }   // no piso lo que ya está para firmar
+      await writeFile(outDir, h.name, await f.arrayBuffer());
+      await ed.removeEntry(h.name); ok++;
+      envios.push({ name: h.name, ts: Date.now() });
+    }
+    await kvSet(pk("envios"), envios.slice(-300));
+    await refreshListos(); renderSocios();
+    return { ok, salt };
+  }
   $("hOk").onclick = async () => {
     const want = Math.max(1, Math.floor(+$("hN").value || 0));
     settings.holdN = want; kvSet("settings", settings);
     $("hOk").disabled = true;
     try {
-      const ed = await esperaDir();
-      const files = await Promise.all(enEspera.map(async h => ({ h, f: await h.getFile() })));
-      files.sort((a, b) => a.f.lastModified - b.f.lastModified);
-      let ok = 0, salt = 0;
-      for (const { h, f } of files.slice(0, want)) {
-        if (await fileExists(outDir, h.name)) { salt++; continue; }   // no piso lo que ya está para firmar
-        await writeFile(outDir, h.name, await f.arrayBuffer());
-        await ed.removeEntry(h.name); ok++;
-      }
+      const { ok, salt } = await moverAFirma(want);
       $("hdlg").hidden = true;
-      await refreshListos(); renderSocios();
       toast(`📤 ${ok} pasado${ok === 1 ? "" : "s"} a "${outDir.name}" · quedan ${enEspera.length} en espera` + (salt ? ` · ${salt} salteado${salt === 1 ? "" : "s"} (ya estaba en listos)` : ""));
     } catch (e) { console.error(e); toast("No pude moverlos: " + (e.message || e)); }
     finally { $("hOk").disabled = false; }
   };
+
+  /* ---------- Envío automático por tandas + seguimiento de firma ---------- */
+  let avisados = new Set();
+  async function loadAuto() { auto = { ...auto, on: false, ...((await kvGet(pk("auto"))) || {}) }; renderAuto(); }
+  const saveAuto = () => kvSet(pk("auto"), auto);
+  const hhmm = t => new Date(t).toTimeString().slice(0, 5);
+  const jitter = min => min * 60000 * (0.8 + Math.random() * 0.4);
+  const enHorario = d => { const h = d.getHours() + d.getMinutes() / 60; return h >= auto.desde && h < auto.hasta; };
+  function renderAuto() {
+    $("aK").value = auto.k; $("aMin").value = auto.min; $("aDesde").value = auto.desde; $("aHasta").value = auto.hasta; $("aAlerta").value = auto.alerta;
+    $("aToggle").textContent = auto.on ? "⏸ Pausar automático" : "▶ Arrancar automático";
+    $("aToggle").classList.toggle("primary", !auto.on);
+    $("aInfo").textContent = !auto.on ? "Apagado." : !enEspera.length ? "Prendido · no queda nada en espera." :
+      `Prendido · próximo envío ${auto.next ? hhmm(auto.next) : "ya"}${enHorario(new Date(auto.next || Date.now())) ? "" : " (fuera de horario: espera a las " + auto.desde + " h)"} · quedan ${enEspera.length} en espera.`;
+    $("holdBtn").title = auto.on ? `Automático: ${auto.k} cada ~${auto.min} min · próximo ${auto.next ? hhmm(auto.next) : "ya"}` : "Planillas guardadas que todavía no pasaron a la carpeta de listos (para firmar)";
+    $("holdBtn").classList.toggle("auto", auto.on);
+  }
+  ["aK", "aMin", "aDesde", "aHasta", "aAlerta"].forEach(id => $(id).addEventListener("change", () => {
+    const v = Math.max(+$(id).min || 0, Math.floor(+$(id).value || 0));
+    const key = { aK: "k", aMin: "min", aDesde: "desde", aHasta: "hasta", aAlerta: "alerta" }[id];
+    auto[key] = v; if (key === "min" && auto.on) auto.next = Date.now() + jitter(auto.min);
+    saveAuto(); renderAuto();
+  }));
+  $("aToggle").onclick = async () => {
+    if (!auto.on && !(await hasPerm(outDir, true))) { toast("Sin permiso en la carpeta de listos."); return; }
+    auto.on = !auto.on; auto.next = auto.on ? Date.now() : 0; saveAuto(); renderAuto();
+    if (auto.on) tickAuto();
+  };
+  // Seguimiento: ¿volvió firmado? (nombre + _signed en Firmados)
+  async function firmadosNombres() {
+    const set = new Set();
+    if (signDir && (await signDir.queryPermission({ mode: "read" })) === "granted")
+      for await (const [n, h] of signDir.entries()) if (h.kind === "file") set.add(n.toLowerCase());
+    return set;
+  }
+  const signedName = n => n.replace(/\.pdf$/i, "").toLowerCase() + "_signed.pdf";
+  async function renderEnvios() {
+    const envios = (await kvGet(pk("envios"))) || [], firm = await firmadosNombres(), now = Date.now();
+    let cambios = false;
+    for (const e of envios) if (!e.firmado && firm.has(signedName(e.name))) { e.firmado = now; cambios = true; }
+    if (cambios) kvSet(pk("envios"), envios);
+    const ult = envios.slice(-40).reverse();
+    $("aList").innerHTML = ult.length ? ult.map(e => {
+      const min = Math.round((now - e.ts) / 60000);
+      const st = e.firmado ? `<span class="ok">✓ firmado ${hhmm(e.firmado)}</span>` : min > auto.alerta ? `<span class="bad">⚠ sin firmar hace ${min} min</span>` : `<span class="wait">⏳ esperando firma</span>`;
+      return `<div><span>${escapeHtml(e.name)}</span><span>enviado ${hhmm(e.ts)} · ${st}</span></div>`;
+    }).join("") : `<p class="label">Todavía no mandaste ninguno.</p>`;
+    return { envios, firm, now };
+  }
+  async function tickAuto() {
+    try {
+      if (!outDir) return;
+      const { envios, now } = await renderEnvios();
+      // avisos de demora (una vez por archivo)
+      const tarde = envios.filter(e => !e.firmado && now - e.ts > auto.alerta * 60000 && !avisados.has(e.name));
+      if (tarde.length) { tarde.forEach(e => avisados.add(e.name)); toast(`⚠ ${tarde.length} sin firmar hace más de ${auto.alerta} min: ${tarde.slice(0, 3).map(e => e.name).join(", ")}${tarde.length > 3 ? "…" : ""}. ¿Está corriendo la autofirma?`, { sticky: true }); }
+      if (!auto.on || now < auto.next || !enHorario(new Date(now))) { renderAuto(); return; }
+      if ((await outDir.queryPermission({ mode: "readwrite" })) !== "granted") { renderAuto(); $("aInfo").textContent = "⚠ Chrome pidió permiso de nuevo: tocá 📤 Mandar a firmar y después ▶ para seguir."; auto.on = false; saveAuto(); return; }
+      await refreshListos();
+      if (enEspera.length) {
+        const { ok } = await moverAFirma(auto.k);
+        if (ok) toast(`⏱ ${ok} mandado${ok === 1 ? "" : "s"} a firmar · quedan ${enEspera.length} en espera`);
+        await renderEnvios();
+      }
+      auto.next = Date.now() + jitter(auto.min); saveAuto(); renderAuto();
+    } catch (e) { console.error(e); }
+  }
+  setInterval(tickAuto, 30000);
 
   function isListoWith(s) {
     if (VAR_RE.test(tpl)) {
@@ -3379,6 +3473,7 @@
     rootDir = outDir = null;
     signDir = null;
     if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; signDir = (await kvGet(pk("signDir"))) || null; }
+    await loadAuto();
     $("search").value = "";
     updateTplPreview();
     await refreshAll();
