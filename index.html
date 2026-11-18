@@ -597,6 +597,8 @@ body.dsopen .modal{right:400px}
   <h3>👥 Lista de nombres</h3>
   <p>Copiá de tu Excel las columnas <b>DNI</b>, <b>CUIL</b> y <b>Apellido, Nombre</b> (en cualquier orden; el CUIL es opcional) y pegalas acá (Ctrl+V). Cada carpeta busca su DNI y toma nombre y CUIL solos. Lo que pegues se suma a la lista que ya tenías.</p>
   <textarea id="nmText" rows="9" placeholder="16749332&#9;27167493324&#9;GALEAZZI, SILVINA SANDRA&#10;17523969&#9;27175239694&#9;GARCIA SANCHEZ, MARINA NOEMI"></textarea>
+  <p>O cargá un archivo: <button id="nmFileBtn" type="button">📄 Elegir .txt / .csv</button> <input type="file" id="nmFile" accept=".txt,.csv,.tsv,.tab,text/plain,text/csv" hidden>
+    <span class="label">En Excel: Archivo → Guardar como → <b>Texto (delimitado por tabulaciones)</b> o <b>CSV</b>.</span></p>
   <p id="nmInfo"></p>
   <div class="frow">
     <button class="primary" id="nmOk">Guardar</button>
@@ -638,7 +640,7 @@ body.dsopen .modal{right:400px}
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
-<li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa.</li>
+<li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
 <table><tr><th>Dato</th><th>Qué pone</th></tr><tr><td><code>{dni}</code></td><td>DNI de la carpeta</td></tr><tr><td><code>{cuil}</code></td><td>CUIL de la lista de nombres</td></tr><tr><td><code>{nombre}</code></td><td>Apellido y nombre</td></tr><tr><td><code>{tipo}</code></td><td>Tipo de documentación (Hs extras)</td></tr><tr><td><code>{periodo}</code></td><td>Período, ej. 9-26 (Hs extras)</td></tr><tr><td><code>{tramite}</code> / <code>{fecha}</code></td><td>Número y fecha del trámite</td></tr><tr><td><code>{carpeta}</code></td><td>Nombre completo de la carpeta</td></tr></table>
 <h3>La pantalla principal</h3>
@@ -3420,6 +3422,24 @@ body.dsopen .modal{right:400px}
     $("nmInfo").textContent = dnis.size ? `Reconocí ${dnis.size} personas${stx} (${Object.keys(got.names).length} con nombre, ${Object.keys(got.cuils).length} con CUIL) · ${match} coinciden con carpetas de esta tanda.` + (got.malos.length ? ` ⚠ ${got.malos.length} CUIL ignorado${got.malos.length === 1 ? "" : "s"} porque no corresponde${got.malos.length === 1 ? "" : "n"} a su DNI (familiar con el CUIL del titular): ${got.malos.slice(0, 5).join(", ")}${got.malos.length > 5 ? "…" : ""}.` : "") : "Pegá las filas copiadas de Excel.";
   });
   $("nmCancel").onclick = () => { $("nmlg").hidden = true; };
+  // Archivo .txt / .csv: si no es UTF-8 (Excel guarda en ANSI), se lee como Windows-1252 para no romper acentos y ñ
+  $("nmFileBtn").onclick = () => $("nmFile").click();
+  $("nmFile").addEventListener("change", async () => {
+    const f = $("nmFile").files[0]; if (!f) return;
+    const buf = await f.arrayBuffer();
+    let txt = new TextDecoder("utf-8").decode(buf);
+    if (txt.includes("\uFFFD")) txt = new TextDecoder("windows-1252").decode(buf);
+    txt = txt.replace(/^\uFEFF/, "");
+    // CSV de Excel en español viene con ";": lo paso a tabulaciones respetando comillas
+    const first = txt.split(/\r?\n/, 1)[0] || "";
+    if (!first.includes("\t") && (first.split(";").length > 1 || first.split(",").length > 2)) {
+      const sep = first.split(";").length > 1 ? ";" : ",";
+      txt = txt.split(/\r?\n/).map(l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.join("\t"); }).join("\n");
+    }
+    $("nmText").value = txt; $("nmFile").value = "";
+    $("nmText").dispatchEvent(new Event("input"));
+    $("nmInfo").textContent = `📄 ${f.name}: ` + $("nmInfo").textContent + " Tocá Guardar.";
+  });
   const histN = () => Object.keys(hist).length;
   $("histPaste").onclick = () => { $("hiText").value = ""; $("hiInfo").textContent = `Ahora hay ${histN()} socios en el historial.`; $("hilg").hidden = false; setTimeout(() => $("hiText").focus(), 30); };
   $("hiText").addEventListener("input", () => { const g = parseHist($("hiText").value); $("hiInfo").textContent = g.err || `Reconocí ${g.rows.length} filas con DNI y fecha.`; });
