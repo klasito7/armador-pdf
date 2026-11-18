@@ -302,6 +302,15 @@
 #mstTabla table{border-collapse:collapse;width:100%;font-size:12.5px}#mstTabla th{position:sticky;top:0;background:var(--panel);text-align:left;border-bottom:2px solid var(--line);padding:5px 8px}
 #mstTabla td{border-bottom:1px solid var(--line);padding:4px 8px}
 #mstTabla tr.hoy td{background:color-mix(in srgb,#f0a020 14%,transparent)}
+.mstprod table{border-collapse:collapse}
+.mstprod th,.mstprod td{padding:4px 8px;text-align:right;white-space:nowrap}
+.mstprod th:first-child,.mstprod td:first-child{text-align:left}
+.mstprod th.mes{cursor:pointer;text-decoration:underline dotted}
+.mstprod td small{opacity:.65;font-size:11px;margin-left:4px}
+.mstprod tr.sel td{background:color-mix(in srgb,#2b6cdf 10%,transparent)}
+.mstprod tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+.mstprod td.z{opacity:.35}
+#mstProdBtn.on{outline:2px solid #2b6cdf}
 .msttanda{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 10px;border-radius:8px;background:color-mix(in srgb,#f0a020 12%,transparent);font-size:13px}
 .msttanda input{width:56px}
 .msttanda[hidden]{display:none}
@@ -725,6 +734,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
+<li><b>📈 Por analista:</b> botón al lado del filtro de analista en el Master. Tabla con cuántos empadronamientos (E) y reempadronamientos (R) cargó cada analista en los últimos 6 meses, con el total. Tocando un mes se ve por día hábil (← Volver a meses). Cuenta por la fecha de carga de la hoja emp. y reemp.; quién cargó = Usuario (Usuario2 en el reemp.) o, si está vacía, Analista. 📋 Copiar tabla la copia para Excel.</li>
 <li><b>🔴 Motivos de rechazo:</b> en el grupo Rechazados del Master cada fila tiene <b>Motivo del rechazo</b>: escribís lo que puso la SSS (te sugiere los que ya usaste). Arriba de la tabla se ven los más repetidos del último año, y en 🧾 Datos SURGE (tecla D) aparecen los 3 más comunes para revisarlos antes de cargar.</li>
 <li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
 <li><b>🧾 Datos SURGE (tecla D):</b> panel a la derecha para tipear los datos de la planilla en el mismo orden que SURGE, con la planilla en grande al lado (RePág / AvPág cambian de hoja). Fecha al lado del valor con Tab (2023 = 01/01/2023; vacía = la de planilla). En la lista: 🧾 n/20 o 🧾 datos ✓. <b>📋 Datos para SURGE</b> (barra izquierda) copia los completos con CUIL y fecha de planilla para Carga rápida.</li>
@@ -934,7 +944,7 @@ body.dsopen .modal{right:400px}
     <button id="mstPickBase" title="Tu base propia (el listado del Armador con tu columna Fecha cargado en base padron diabetes): .xlsx, .txt o .csv">🧍 Mi base</button><input type="file" id="mstFileBase" accept=".xlsx,.xlsm,.txt,.csv,.tsv" hidden>
     <span id="mstInfo" class="label">Elegí el Excel compartido (.xlsx). Se lee acá en tu PC: no se sube a ningún lado.</span>
     <button id="mstClose">✕</button></div>
-  <div class="mstfilt"><label>👤 Analista <select id="mstAnalista"><option value="">Todos los analistas</option></select></label> <span id="mstResumen"></span></div>
+  <div class="mstfilt"><label>👤 Analista <select id="mstAnalista"><option value="">Todos los analistas</option></select></label> <button id="mstProdBtn" title="Cuántos empadronamientos y reempadronamientos cargó cada analista, por mes y por día">📈 Por analista</button> <span id="mstResumen"></span></div>
   <div id="mstCards"></div>
   <div class="mstbar"><h3 id="mstTitulo"></h3><button id="mstCopyDni">📋 Copiar DNI</button><button id="mstCopyTabla">📋 Copiar tabla</button></div>
   <div class="msttanda" id="mstTanda" hidden></div>
@@ -4235,7 +4245,7 @@ body.dsopen .modal{right:400px}
       if (!em) em = mTabla(h.rows, ["estado empadronamiento", "nro empadronamiento"]);   // la hoja análisis también tiene "estado empadronamiento"
     }
     if (!an && !em) throw new Error("No encuentro las hojas de análisis (columna ESTADO ACTUAL) ni de emp. y reemp. (columnas Estado empadronamiento y Nro empadronamiento).");
-    const P = {};
+    const P = {}, cargas = [];
     const get = d => (P[d] = P[d] || { dni: d, cuil: "", nombre: "" });
     const txt = v => String(v ?? "").trim();
     if (an) for (const r of an.body) {
@@ -4260,6 +4270,10 @@ body.dsopen .modal{right:400px}
       const ciclo = eRe ? { tipo: "Reemp", estado: eRe, nro: em.get(r, "nro reempadronamiento"), hasta: mFecha(em.get(r, "vigencia fin re")) }
         : eEm ? { tipo: "Emp", estado: eEm, nro: em.get(r, "nro empadronamiento"), hasta: mFecha(em.get(r, "vigencia fin")) } : null;
       if (ciclo && (!x.ciclo || (ciclo.hasta || 0) > (x.ciclo.hasta || 0))) { x.ciclo = ciclo; x.analistaEm = txt(em.get(r, "analista")) || txt(em.get(r, eRe ? "usuario2" : "usuario")); }
+      // cargas por analista (para 📈 Por analista): quién cargó = Usuario / Usuario2, si no, Analista
+      const fe = mFecha(em.get(r, "fecha carga empadronamiento", "fecha carga")), fr = mFecha(em.get(r, "fecha carga reempadronamiento/analisis", "fecha carga reempadronamiento"));
+      if (fe && eEm) cargas.push({ a: txt(em.get(r, "usuario")) || txt(em.get(r, "analista")), t: "E", d: fe });
+      if (fr && eRe) cargas.push({ a: txt(em.get(r, "usuario2")) || txt(em.get(r, "analista")), t: "R", d: fr });
       const fp = mFecha(em.get(r, "fecha planilla")); if (fp && (!x.fp || fp > x.fp)) x.fp = fp;
       const ob = [em.get(r, "observaciones"), em.get(r, "observaciones2"), em.get(r, "obs2")].filter(Boolean).join(" · ");
       if (ob) x.obsEmp = ob;
@@ -4307,7 +4321,7 @@ body.dsopen .modal{right:400px}
       } else if (x.enAnalisis && /empadronad/.test(ea) && !noRec) add("inconsistente", x, `ESTADO ACTUAL "${x.estadoActual}" pero no figura en emp. y reemp.`, x.analistaAn);
     }
     const analistas = [...new Set(filas.map(f => f.analista).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
-    return { filas, P, total: Object.keys(P).length, analistas, hojas: [an && "análisis", em && "emp. y reemp."].filter(Boolean) };
+    return { filas, P, cargas, total: Object.keys(P).length, analistas, hojas: [an && "análisis", em && "emp. y reemp."].filter(Boolean) };
   }
   // Grupos con el filtro de analista aplicado
   function mstGrupos() {
@@ -4404,11 +4418,12 @@ body.dsopen .modal{right:400px}
     $("mstResumen").innerHTML = `<b>${vistos.size}</b> socios${mstAnalista ? " de <b>" + escapeHtml(mstAnalista === "__sin" ? "(sin analista)" : mstAnalista) + "</b>" : ""} · vencen este mes <b>${vencenMes}</b> · para cargar ya <b>${porHacer}</b> (≈ <b>${Math.ceil(porHacer / (habiles || 1))}</b> por día hábil hasta fin de mes)`;
     $("mstCards").innerHTML = MST_SECCIONES.map(([tit, gs]) => `<div class="mstsec"><h4>${tit}</h4><div class="mstgrid">${gs.map(([k, t, desc]) => `<button class="mstcard ${G[k].length ? "" : "vacia"}" data-g="${k}" title="${escapeHtml(desc)}"><span>${t}</span><b>${G[k].length}</b></button>`).join("")}</div></div>`).join("");
     mstData.G = G;
-    mstShow(mstSel && G[mstSel] ? mstSel : MST_GRUPOS.find(([k]) => G[k].length)?.[0] || "vigente");
+    mstShow(mstSel === "__prod" ? "__prod" : mstSel && G[mstSel] ? mstSel : MST_GRUPOS.find(([k]) => G[k].length)?.[0] || "vigente");
   }
   let mstSel = "";
   function mstShow(k) {
-    mstSel = k;
+    if (k === "__prod") { mstProd(); return; }
+    mstSel = k; $("mstProdBtn").classList.remove("on");
     document.querySelectorAll(".mstcard").forEach(b => b.classList.toggle("on", b.dataset.g === k));
     const [, t, desc] = MST_GRUPOS.find(g => g[0] === k), L = mstData.G[k];
     $("mstTitulo").innerHTML = `${t} <span class="label">${escapeHtml(desc)}</span>`;
@@ -4446,6 +4461,52 @@ body.dsopen .modal{right:400px}
     if (t) motivos[n] = { dni: i.dataset.dni, motivo: t, ts: (motivos[n] && motivos[n].ts) || Date.now() }; else delete motivos[n];
     kvSet("motivos", motivos); mstShow(mstSel);
   });
+  /* 📈 Por analista: empadronamientos (E) y reempadronamientos (R) cargados, por mes; tocando un mes, por día */
+  let prodMes = "";
+  const MES_TXT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const mesKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const mesTxt = k => { const [y, m] = k.split("-"); return `${MES_TXT[+m - 1]} ${y.slice(2)}`; };
+  let prodCopia = "";
+  function mstProd() {
+    mstSel = "__prod";
+    document.querySelectorAll(".mstcard").forEach(b => b.classList.remove("on"));
+    $("mstProdBtn").classList.add("on"); $("mstTanda").hidden = true;
+    const C = (mstData && mstData.cargas) || [];
+    const hoy = new Date();
+    let cols, titulo, colOf, colTxt;
+    if (prodMes) {
+      const [y, m] = prodMes.split("-").map(Number), dias = new Date(y, m, 0).getDate();
+      cols = []; for (let d = 1; d <= dias; d++) { const f = new Date(y, m - 1, d); if (f > hoy) break; if (f.getDay() % 6) cols.push(String(d)); }
+      colOf = c => mesKey(c.d) === prodMes ? String(c.d.getDate()) : null; colTxt = k => k;
+      titulo = `📈 Por analista · ${mesTxt(prodMes)} por día <button id="prodVolver">← Volver a meses</button>`;
+    } else {
+      cols = []; for (let i = 5; i >= 0; i--) cols.push(mesKey(new Date(hoy.getFullYear(), hoy.getMonth() - i, 1)));
+      colOf = c => mesKey(c.d); colTxt = mesTxt;
+      titulo = `📈 Por analista · últimos 6 meses <span class="label">Tocá un mes para verlo por día</span>`;
+    }
+    const T = {};   // analista -> col -> {E,R}
+    for (const c of C) {
+      const k = colOf(c); if (!k || !cols.includes(k)) {
+        if (!prodMes || mesKey(c.d) !== prodMes) continue;   // días de fin de semana: van igual al total del mes
+      }
+      const a = c.a || "(sin analista)", col = cols.includes(k) ? k : "_";
+      const x = ((T[a] = T[a] || {})[col] = T[a][col] || { E: 0, R: 0 }); x[c.t]++;
+    }
+    const sum = (o, keys) => keys.reduce((s, k) => { const v = o[k] || { E: 0, R: 0 }; s.E += v.E; s.R += v.R; return s; }, { E: 0, R: 0 });
+    const allKeys = [...cols, "_"];
+    const filas = Object.keys(T).map(a => ({ a, tot: sum(T[a], allKeys) })).sort((x, y) => (y.tot.E + y.tot.R) - (x.tot.E + x.tot.R));
+    const cel = v => { const n = v.E + v.R; return n ? `<td><b>${n}</b><small>${v.E} E · ${v.R} R</small></td>` : `<td class="z">0</td>`; };
+    const totCol = k => sum(Object.fromEntries(filas.map(f => [f.a, T[f.a][k]])), filas.map(f => f.a));
+    $("mstTitulo").innerHTML = titulo;
+    const head = `<tr><th>Analista</th>${cols.map(k => `<th class="${prodMes ? "" : "mes"}" data-mes="${k}">${colTxt(k)}</th>`).join("")}<th>Total</th></tr>`;
+    const body = filas.map(f => `<tr class="${f.a === mstAnalista ? "sel" : ""}"><td>${escapeHtml(f.a)}</td>${cols.map(k => cel(T[f.a][k] || { E: 0, R: 0 })).join("")}${cel(f.tot)}</tr>`).join("");
+    const tot = filas.length ? `<tr class="tot"><td>Total</td>${cols.map(k => cel(totCol(k))).join("")}${cel(filas.reduce((s, f) => ({ E: s.E + f.tot.E, R: s.R + f.tot.R }), { E: 0, R: 0 }))}</tr>` : "";
+    $("mstTabla").innerHTML = `<div class="mstprod">${filas.length ? `<table>${head}${body}${tot}</table>` : `<p class="label">No encuentro fechas de carga en la hoja emp. y reemp. (columnas "Fecha carga empadronamiento" y "Fecha carga reempadronamiento/analisis").</p>`}<p class="label">E = empadronamientos, R = reempadronamientos, según la fecha de carga de la hoja emp. y reemp. Quién cargó = columna Usuario (o Usuario2 en el reemp.); si está vacía, Analista.${prodMes ? " Sábados y domingos no tienen columna, pero sí cuentan en el Total." : ""}</p></div>`;
+    prodCopia = ["Analista\t" + cols.map(colTxt).join("\t") + "\tTotal", ...filas.map(f => [f.a, ...cols.map(k => { const v = T[f.a][k] || { E: 0, R: 0 }; return v.E + v.R; }), f.tot.E + f.tot.R].join("\t"))].join("\r\n");
+    const v = $("prodVolver"); if (v) v.onclick = () => { prodMes = ""; mstProd(); };
+  }
+  $("mstProdBtn").onclick = () => { if (!mstData) { toast("Primero leé el Excel compartido."); return; } prodMes = ""; mstProd(); };
+  $("mstTabla").addEventListener("click", e => { const th = e.target.closest("th.mes"); if (th) { prodMes = th.dataset.mes; mstProd(); } });
   $("mstCards").addEventListener("click", e => { const b = e.target.closest(".mstcard"); if (b) mstShow(b.dataset.g); });
   /* Abrir en SURGE: reempadronar = /admin/extender_empadronamiento/<nº de la solicitud vencida> (crea la solicitud nueva);
      ver o seguir uno = /admin/empadronamientos/<nº>/edit */
@@ -4474,8 +4535,8 @@ body.dsopen .modal{right:400px}
     b.classList.add("ya"); b.textContent = "✓ abierto " + new Date().toTimeString().slice(0, 5);
   });
   $("mstAnalista").addEventListener("change", () => { mstAnalista = $("mstAnalista").value; kvSet("mstAnalista", mstAnalista); mstRender(); });
-  $("mstCopyDni").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(L.map(x => x.dni).join("\r\n")); toast(`📋 ${L.length} DNI copiados (uno por línea).`); };
-  $("mstCopyTabla").onclick = async () => { const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tAnalista\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.analista, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
+  $("mstCopyDni").onclick = async () => { if (mstSel === "__prod") { toast("En 📈 Por analista no hay DNI: usá 📋 Copiar tabla."); return; } const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(L.map(x => x.dni).join("\r\n")); toast(`📋 ${L.length} DNI copiados (uno por línea).`); };
+  $("mstCopyTabla").onclick = async () => { if (mstSel === "__prod") { await navigator.clipboard.writeText(prodCopia); toast("📋 Tabla por analista copiada para Excel."); return; } const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tAnalista\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.analista, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
   async function mstCargar(file) {
     $("mstInfo").textContent = `Leyendo ${file.name}…`;
     try {
