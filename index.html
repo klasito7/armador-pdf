@@ -282,6 +282,23 @@
   .exportbar button{min-width:0}
   .exportbar[hidden]{display:none}
 #holdBtn.auto{outline:2px solid #2a9d6a}
+#dsPanel{position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);z-index:60;box-shadow:-10px 0 30px rgba(0,0,0,.25);transform:translateX(105%);transition:transform .15s;display:flex;flex-direction:column}
+#dsPanel.show{transform:none}
+body.dsopen .modal{right:400px}
+.dshead{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--line)}
+.dshead h3{margin:0 0 2px}
+#dsRows{overflow:auto;padding:6px 10px;flex:1}
+.dsrow{display:grid;grid-template-columns:1fr 100px;gap:2px 6px;padding:4px;border-radius:6px}
+.dsrow:focus-within{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.dsrow.bad{background:color-mix(in srgb,#d33 12%,transparent)}
+.dslbl{grid-column:1/3;font-size:12px;font-weight:600;color:var(--muted)}.dslbl em{color:#d33;font-style:normal;font-weight:400}
+.dsrow input{min-width:0;padding:3px 6px}
+.dsops{grid-column:1/3;display:flex;flex-wrap:wrap;gap:3px}
+.dsop{border:1px solid var(--line);border-radius:12px;padding:0 7px;font-size:11.5px;cursor:pointer}
+.dsop b{color:var(--accent);margin-right:3px}.dsop.on{background:var(--accent);color:#fff;border-color:var(--accent)}.dsop.on b{color:#fff}
+.dsfoot{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line)}
+#dsState.ok{color:#2a9d6a;font-weight:600}
+.dshint{padding:0 12px 10px;margin:0}
 .alist{max-height:220px;overflow:auto;font-size:12.5px}.alist div{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #8882}
 .alist .ok{color:#2a9d6a}.alist .wait{color:#c88a00}.alist .bad{color:#d33}
   .exportbar button{flex:1;font-size:12.5px;padding:5px 6px}
@@ -352,6 +369,7 @@
         <button id="saveList" title="Guarda el listado como .csv (se abre con Excel)">💾 Guardar listado</button>
       </div>
       <div class="exportbar">
+        <button id="dsExport" hidden title="Copia los datos SURGE completos de esta lista, para pegarlos en Carga rápida">📋 Datos para SURGE</button>
         <button id="holdBtn" hidden title="Planillas guardadas que todavía no pasaron a la carpeta de listos (para firmar)">📤 Mandar a firmar <span class="badge" id="holdCount">0</span></button>
         <button id="dayBtn" title="Lo que guardaste hoy, para pegar en tu Excel">🌙 Cierre del día <span class="badge" id="dayCount" hidden>0</span></button>
       </div>
@@ -381,6 +399,7 @@
         <span class="person" id="socioPerson" hidden></span>
         <span class="chip" id="socioChip" hidden></span>
         <button id="toggleNoApto" hidden>⚠️ Marcar no apto</button>
+        <button id="dsBtn" hidden title="Tipear acá los datos de la planilla para SURGE (tecla D)">🧾 Datos SURGE</button>
         <button id="toggleIncomp" hidden title="Socio con documentación incompleta: queda registrado con la fecha de hoy como fecha de análisis">🧩 Doc. incompleta</button>
         <button id="reloadSocio" hidden title="Vuelve a leer la carpeta (ej. si agregaste archivos)">↻ Recargar carpeta</button>
         <button id="nextPend" hidden>Siguiente pendiente ▶</button>
@@ -868,6 +887,12 @@
 <p><b>Instalar o actualizar:</b> <a href="carga.html" target="_blank">página de instalación</a> (la versión tiene que coincidir con la del favorito).</p>
     </div>
   </div>
+</div>
+<div id="dsPanel">
+  <div class="dshead"><div><h3>🧾 Datos SURGE</h3><div id="dsTitle"></div><div id="dsFp" class="label"></div></div><button id="dsClose">✕</button></div>
+  <div id="dsRows"></div><datalist id="dsMeds"></datalist>
+  <div class="dsfoot"><span id="dsState"></span><button class="primary" id="dsDone">Listo</button></div>
+  <p class="label dshint">Enter = siguiente · Tab = fecha que figura al lado (vacía = la de planilla; <b>2023</b> = 01/01/2023) · opciones con su tecla, <b>0</b> = no presenta / ninguna · Backspace borra · Esc cierra · D abre/cierra. La planilla se abre en grande al lado: <b>RePág / AvPág</b> cambian de hoja sin salir del campo.</p>
 </div>
 <div id="cfgPanel" class="sidepanel">
   <div class="edhead"><h3>⚙ Configuración</h3><button id="cfgClose">✕</button></div>
@@ -1459,6 +1484,8 @@
       const nt = noteOf(s);
       const ne = editsOf(s).reduce((a, e) => a + e.pages.length, 0);
       row.querySelector("small").textContent = [tandaSel === "__all" && s.tanda ? "📂 " + s.tanda : "", nt.fp ? "📅 " + fmtFecha(nt.fp) : "", ne ? `📝 ${ne} para editar` : ""].filter(Boolean).join(" · ");
+      const dp = prof === "diabetes" && dsProgress(s);
+      if (dp) { const b = document.createElement("span"); b.className = "rep " + (dp.ok ? "viejo" : "reciente"); b.textContent = dp.ok ? "🧾 datos ✓" : `🧾 ${dp.n}/${dp.total}`; row.querySelector("small").appendChild(b); }
       if (ri) { const b = document.createElement("span"); b.className = "rep " + (ri.reciente ? "reciente" : "viejo"); b.textContent = "🔁 " + repTxt(ri); b.title = "Historial: " + ri.prev.map(e => `${fmtFecha(e.d)} ${e.tipo === "listo" ? "listo" : "incompleta"}${e.fp ? " (planilla " + fmtFecha(e.fp) + ")" : ""} en ${e.scope}`).join(" · "); row.querySelector("small").appendChild(b); }
       row.onclick = () => openSocio(s);
       box.appendChild(row);
@@ -1492,6 +1519,8 @@
     current = s;
     const isSocio = !!s;
     $("toggleNoApto").hidden = $("toggleIncomp").hidden = $("reloadSocio").hidden = $("nextPend").hidden = !isSocio;
+    $("dsBtn").hidden = !isSocio || prof !== "diabetes";
+    if ($("dsPanel").classList.contains("show")) { if (isSocio) setTimeout(dsRender, 0); else dsClose(); }
     if (!isSocio) $("socioRep").hidden = true;
     $("socioChip").hidden = !isSocio;
     $("socioNotes").hidden = !isSocio;
@@ -3450,6 +3479,7 @@
     ["quickDate", "Fecha de planilla a mano", "q"],
     ["readDate", "Leer fecha manuscrita", "f"],
     ["photopea", "Abrir en Photopea", "e"],
+    ["surge", "Datos para SURGE (panel)", "d"],
     ["toEdit", "Mandar a Para editar (lista)", "l"],
     ["closePreview", "Cerrar hoja en grande / vista previa", "enter"],
     ["toggleIncl", "Incluir/excluir hoja (en grande)", "space"],
@@ -3682,6 +3712,7 @@
     signDir = null;
     if (HAS_FS) { rootDir = (await kvGet(pk("rootDir"))) || null; outDir = (await kvGet(pk("outDir"))) || null; signDir = (await kvGet(pk("signDir"))) || null; }
     holdDir = HAS_FS ? (await kvGet(pk("holdDir"))) || null : null; renderHoldPick();
+    await loadSurge();
     await loadAuto();
     $("search").value = "";
     updateTplPreview();
@@ -3693,6 +3724,188 @@
     prof = b.dataset.p; await kvSet("prof", prof);
     await loadProfile();
   });
+
+
+  /* ================= Datos para SURGE (se tipean acá, Carga rápida los vuelca en SURGE) ================= */
+  // Mismo orden y mismas opciones que SURGE (Diabetes)
+  const DS_FIELDS = [
+    { k: "fdiag", label: "Fecha diagnóstico", type: "fecha", basico: true },
+    { k: "matricula", label: "Matrícula", type: "matricula", basico: true },
+    { k: "medico", label: "Médico", type: "texto", basico: true },
+    { k: "tipomat", label: "Tipo de matrícula", type: "combo", ops: ["Nacional", "Provincial"], basico: true },
+    { k: "tipo", label: "Tipo de Diabetes", type: "combo", ops: ["Tipo 1", "Tipo 2", "Otros tipos"] },
+    { k: "comorb", label: "Comorbilidades", type: "multiple", ops: ["Dislipemia", "Obesidad", "Tabaquismo", "Hipertensión Arterial", "No presenta comorbilidades"], excl: 4 },
+    { k: "compl", label: "Complicaciones de la DBT", type: "multiple", ops: ["Hipertrofia del Ventrículo izquierdo", "Infarto de Miocardio (IAM)", "Insuficiencia cardiaca", "Accidente cerebrovascular (ACV)", "Retinopatía", "Ceguera", "Neuropatía periférica", "Vasculopatía periférica", "Amputación de miembros", "Nefropatía", "Diálisis", "Trasplante Renal", "No presenta ninguna de las anteriores"], excl: 12 },
+    { k: "gluc", label: "Glucemia", type: "numero", min: 40, max: 1000 },
+    { k: "hba1c", label: "Hemoglobina Glicosilada (HbA1c)", type: "numero", min: 3, max: 20, dec: true },
+    { k: "ldl", label: "LDL", type: "numero", min: 20, max: 1000 },
+    { k: "tg", label: "Triglicéridos", type: "numero", min: 20, max: 5000 },
+    { k: "tas", label: "Tensión Arterial Sistólica (TAS)", type: "numero", min: 50, max: 300 },
+    { k: "tad", label: "Tensión Arterial Diastólica (TAD)", type: "numero", min: 30, max: 200 },
+    { k: "creat", label: "Creatinina", type: "numero", min: 0.1, max: 15, dec: true },
+    { k: "peso", label: "Peso", type: "numero", min: 0, max: 400, dec: true },
+    { k: "talla", label: "Talla", type: "numero", min: 0, max: 250, dec: true },
+    { k: "fondo", label: "Fondo de ojos", type: "combo", ops: ["Normal", "Alterado", "No realizado"] },
+    { k: "pies", label: "Inspección de pies", type: "combo", ops: ["Normal", "Alterado", "No realizado"] },
+    { k: "tratCom", label: "Tratamiento comorbilidades", type: "multiple", ops: ["No recibe tratamientos", "Tratamiento hipolipemiante (estatinas u otro)", "Tratamiento antihipertensivo", "Antiagregación (acido salicilico u otros)"], excl: 0 },
+    { k: "tratDbt", label: "Tratamiento de la Diabetes", type: "multiple", ops: ["Sin tratamiento farmacológico", "Metformina", "Sulfonilureas", "Inhibidores DDP-4", "Inhibidores SGLT-2", "Agonistas del Receptor GLP-1", "Insulina basal", "Insulina de correción", "Bomba de insulina"], excl: 0 }
+  ];
+  const DS_KEYS = "123456789abcdefghijk";
+  const dsKeyOf = (f, i) => { if (f.excl === i) return "0"; return DS_KEYS[f.excl != null && i > f.excl ? i - 1 : i]; };
+  let surgeData = {}, dsMedicos = {};
+  async function loadSurge() {
+    surgeData = (await kvGet(pk("surge"))) || {};
+    dsMedicos = (await kvGet("medicos")) || {};
+    $("dsBtn").hidden = prof !== "diabetes";
+    $("dsExport").hidden = prof !== "diabetes";
+  }
+  const dsOf = s => (surgeData[sidOf(s)] = surgeData[sidOf(s)] || { vals: {} });
+  const dsSave = () => kvSet(pk("surge"), surgeData);
+  // "2023" -> 01/01/2023, "150325" -> 15/03/2025, "15/3/25" -> 15/03/2025
+  function dsDate(t) {
+    t = String(t || "").trim(); if (!t) return "";
+    if (/^\d{4}$/.test(t)) return `01/01/${t}`;
+    let d, m, y; const p = t.split(/[\/\-.\s]+/);
+    if (p.length === 3) [d, m, y] = p; else if (/^\d{6}$|^\d{8}$/.test(t)) [d, m, y] = [t.slice(0, 2), t.slice(2, 4), t.slice(4)]; else return null;
+    d = +d; m = +m; y = +y; if (y < 100) y += 2000;
+    const dt = new Date(y, m - 1, d); if (dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+    return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+  }
+  function dsCheck(f, raw) {
+    const t = String(raw ?? "").trim(); if (!t) return "";
+    if (f.type === "numero") {
+      const n = Number(t.replace(",", "."));
+      if (isNaN(n)) return "no es un número";
+      if (!f.dec && !Number.isInteger(n)) return "va sin decimales";
+      if (n < f.min || n > f.max) return `fuera de rango (${f.min}–${f.max})`;
+    }
+    if (f.type === "fecha" && !dsDate(t)) return "fecha inválida";
+    return "";
+  }
+  const dsFilled = (f, v) => v && (f.type === "combo" || f.type === "multiple" ? (v.sel || []).length : String(v.v || "").trim());
+  function dsProgress(s) {
+    const d = surgeData[sidOf(s)]; if (!d) return null;
+    const n = DS_FIELDS.filter(f => dsFilled(f, d.vals[f.k]) && !dsCheck(f, d.vals[f.k].v)).length;
+    return n ? { n, total: DS_FIELDS.length, ok: n === DS_FIELDS.length } : null;
+  }
+  function dsRender() {
+    if (!current) return;
+    const d = dsOf(current), nt = noteOf(current);
+    const fpTxt = nt.fp ? fmtFecha(nt.fp) : "sin fecha de planilla";
+    $("dsTitle").textContent = `${current.name}${personName(current) ? " · " + personName(current) : ""}`;
+    $("dsFp").textContent = "📅 " + fpTxt + (cuilOf(current) ? " · CUIL " + cuilOf(current) : " · ⚠ sin CUIL");
+    $("dsRows").innerHTML = DS_FIELDS.map((f, i) => {
+      const v = d.vals[f.k] || {};
+      const sel = new Set(v.sel || []);
+      const err = dsCheck(f, v.v);
+      let inp;
+      if (f.type === "combo" || f.type === "multiple") inp = `<input class="dsv" data-i="${i}" readonly placeholder="${f.type === "multiple" ? "teclas (varias)" : "tecla"}" value="${[...sel].map(j => dsKeyOf(f, j)).join(" ")}">`;
+      else inp = `<input class="dsv" data-i="${i}" value="${escapeHtml(v.v || "")}" placeholder="${f.type === "numero" ? f.min + "–" + f.max : f.type === "fecha" ? "año o ddmmaa" : ""}" ${f.type === "matricula" ? 'list="dsMeds"' : ""}>`;
+      const date = f.basico ? "<span></span>" : `<input class="dsd" data-i="${i}" placeholder="fecha planilla" value="${escapeHtml(v.d || "")}">`;
+      const ops = f.ops && !f.basico || f.k === "tipomat" ? `<div class="dsops">${f.ops.map((o, j) => `<span class="dsop ${sel.has(j) ? "on" : ""}" data-i="${i}" data-o="${j}"><b>${dsKeyOf(f, j)}</b>${escapeHtml(o)}</span>`).join("")}</div>` : "";
+      return `<div class="dsrow ${err ? "bad" : ""}" data-row="${i}"><div class="dslbl">${escapeHtml(f.label)}${err ? ` <em>${err}</em>` : ""}</div>${inp}${date}${ops}</div>`;
+    }).join("");
+    $("dsMeds").innerHTML = Object.entries(dsMedicos).map(([m, x]) => `<option value="${escapeHtml(m)}">${escapeHtml(x.nombre)}</option>`).join("");
+    const p = dsProgress(current);
+    $("dsState").textContent = p ? (p.ok ? "✓ Completo: listo para Carga rápida" : `${p.n} de ${p.total} datos`) : "Sin datos todavía";
+    $("dsState").className = p && p.ok ? "ok" : "";
+  }
+  function dsSet(k, patch) { const d = dsOf(current); d.vals[k] = { ...(d.vals[k] || {}), ...patch }; d.upd = Date.now(); dsSave(); }
+  function dsFocus(i) {
+    const el = $("dsRows").querySelector(`.dsv[data-i="${i}"]`);
+    if (!el) { $("dsDone").focus(); return; }
+    el.focus(); el.closest(".dsrow").scrollIntoView({ block: "nearest" });
+  }
+  function dsToggle(i, j) {
+    const f = DS_FIELDS[i], v = (dsOf(current).vals[f.k] || {}); const sel = new Set(v.sel || []);
+    if (f.type === "combo") { sel.clear(); sel.add(j); }
+    else if (sel.has(j)) sel.delete(j);
+    else { if (j === f.excl) sel.clear(); else if (f.excl != null) sel.delete(f.excl); sel.add(j); }
+    dsSet(f.k, { sel: [...sel].sort((a, b) => a - b) });
+    const row = $("dsRows").querySelector(`.dsrow[data-row="${i}"]`);
+    row.querySelectorAll(".dsop").forEach(o => o.classList.toggle("on", sel.has(+o.dataset.o)));
+    row.querySelector(".dsv").value = [...sel].map(x => dsKeyOf(f, x)).join(" ");
+    if (f.type === "combo") dsFocus(i + 1);
+  }
+  function dsOpen() {
+    if (!current) { toast("Abrí un socio primero."); return; }
+    if (prof !== "diabetes") return;
+    dsRender(); $("dsPanel").classList.add("show"); document.body.classList.add("dsopen");
+    // la planilla en grande al lado (primera hoja incluida, o la primera)
+    if (!modal.classList.contains("show") && items.length) zoom(items.find(x => x.on) || items[0]);
+    const first = DS_FIELDS.findIndex(f => !dsFilled(f, dsOf(current).vals[f.k]));
+    setTimeout(() => dsFocus(first < 0 ? 0 : first), 50);
+  }
+  function dsClose() { $("dsPanel").classList.remove("show"); document.body.classList.remove("dsopen"); renderSocios(); }
+  $("dsBtn").onclick = () => $("dsPanel").classList.contains("show") ? dsClose() : dsOpen();
+  $("dsClose").onclick = dsClose;
+  $("dsDone").onclick = () => { const p = dsProgress(current); dsClose(); toast(p && p.ok ? "🧾 Datos completos." : `🧾 Guardado (${p ? p.n : 0} de ${DS_FIELDS.length}).`); };
+  $("dsRows").addEventListener("click", e => { const o = e.target.closest(".dsop"); if (o) { dsToggle(+o.dataset.i, +o.dataset.o); $("dsRows").querySelector(`.dsv[data-i="${o.dataset.i}"]`).focus(); } });
+  $("dsRows").addEventListener("input", e => {
+    const el = e.target; if (!el.classList.contains("dsv") && !el.classList.contains("dsd")) return;
+    const f = DS_FIELDS[+el.dataset.i];
+    if (el.classList.contains("dsv")) {
+      dsSet(f.k, { v: el.value });
+      if (f.k === "matricula") { const m = dsMedicos[el.value.trim()]; if (m) { dsSet("medico", { v: m.nombre }); dsSet("tipomat", { sel: [m.tipo === "2" ? 1 : 0] }); const mi = $("dsRows").querySelector('.dsv[data-i="2"]'); if (mi) mi.value = m.nombre; const ti = $("dsRows").querySelector('.dsrow[data-row="3"]'); if (ti) { ti.querySelector(".dsv").value = m.tipo === "2" ? "2" : "1"; ti.querySelectorAll(".dsop").forEach(o => o.classList.toggle("on", +o.dataset.o === (m.tipo === "2" ? 1 : 0))); } } }
+    } else dsSet(f.k, { d: el.value });
+  });
+  $("dsRows").addEventListener("change", e => {
+    const el = e.target, i = +el.dataset.i, f = DS_FIELDS[i]; if (!f) return;
+    const row = el.closest(".dsrow");
+    if (el.classList.contains("dsd") || f.type === "fecha") {
+      const d = dsDate(el.value);
+      if (el.value && !d) { row.classList.add("bad"); toast(`${f.label}: fecha inválida.`); return; }
+      el.value = d || ""; dsSet(f.k, el.classList.contains("dsd") ? { d: el.value } : { v: el.value });
+    }
+    const err = dsCheck(f, (dsOf(current).vals[f.k] || {}).v);
+    row.classList.toggle("bad", !!err);
+    const lbl = row.querySelector(".dslbl"); lbl.innerHTML = escapeHtml(f.label) + (err ? ` <em>${err}</em>` : "");
+    if (f.k === "medico" || f.k === "matricula" || f.k === "tipomat") {
+      const v = dsOf(current).vals; const mat = String((v.matricula || {}).v || "").trim(), med = String((v.medico || {}).v || "").trim();
+      if (mat && med) { dsMedicos[mat] = { nombre: med, tipo: ((v.tipomat || {}).sel || [0])[0] === 1 ? "2" : "1" }; kvSet("medicos", dsMedicos); }
+    }
+    const p = dsProgress(current); $("dsState").textContent = p ? (p.ok ? "✓ Completo: listo para Carga rápida" : `${p.n} de ${p.total} datos`) : "Sin datos todavía"; $("dsState").className = p && p.ok ? "ok" : "";
+  });
+  $("dsPanel").addEventListener("keydown", e => {
+    e.stopPropagation();
+    const el = e.target;
+    if (e.key === "Escape") { e.preventDefault(); dsClose(); return; }
+    if (e.key === "PageDown" || e.key === "PageUp") { e.preventDefault(); if (modal.classList.contains("show")) $(e.key === "PageDown" ? "zNext" : "zPrev").click(); return; }
+    if (!el.dataset || el.dataset.i == null) return;
+    const i = +el.dataset.i, f = DS_FIELDS[i];
+    if (el.classList.contains("dsv") && (f.type === "combo" || f.type === "multiple")) {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const j = f.ops.findIndex((o, x) => dsKeyOf(f, x) === e.key.toLowerCase());
+      if (j >= 0) { e.preventDefault(); dsToggle(i, j); return; }
+      if (e.key === "Backspace") { e.preventDefault(); dsSet(f.k, { sel: [] }); el.value = ""; el.closest(".dsrow").querySelectorAll(".dsop").forEach(o => o.classList.remove("on")); return; }
+    }
+    if (e.key === "Enter") { e.preventDefault(); el.dispatchEvent(new Event("change", { bubbles: true })); dsFocus(i + 1); }
+  });
+  // Tecla D: abrir / cerrar (también con la hoja en grande abierta)
+  document.addEventListener("keydown", e => {
+    if (!keyIs(e, "surge") || prof !== "diabetes") return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || ["edlg", "fdlg", "qdlg", "nmlg", "daylg", "hdlg", "hilg"].some(id => !$(id).hidden) || $("work").hidden) return;
+    e.preventDefault(); $("dsPanel").classList.contains("show") ? dsClose() : dsOpen();
+  });
+  // Exportar para Carga rápida: los completos con CUIL, en un solo texto para pegar en SURGE
+  $("dsExport").onclick = async () => {
+    const recs = [], faltan = [];
+    for (const s of socios) {
+      const d = surgeData[sidOf(s)], p = dsProgress(s);
+      if (!d || !p) continue;
+      if (!p.ok || !cuilOf(s) || !noteOf(s).fp) { faltan.push(s.name); continue; }
+      const req = {};
+      for (const f of DS_FIELDS) {
+        const v = d.vals[f.k] || {};
+        req[f.k] = f.type === "combo" || f.type === "multiple" ? { sel: (v.sel || []).map(j => f.ops[j]), d: v.d || "" } : { v: f.type === "fecha" ? dsDate(v.v) : f.type === "numero" ? String(Number(String(v.v).replace(",", "."))) : String(v.v).trim(), d: v.d || "" };
+      }
+      const [y, m, dd] = noteOf(s).fp.split("-");
+      recs.push({ cuil: cuilOf(s), dni: s.dni, nombre: personName(s) || "", fp: `${dd}/${m}/${y}`, req });
+    }
+    if (!recs.length) { toast(faltan.length ? `Ninguno completo todavía (${faltan.length} a medias, o sin CUIL / fecha de planilla).` : "Todavía no cargaste datos de SURGE en ningún socio (tecla D)."); return; }
+    await navigator.clipboard.writeText("CARGARAPIDA:" + JSON.stringify(recs));
+    toast(`📋 Copiados los datos de ${recs.length} socio${recs.length === 1 ? "" : "s"}. En SURGE: Carga rápida → 📥 Pegar datos del Armador.` + (faltan.length ? ` (${faltan.length} quedaron afuera por estar incompletos o sin CUIL / fecha.)` : ""), { sticky: true });
+  };
 
   (async function init() {
     kbUpdate();
