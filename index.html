@@ -3919,7 +3919,11 @@ body.dsopen .modal{right:400px}
     for (const s of socios) {
       const d = surgeData[sidOf(s)], p = dsProgress(s);
       if (!d || !p) continue;
-      if (!p.ok || !cuilOf(s) || !noteOf(s).fp) { faltan.push(s.name); continue; }
+      const por = [];
+      if (!p.ok) por.push(`faltan ${p.total - p.n} datos (${DS_FIELDS.filter(f => !dsFilled(f, d.vals[f.k]) || dsCheck(f, (d.vals[f.k] || {}).v)).map(f => f.label).slice(0, 3).join(", ")}${p.total - p.n > 3 ? "…" : ""})`);
+      if (!cuilOf(s)) por.push("sin CUIL en la Lista de nombres");
+      if (!noteOf(s).fp) por.push("sin fecha de planilla");
+      if (por.length) { faltan.push(`${s.name}: ${por.join(" · ")}`); continue; }
       const req = {};
       for (const f of DS_FIELDS) {
         const v = d.vals[f.k] || {};
@@ -3928,9 +3932,18 @@ body.dsopen .modal{right:400px}
       const [y, m, dd] = noteOf(s).fp.split("-");
       recs.push({ cuil: cuilOf(s), dni: s.dni, nombre: personName(s) || "", fp: `${dd}/${m}/${y}`, req });
     }
-    if (!recs.length) { toast(faltan.length ? `Ninguno completo todavía (${faltan.length} a medias, o sin CUIL / fecha de planilla).` : "Todavía no cargaste datos de SURGE en ningún socio (tecla D)."); return; }
-    await navigator.clipboard.writeText("CARGARAPIDA:" + JSON.stringify(recs));
-    toast(`📋 Copiados los datos de ${recs.length} socio${recs.length === 1 ? "" : "s"}. En SURGE: Carga rápida → 📥 Pegar datos del Armador.` + (faltan.length ? ` (${faltan.length} quedaron afuera por estar incompletos o sin CUIL / fecha.)` : ""), { sticky: true });
+    const det = faltan.length ? ` Quedaron afuera ${faltan.length}: ${faltan.slice(0, 4).join(" | ")}${faltan.length > 4 ? " | …" : ""}` : "";
+    if (!recs.length) { toast(faltan.length ? `No copié nada: ningún socio de esta lista está listo.${det}` : `No copié nada: en ${tandaSel === "__all" ? "esta lista" : "la tanda " + tandaSel} ningún socio tiene datos de SURGE cargados (abrí el socio y apretá D). Si los cargaste en otra tanda, elegila arriba o elegí "Todas".`, { sticky: true }); return; }
+    const txt = "CARGARAPIDA:" + JSON.stringify(recs);
+    let ok = false;
+    try { await navigator.clipboard.writeText(txt); ok = true; } catch (e) {
+      // si el portapapeles moderno no deja, el método viejo
+      const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "position:fixed;left:-9999px"; document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand("copy"); } catch (e2) {}
+      ta.remove();
+    }
+    if (!ok) { toast("Chrome no me dejó copiar al portapapeles. Probá de nuevo haciendo clic en la página antes.", { sticky: true }); return; }
+    toast(`📋 Copiados los datos de ${recs.length} socio${recs.length === 1 ? "" : "s"}. En SURGE: favorito ⚡ → Pegar datos → Ctrl + V.${det}`, { sticky: true });
   };
 
   (async function init() {
