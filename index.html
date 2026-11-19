@@ -82,6 +82,19 @@
   .infolink{font-size:12.5px;color:var(--muted)}
   #cfgPanel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:56;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
   #cfgPanel.show{transform:none}
+  #hoyPanel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:56;box-shadow:-10px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .18s;display:flex;flex-direction:column}
+  #hoyPanel.show{transform:none}
+  .hoypaso{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+  .hoypaso input[type=checkbox]{width:20px;height:20px;margin-top:2px;flex:none}
+  .hoypaso.ok .hoytxt b{text-decoration:line-through;opacity:.6}
+  .hoytxt{flex:1;font-size:13.5px}
+  .hoytxt .n{font-size:15px;font-weight:700}
+  .hoytxt button{margin-top:6px;font-size:12.5px}
+  .hoybar{height:6px;border-radius:4px;background:var(--line);margin-top:5px;overflow:hidden}
+  .hoybar i{display:block;height:100%;background:#2b8a3e}
+  .hoyctl{margin-top:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:13px;line-height:1.5}
+  .hoyctl .warn{color:#b45309;font-weight:600}
+  .hoyofi{padding:8px 10px;border-radius:8px;background:color-mix(in srgb,#2b6cdf 10%,transparent);font-size:13px;margin:8px 0}
   .cfgbody{overflow:auto;padding:4px 16px 24px}
   .cfgbody h4{margin:12px 0 4px}
   .cfgrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
@@ -365,6 +378,7 @@ body.dsopen .modal{right:400px}
     <span style="margin-left:8px" title="Carpeta donde quedan los PDF ya firmados (opcional)">✍ Firmados: <b id="signName">—</b></span><button id="pickSign">Elegir</button>
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
     <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
+    <button id="hoyOpen" title="Lo que tenés que largar hoy para mantener los números normales">📋 Hoy</button>
     <button id="mstOpen" title="Qué hacer con cada socio según el Excel compartido">🗂 Master</button>
     <button id="cfgOpen" title="Configuración: atajos de teclado">⚙</button>
     <button id="infoOpen" title="Manual de uso y guía de trabajo">ℹ Info</button>
@@ -734,6 +748,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
+<li><b>📋 Hoy (arriba, apartado Diabetes):</b> lo que tenés que largar en el día para mantener números normales, con lo que producís de más guardado como colchón. 5 pasos tildables: 1) análisis al compartido (hechos / cupo, desde el Master); 2) mandar a firma (enviados hoy / cupo editable, 22 de entrada; necesita Retener prendido); 3) cargas en SURGE (hechos / cupo y minutos de la tanda); 4) fila en emp. y reemp.; 5) fecha en tu base. 1 a 3 se tildan solos al llegar al cupo. Abajo, <b>Control</b>: tus cargas del mes (según 👤 Analista del Master), proyección a fin de mes contra el promedio de los 3 meses anteriores (avisa si vas 30 % arriba) y cuántos días de colchón tenés (avisa si pasa de 2 semanas). Los días de oficina (mié-vie) lo recuerda arriba.</li>
 <li><b>📈 Por analista:</b> botón al lado del filtro de analista en el Master. Tabla con cuántos empadronamientos (E) y reempadronamientos (R) cargó cada analista en los últimos 6 meses, con el total. Tocando un mes se ve por día hábil (← Volver a meses). Cuenta por la fecha de carga de la hoja emp. y reemp.; quién cargó = Usuario (Usuario2 en el reemp.) o, si está vacía, Analista. 📋 Copiar tabla la copia para Excel.</li>
 <li><b>🔴 Motivos de rechazo:</b> en el grupo Rechazados del Master cada fila tiene <b>Motivo del rechazo</b>: escribís lo que puso la SSS (te sugiere los que ya usaste). Arriba de la tabla se ven los más repetidos del último año, y en 🧾 Datos SURGE (tecla D) aparecen los 3 más comunes para revisarlos antes de cargar.</li>
 <li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
@@ -994,6 +1009,10 @@ body.dsopen .modal{right:400px}
     <button id="cfgReset" class="danger">Restablecer atajos originales</button>
     </details>
   </div>
+</div>
+<div id="hoyPanel" class="sidepanel">
+  <div class="edhead"><h3 id="hoyTit">📋 Hoy</h3><button id="hoyClose">✕</button></div>
+  <div class="cfgbody" id="hoyBody"></div>
 </div>
 <div id="mtPanel" class="sidepanel">
   <div class="edhead"><h3>📊 Métricas <span class="label" id="mtProf"></span></h3><button id="mtClose">✕</button></div>
@@ -1403,7 +1422,7 @@ body.dsopen .modal{right:400px}
       await ed.removeEntry(h.name); ok++;
       envios.push({ name: h.name, ts: Date.now() });
     }
-    await kvSet(pk("envios"), envios.slice(-300));
+    await kvSet(pk("envios"), envios.slice(-300)); setTimeout(renderHoy, 0);
     await refreshListos(); renderSocios();
     return { ok, salt };
   }
@@ -3914,6 +3933,7 @@ body.dsopen .modal{right:400px}
     dsMedicos = (await kvGet("medicos")) || {};
     $("dsBtn").hidden = prof !== "diabetes";
     $("mstOpen").hidden = prof !== "diabetes";
+    $("hoyOpen").hidden = prof !== "diabetes";
     $("dsExport").hidden = prof !== "diabetes";
   }
   const dsOf = s => (surgeData[sidOf(s)] = surgeData[sidOf(s)] || { vals: {} });
@@ -4403,6 +4423,7 @@ body.dsopen .modal{right:400px}
   };
   $("mstFileBase").addEventListener("change", () => { const f = $("mstFileBase").files[0]; if (f) cargarBase(f); $("mstFileBase").value = ""; });
   function mstRender() {
+    setTimeout(renderHoy, 0);
     if (!mstData) return;
     const sel = $("mstAnalista");
     sel.innerHTML = `<option value="">Todos los analistas</option>${mstData.analistas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("")}<option value="__sin">(sin analista)</option>`;
@@ -4566,6 +4587,75 @@ body.dsopen .modal{right:400px}
     }
     catch (e) { toast("No pude volver a leer el Excel (¿lo moviste?). Elegilo de nuevo."); }
   };
+  /* 📋 Hoy: los 5 pasos para largar a ritmo normal + control semanal */
+  let hoyChk = {};
+  const habilesEntre = (a, b) => { let n = 0; for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) n++; return n; };
+  async function renderHoy() {
+    if (!$("hoyPanel").classList.contains("show")) return;
+    const hoy = new Date(), iso = hoyIso();
+    hoyChk = (await kvGet("hoy:" + iso)) || {};
+    const firmaCupo = (await kvGet("hoyFirmaCupo")) || 22;
+    const envHoy = ((await kvGet(pk("envios"))) || []).filter(e => isoDay(new Date(e.ts)) === iso).length;
+    const ofi = [3, 4, 5].includes(hoy.getDay());
+    $("hoyTit").textContent = "📋 Hoy · " + hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "numeric" });
+    const M = mstData && miBase ? mstData.G : null;
+    const bar = (h, c) => `<div class="hoybar"><i style="width:${Math.min(100, c ? h / c * 100 : 0)}%"></i></div>`;
+    const sinMaster = `<br><span class="label">Abrí el Master y tocá ↻ Actualizar (con 🧍 Mi base elegida) para ver los números.</span><br><button data-hoy="master">🗂 Abrir Master</button>`;
+    const pasos = [];
+    // 1 análisis
+    { const c = mstCupos.mi_an, h = M ? hechosHoy("mi_an") : 0;
+      pasos.push({ id: 1, auto: M && h >= c, html: `<b>Análisis al compartido</b><br>${M ? `<span class="n">${h} / ${c}</span> hoy · quedan ${M.mi_an.length} por pasar${bar(h, c)}<button data-hoy="mi_an">Ver tanda de hoy</button>` : sinMaster}` }); }
+    // 2 firma
+    { const c = firmaCupo, enE = settings.hold ? enEspera.length : null;
+      pasos.push({ id: 2, auto: envHoy >= c, html: `<b>Mandar a firma</b><br><span class="n">${envHoy} / <input id="hoyFirmaCupo" type="number" min="1" value="${c}" style="width:52px"></span> hoy${enE != null ? ` · ${enE} en espera` : ""}${bar(envHoy, c)}${settings.hold ? `<button data-hoy="firma">📤 Mandar a firmar</button>` : `<span class="label">Retener está apagado: lo que guardás va directo a firmar. Prendelo en ⚙ Configuración → Firma para dosificar.</span>`}` }); }
+    // 3 SURGE
+    { const c = mstCupos.mi_surge, h = M ? hechosHoy("mi_surge") : 0, t = M ? tandaDe("mi_surge") : [], min = t.reduce((s, x) => s + (x.min || 0), 0);
+      pasos.push({ id: 3, auto: M && h >= c, html: `<b>Cargas en SURGE</b><br>${M ? `<span class="n">${h} / ${c}</span> hoy · tanda pendiente ≈ ${min} min · quedan ${M.mi_surge.length}${bar(h, c)}<button data-hoy="mi_surge">Ver tanda de hoy</button>` : sinMaster}` }); }
+    // 4 y 5 manuales
+    pasos.push({ id: 4, html: `<b>Fila en emp. y reemp.</b><br><span class="label">Pegá en el compartido el bloque que copia Carga rápida al Enviar a revisión (lista "Excel pendientes").</span>` });
+    { const n = M ? hechosHoy("mi_an") + hechosHoy("mi_surge") : null;
+      pasos.push({ id: 5, html: `<b>Fecha en tu base</b><br><span class="label">Completá "Fecha cargado en base padron diabetes"${n != null ? ` de los ${n} que pasaste hoy` : ""}.</span>` }); }
+    let html = ofi ? `<div class="hoyofi">🏢 Día de oficina: producís a mano, como siempre. Los números de hoy salen del colchón.</div>` : "";
+    html += pasos.map(p => { const ok = !!(hoyChk[p.id] ?? p.auto); return `<div class="hoypaso ${ok ? "ok" : ""}"><input type="checkbox" data-hoychk="${p.id}" ${ok ? "checked" : ""}><div class="hoytxt">${p.id}. ${p.html}</div></div>`; }).join("");
+    // control
+    let ctl = "";
+    if (mstData) {
+      const yo = mstAnalista;
+      if (!yo) ctl += `Elegí tu nombre en 👤 Analista del Master para ver tu ritmo del mes.<br>`;
+      else {
+        const C = (mstData.cargas || []).filter(c => mNorm(c.a) === mNorm(yo));
+        const mk = d => d.getFullYear() * 12 + d.getMonth(), m0 = mk(hoy);
+        const esteMes = C.filter(c => mk(c.d) === m0).length;
+        const prev = [1, 2, 3].map(i => C.filter(c => mk(c.d) === m0 - i).length).filter(n => n > 0);
+        const prom = prev.length ? Math.round(prev.reduce((a, b) => a + b, 0) / prev.length) : null;
+        const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        const proy = Math.round(esteMes / Math.max(1, habilesEntre(ini, hoy)) * habilesEntre(ini, fin));
+        ctl += `<b>Tu mes (${escapeHtml(yo)}):</b> ${esteMes} cargados · a este ritmo cerrás en ~${proy}${prom != null ? ` · promedio de los meses anteriores: ${prom}` : ""}<br>`;
+        if (prom != null && proy > prom * 1.3) ctl += `<span class="warn">⚠ Vas un ${Math.round((proy / prom - 1) * 100)} % arriba de lo normal: bajá el cupo de SURGE.</span><br>`;
+      }
+      if (M) {
+        const dAn = M.mi_an.length / Math.max(1, mstCupos.mi_an), dSu = M.mi_surge.length / Math.max(1, mstCupos.mi_surge), d = Math.max(dAn, dSu);
+        ctl += `<b>Colchón:</b> ${Math.round(dAn)} días de análisis · ${Math.round(dSu)} días de SURGE<br>`;
+        if (d > 10) ctl += `<span class="warn">⚠ Más de 2 semanas guardadas: frená la producción y usá el tiempo en otra cosa.</span>`;
+      }
+    } else ctl = `Abrí el Master y tocá ↻ Actualizar para ver tu ritmo y el colchón.`;
+    html += `<div class="hoyctl">📊 <b>Control</b><br>${ctl}</div>`;
+    $("hoyBody").innerHTML = html;
+    const fc = $("hoyFirmaCupo"); if (fc) fc.onchange = async () => { await kvSet("hoyFirmaCupo", Math.max(1, +fc.value || 1)); renderHoy(); };
+  }
+  $("hoyBody").addEventListener("change", async e => {
+    const c = e.target.closest("[data-hoychk]"); if (!c) return;
+    hoyChk[c.dataset.hoychk] = c.checked; await kvSet("hoy:" + hoyIso(), hoyChk); renderHoy();
+  });
+  $("hoyBody").addEventListener("click", e => {
+    const b = e.target.closest("[data-hoy]"); if (!b) return;
+    const a = b.dataset.hoy;
+    if (a === "firma") { $("holdBtn").click(); return; }
+    $("hoyPanel").classList.remove("show"); $("mstOpen").click();
+    if (a === "mi_an" || a === "mi_surge") setTimeout(() => mstShow(a), 50);
+  });
+  $("hoyOpen").onclick = () => { closeEdPanel(); closeMetrics(); $("cfgPanel").classList.remove("show"); $("hoyPanel").classList.add("show"); renderHoy(); };
+  $("hoyClose").onclick = () => $("hoyPanel").classList.remove("show");
   $("mstOpen").onclick = async () => { $("mstPanel").hidden = false; mstAnalista = (await kvGet("mstAnalista")) || ""; if (!mstData) { const h = await kvGet("masterFile"); if (h) { $("mstInfo").textContent = "Tocá ↻ Actualizar para leer el Excel."; } } };
   $("mstClose").onclick = () => { $("mstPanel").hidden = true; };
 
