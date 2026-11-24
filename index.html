@@ -104,6 +104,7 @@
   .dsmot{color:#b45309;margin-top:2px}
   .mstmot{width:100%;min-width:180px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit}
   .mstmots{margin:4px 0 8px;font-size:13px}
+  .docb{position:absolute;left:6px;bottom:6px;z-index:3;background:#2b8a3e;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cfgbody details{border:1px solid var(--line);border-radius:10px;padding:6px 12px;margin:0 0 10px}
   .cfgbody summary{cursor:pointer;font-weight:700;padding:6px 0;font-size:14.5px}
   .cfgbody details h4{margin:10px 0 4px;font-size:13px;opacity:.85}
@@ -522,6 +523,7 @@ body.dsopen .modal{right:400px}
     <span class="label">Guardar como:</span>
     <input type="text" id="fname" value="documento.pdf">
     <button id="preview" title="Atajo: P">👁 Vista previa <kbd data-k="preview">P</kbd></button>
+    <button id="saveDocBtn" hidden title="Guarda las hojas marcadas como un documento (con el tipo de arriba) y te deja en el mismo socio para armar el siguiente">📄 Guardar documento y seguir <kbd data-k="saveDoc">Ctrl+Shift+S</kbd></button>
     <button class="primary" id="saveBtn" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd data-k="save">Ctrl+S</kbd></button>
     <button id="dlBtn">⬇ Descargar</button>
     <span id="status"></span>
@@ -690,6 +692,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -1198,6 +1201,7 @@ body.dsopen .modal{right:400px}
   // Muestra solo los campos que usa el formato de nombre
   function updateFieldInputs() {
     for (const f of Object.keys(FIELD_TOKENS)) { const el = $("f_" + f); if (el) el.parentElement.hidden = !usesTok(f); }
+    $("saveDocBtn").hidden = !usesTok("tipo");
   }
 
   /* ================= Carpetas ================= */
@@ -1661,7 +1665,7 @@ body.dsopen .modal{right:400px}
     const nt = noteOf(current);
     if (document.activeElement !== $("fechaPlanilla")) $("fechaPlanilla").value = nt.fp || "";
     if (document.activeElement !== $("obs")) $("obs").value = nt.obs || "";
-    $("fechaPlanilla").classList.toggle("missing", !nt.fp);
+    $("fechaPlanilla").classList.toggle("missing", !nt.fp && !usesTok("periodo"));
     for (const f of Object.keys(FIELD_TOKENS)) {
       const el = $("f_" + f);
       if (document.activeElement !== el) el.value = fieldVal(current, f);
@@ -1977,7 +1981,7 @@ body.dsopen .modal{right:400px}
       card.draggable = true;
       card.innerHTML = `
         ${isCut ? '<span class="cutlbl">✂ Nuevo archivo</span>' : ""}
-        <div class="thumb"><span class="num">${idx + 1}</span><span class="check">${it.on ? "✓" : ""}</span>${it.edited ? `<span class="edited">${it.edited === true ? "editada" : it.edited}</span>` : ""}</div>
+        <div class="thumb"><span class="num">${idx + 1}</span><span class="check">${it.on ? "✓" : ""}</span>${it.doc ? `<span class="docb">📄 ${escapeHtml(it.doc)}</span>` : ""}${it.edited ? `<span class="edited">${it.edited === true ? "editada" : it.edited}</span>` : ""}</div>
         <div class="meta"></div>
         <div class="tools">
           <button data-a="left" title="Mover antes">◀</button>
@@ -2363,7 +2367,7 @@ body.dsopen .modal{right:400px}
     const w = await fh.createWritable(); await w.write(data); await w.close();
   }
 
-  async function saveAllToListos(pdfs, base, say) {
+  async function saveAllToListos(pdfs, base, say, opts = {}) {
     if (!outDir) { say("Primero elegí la carpeta de listos (arriba).", "err"); return false; }
     const falta = current && !$("fname").dataset.manual ? missingFields(current) : [];
     if (falta.length) {
@@ -2371,7 +2375,7 @@ body.dsopen .modal{right:400px}
       const el = $("f_" + falta.find(f => f !== "cuil")); if (el) { el.focus(); el.classList.add("missing"); }
       return false;
     }
-    if (settings.requireFp && current && !noteOf(current).fp) {
+    if (settings.requireFp && current && !usesTok("periodo") && !noteOf(current).fp) {   // en Hs extras manda el período, no la fecha
       say(`Falta la fecha de planilla: cargala con ${KL("quickDate")} (o ${KL("readDate")} para leerla) y volvé a guardar.`, "err");
       toast(`📅 Falta la fecha de planilla — apretá ${KL("quickDate")} para cargarla.`);
       $("fechaPlanilla").classList.add("missing");
@@ -2393,7 +2397,7 @@ body.dsopen .modal{right:400px}
     if (!saved.length) { say("No se guardó nada (ya existían)."); return false; }
     if (settings.hold) { await refreshListos(); renderSocios(); }
     say(`✓ Guardado en "${settings.hold ? holdDir.name + " (en espera)" : outDir.name}": ${saved.join(", ")}`, "ok");
-    if (settings.autoNext) setTimeout(goNextAuto, 250);
+    if (settings.autoNext && !opts.noNext) setTimeout(goNextAuto, 250);
     return true;
   }
   function downloadAll(pdfs, base, say) {
@@ -2414,6 +2418,20 @@ body.dsopen .modal{right:400px}
     try { await fn(); } catch (e) { console.error(e); say("Error: " + (e.message || e), "err"); }
     finally { btn.disabled = false; }
   }
+  /* Hs extras (medicación): un PDF por documento (RHC, PASI, estudios…) sin salir del socio */
+  $("saveDocBtn").onclick = () => withBuild($("saveDocBtn"), setStatus, async () => {
+    const tipo = current ? fieldVal(current, "tipo") : "";
+    if (!tipo) { setStatus("Escribí arriba el tipo de este documento (RHC, PASI, estudio…) y volvé a guardar.", "err"); $("f_tipo").focus(); $("f_tipo").classList.add("missing"); return; }
+    $("fname").value = cleanName($("fname").value);
+    const ok = await saveAllToListos(await buildAll(setStatus), $("fname").value, setStatus, { noNext: true });
+    if (!ok) return;
+    items.forEach(it => { if (it.on) { it.doc = tipo; it.on = false; } });
+    render();
+    await setNote("tipo", ""); $("f_tipo").value = ""; $("fname").dataset.manual = ""; updateSocioHead();
+    const quedan = items.filter(it => !it.doc).length;
+    setStatus(`✓ ${tipo} guardado. ${quedan ? `Quedan ${quedan} hojas sin guardar: marcá las del próximo documento y escribí su tipo.` : "Ya guardaste todas las hojas de este socio."}`, "ok");
+    $("f_tipo").focus();
+  });
   $("saveBtn").onclick = () => withBuild($("saveBtn"), setStatus, async () => {
     $("fname").value = cleanName($("fname").value);
     await saveAllToListos(await buildAll(setStatus), $("fname").value, setStatus);
@@ -3194,7 +3212,9 @@ body.dsopen .modal{right:400px}
     // primero los guardados (tienen archivo); después las fechas de planilla que no tengan guardado ese día
     for (const r of [...dayLog, ...fpEvents()]) {
       const d = isoDay(new Date(r.ts)); if (d < from || d > to) continue;
-      const k = d + "|" + r.root + "|" + r.socio;
+      // Hs extras: cada documento (RHC, PASI…) es su propia fila
+      const base = d + "|" + r.root + "|" + r.socio, k = base + (r.file && r.tipo ? "|" + r.tipo : "");
+      if (r.viaFecha && !seen.has(k) && [...seen.keys()].some(x => x.startsWith(base + "|"))) continue;
       if (!seen.has(k)) seen.set(k, r);
       else if (seen.get(k).viaFecha === undefined && r.viaFecha && !seen.get(k).fp) seen.get(k).fp = r.fp;
     }
@@ -3295,13 +3315,16 @@ body.dsopen .modal{right:400px}
     if (Object.keys(cuilMap).length || usesTok("cuil")) cols.push(["CUIL", r => cuilMap[r.dni] || ""]);
     if (showNames()) cols.push(["Nombre y apellido", r => r.nombre]);
     if (usesTok("tipo")) cols.push(["Tipo", r => r.tipo]);
-    if (usesTok("periodo")) cols.push(["Período", r => r.periodo]);
-    cols.push(["Fecha planilla", r => fmtFecha(r.fp)], ["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs], ["Fecha análisis", r => r.ts ? fmtFecha(isoDay(new Date(r.ts))) : ""]);
+    // Hs extras: lo que importa es el mes; para el Excel va como 01/MM/AAAA (9-26 → 01/09/2026)
+    const perFecha = p => { const m = String(p || "").match(/^(\d{1,2})\D+(\d{2}|\d{4})$/); return m ? `01/${m[1].padStart(2, "0")}/${m[2].length === 2 ? "20" + m[2] : m[2]}` : (p || ""); };
+    if (usesTok("periodo")) cols.push(["Período", r => perFecha(r.periodo)]);
+    else cols.push(["Fecha planilla", r => fmtFecha(r.fp)]);
+    cols.push(["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs], ["Fecha análisis", r => r.ts ? fmtFecha(isoDay(new Date(r.ts))) : ""]);
     return cols;
   }
   // Repartir: lo hecho se pasa al Excel de a una tanda por día (del más viejo al más nuevo)
   let pasados = new Set(), repDesde = 0;
-  const repKey = r => isoDay(new Date(r.ts)) + "|" + r.root + "|" + r.socio;
+  const repKey = r => isoDay(new Date(r.ts)) + "|" + r.root + "|" + r.socio + (r.file && r.tipo ? "|" + r.tipo : "");
   function repRows() {
     return savesIn("0000-00-00", "9999-12-31").filter(r => r.ts >= repDesde && !pasados.has(repKey(r))).sort((a, b) => a.ts - b.ts);
   }
@@ -3619,6 +3642,7 @@ body.dsopen .modal{right:400px}
     ["invert", "Invertir selección", "i"],
     ["preview", "Abrir vista previa", "p"],
     ["save", "Guardar en Listos", "ctrl+s"],
+    ["saveDoc", "Guardar documento y seguir (Hs extras)", "ctrl+shift+s"],
     ["quickDate", "Fecha de planilla a mano", "q"],
     ["readDate", "Leer fecha manuscrita", "f"],
     ["photopea", "Abrir en Photopea", "e"],
@@ -3808,6 +3832,9 @@ body.dsopen .modal{right:400px}
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
     const pvOpen = pv.classList.contains("show"), ppOpen = $("ppOv").classList.contains("show");
     // Ctrl + S: guardar (en Listos si hay carpeta; si no, descargar)
+    if (keyIs(e, "saveDoc") && !$("saveDocBtn").hidden && !pvOpen && !ppOpen) {
+      e.preventDefault(); if (typing) e.target.blur(); setTimeout(() => $("saveDocBtn").click(), 0); return;
+    }
     if (keyIs(e, "save")) {
       e.preventDefault();
       if (ppOpen) return;
