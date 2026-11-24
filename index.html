@@ -1237,6 +1237,7 @@ body.dsopen .modal{right:400px}
     toast(`No encuentro la carpeta ${nombre}. Si la renombraste o la moviste, tocá "Elegir" y seleccionala de nuevo.`, { sticky: true });
   }
   async function safePerm(h) { try { return !!h && await hasPerm(h, false); } catch (e) { return false; } }
+  let rootDiag = "";
   async function refreshAll() {
     $("rootName").textContent = rootDir ? rootDir.name : "—";
     $("outName").textContent = outDir ? outDir.name : "—";
@@ -1275,6 +1276,15 @@ body.dsopen .modal{right:400px}
       }
       socios.sort((a, b) => natural(a.name, b.name) || natural(a.tanda || "", b.tanda || ""));
     } catch (e) { socios = []; tandas = []; folderProblem("root", e); }
+    // Diagnóstico: si no apareció ningún socio, decir qué hay en la carpeta elegida
+    rootDiag = "";
+    if (okRoot && !socios.length) try {
+      const vis = [], dirs = [], files = []; let n = 0;
+      const mirar = async (d, pre, nivel) => { for await (const [name, h] of d.entries()) { if (++n > 400) return; (h.kind === "directory" ? dirs : files).push(pre + name); if (vis.length < 12) vis.push((h.kind === "directory" ? "📁 " : "📄 ") + pre + name); if (h.kind === "directory" && nivel < 1) await mirar(h, pre + name + "\\", nivel + 1); } };
+      await mirar(rootDir, "", 0);
+      rootDiag = !dirs.length && !files.length ? `La carpeta "${rootDir.name}" se ve vacía desde Chrome (puede ser OneDrive con archivos solo en la nube, o que no esté descomprimida).`
+        : `No encontré carpetas de socios (tienen que empezar con el DNI). En "${rootDir.name}" veo: ${vis.join(" · ")}${dirs.length + files.length > vis.length ? " …" : ""}`;
+    } catch (e) { rootDiag = "No pude leer la carpeta: " + e.message; }
     renderTandas();
     renderSocios();            // la lista aparece ya; listos y firmados se completan enseguida
     try { await refreshListos(okOut); } catch (e) { listos = new Set(); listosMap = new Map(); folderProblem("out", e); }
@@ -1600,7 +1610,7 @@ body.dsopen .modal{right:400px}
       box.appendChild(row);
     }
     if (typeof renderMetrics === "function") setTimeout(renderMetrics, 0);
-    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos${c.incompleta ? ` · ${c.incompleta} incompletos` : ""} · ${c.listo} listos${c.firmado ? ` · ${c.firmado} firmados` : ""}` : "";
+    $("counts").textContent = socios.length ? `${socios.length} socios · ${c.pend} pendientes · ${c.noapto} no aptos${c.incompleta ? ` · ${c.incompleta} incompletos` : ""} · ${c.listo} listos${c.firmado ? ` · ${c.firmado} firmados` : ""}` : (rootDiag ? "⚠ " + rootDiag : "");
     const rb = $("repBar");
     rb.hidden = !(nRec || nOcultos || nViejo);
     if (!rb.hidden) {
