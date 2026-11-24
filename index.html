@@ -460,7 +460,7 @@ body.dsopen .modal{right:400px}
       <div class="socio-notes" id="socioNotes" hidden>
         <label>📅 Fecha planilla <input type="date" id="fechaPlanilla"></label>
         <label class="fld" hidden>👤 <input type="text" id="f_nombre" placeholder="Nombre y apellido"></label>
-        <label class="fld" hidden>📄 <input type="text" id="f_tipo" list="tiposList" placeholder="Tipo de documentación"></label>
+        <label class="fld" hidden>📄 <input type="text" id="f_tipo" list="tiposList" placeholder="Tipo y período (ej: RHC 9-26)"></label>
         <label class="fld" hidden>🗓 <input type="text" id="f_periodo" placeholder="Período (ej: 9-26)" size="9"></label>
         <datalist id="tiposList"></datalist>
         <input type="text" id="obs" placeholder="Observación (opcional)…">
@@ -538,7 +538,7 @@ body.dsopen .modal{right:400px}
     <span class="label">Nombre:</span>
     <input type="text" id="pvName">
     <span class="pvfields" id="pvFields" hidden>
-      <input type="text" id="pv_tipo" list="tiposList" placeholder="Tipo (ej: RHC)">
+      <input type="text" id="pv_tipo" list="tiposList" placeholder="Tipo y período (ej: RHC 9-26)">
       <input type="text" id="pv_periodo" placeholder="Período (ej: 9-26)">
     </span>
     <button class="primary" id="pvSave" title="Atajo: Ctrl + S">💾 Guardar en Listos <kbd data-k="save">Ctrl+S</kbd></button>
@@ -692,7 +692,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -1707,6 +1707,11 @@ body.dsopen .modal{right:400px}
     const el = $("f_" + f);
     el.addEventListener("change", async () => {
       let v = el.value.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+      // "RHC 9-26" en el tipo: se separa en tipo (RHC) y período (9-26)
+      if (f === "tipo" && usesTok("periodo")) {
+        const m = v.match(/^(.*?)\s+(\d{1,2})\s*[-./]\s*(\d{2}|\d{4})$/);
+        if (m && m[1]) { v = m[1].trim(); const per = `${+m[2]}-${m[3].slice(-2)}`; $("f_periodo").value = per; await setNote("periodo", per); }
+      }
       if (f === "periodo") { const m = v.match(/^(\d{1,2})\D+(\d{2,4})$/); if (m) v = `${+m[1]}-${m[2].slice(-2)}`; }
       el.value = v;
       await setNote(f, v);
@@ -2953,6 +2958,16 @@ body.dsopen .modal{right:400px}
   // Tecla F
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "readDate")) return;
+    // Hs extras: la F lleva al tipo de documentación, donde se escribe "RHC 9-26" (tipo y período juntos)
+    if (usesTok("tipo") && current && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && $("fdlg").hidden && !$("ppOv").classList.contains("show") && !$("work").hidden) {
+      e.preventDefault();
+      if (modal.classList.contains("show")) $("mclose").click();
+      const el = pv.classList.contains("show") ? $("pv_tipo") : $("f_tipo");
+      const p = fieldVal(current, "periodo"), t = fieldVal(current, "tipo");
+      if (!t && p) el.value = " " + p;   // deja el período y el cursor al principio para escribir el tipo
+      el.focus(); if (!t && p) el.setSelectionRange(0, 0); else el.select();
+      return;
+    }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || !$("fdlg").hidden || pv.classList.contains("show") || $("ppOv").classList.contains("show") || $("work").hidden) return;
     e.preventDefault();
     readDate(modal.classList.contains("show") ? zItem : (hoverItem || lastClicked));
@@ -3644,7 +3659,7 @@ body.dsopen .modal{right:400px}
     ["save", "Guardar en Listos", "ctrl+s"],
     ["saveDoc", "Guardar documento y seguir (Hs extras)", "ctrl+shift+s"],
     ["quickDate", "Fecha de planilla a mano", "q"],
-    ["readDate", "Leer fecha manuscrita", "f"],
+    ["readDate", "Leer fecha manuscrita (Hs extras: tipo y período)", "f"],
     ["photopea", "Abrir en Photopea", "e"],
     ["surge", "Datos para SURGE (panel)", "d"],
     ["toEdit", "Mandar a Para editar (lista)", "l"],
