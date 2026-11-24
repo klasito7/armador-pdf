@@ -104,7 +104,7 @@
   .dsmot{color:#b45309;margin-top:2px}
   .mstmot{width:100%;min-width:180px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit}
   .mstmots{margin:4px 0 8px;font-size:13px}
-  #hastaBox{position:fixed;left:14px;bottom:110px;z-index:45;background:var(--panel);border:2px solid #2b6cdf;border-radius:10px;padding:5px 11px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:grab;user-select:none;touch-action:none;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+  #hastaBox{position:fixed;left:14px;bottom:calc(var(--footH,90px) + 10px);z-index:45;background:var(--panel);border:2px solid #2b6cdf;border-radius:10px;padding:5px 11px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:grab;user-select:none;touch-action:none;display:flex;flex-direction:column;align-items:center;line-height:1.2}
   #hastaBox[hidden]{display:none}
   #hastaBox span{font-size:11px;opacity:.75}
   #hastaBox b{font-size:16px}
@@ -191,7 +191,7 @@
   .filters button{font-size:12px;padding:3px 8px;border-radius:999px}
   .filters button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
   .counts{font-size:12px;color:var(--muted)}
-  #socios{overflow:auto;flex:1}
+  #socios{overflow:auto;flex:1;padding-bottom:var(--footH,0px)}
   .socio{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .socio:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
   .socio.sel{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
@@ -209,7 +209,7 @@
   .repbar button{font-size:12px;padding:2px 8px}
   #socioRep{font-size:12.5px;margin:2px 0 4px}
 
-  main{flex:1;overflow:auto;padding:14px 20px 150px;min-width:0}
+  main{flex:1;overflow:auto;padding:14px 20px calc(var(--footH,0px) + 30px);min-width:0}
   .setup{max-width:680px;margin:30px auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
   .setup h2{margin:0 0 8px;font-size:19px}
   .setup p{color:var(--muted);line-height:1.5;margin:6px 0 14px}
@@ -1660,6 +1660,13 @@ body.dsopen .modal{right:400px}
     $("fname").value = isSocio ? nameFor(s) : "documento.pdf";
     updateTplPreview();
   }
+  // La barra de abajo es fija: la lista de socios y la zona de trabajo dejan ese espacio libre para que nada quede tapado
+  (() => {
+    const f = $("footer"), set = () => document.documentElement.style.setProperty("--footH", (f.hidden ? 0 : f.offsetHeight) + "px");
+    try { new ResizeObserver(set).observe(f); } catch (e) {}
+    new MutationObserver(set).observe(f, { attributes: true, attributeFilter: ["hidden"] });
+    window.addEventListener("resize", set); set();
+  })();
   /* Ventanita flotante "Fecha hasta": movible, recuerda dónde la dejaste */
   function renderHasta() {
     const b = $("hastaBox"), v = current && hastaMap[current.dni];
