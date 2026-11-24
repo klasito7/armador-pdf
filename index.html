@@ -104,6 +104,17 @@
   .dsmot{color:#b45309;margin-top:2px}
   .mstmot{width:100%;min-width:180px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit}
   .mstmots{margin:4px 0 8px;font-size:13px}
+  #qpPanel{position:fixed;inset:0;z-index:72;background:#0007;display:flex;align-items:center;justify-content:center}
+  #qpPanel[hidden]{display:none}
+  .qpbox{background:var(--panel);border-radius:12px;padding:14px 18px;width:min(720px,96vw);max-height:92vh;overflow:auto;box-shadow:0 10px 40px #0006}
+  #qpDrop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;margin:8px 0;font-size:14px}
+  #qpDrop.over{border-color:#2b6cdf;background:color-mix(in srgb,#2b6cdf 8%,transparent)}
+  #qpList{margin:6px 0 10px;padding-left:22px;max-height:45vh;overflow:auto}
+  #qpList li{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+  #qpList img{width:44px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+  #qpList .pdfi{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line);border-radius:4px}
+  #qpList .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  #qpList button{padding:2px 7px}
   #hastaBox{position:fixed;left:14px;bottom:calc(var(--footH,90px) + 10px);z-index:45;background:var(--panel);border:2px solid #2b6cdf;border-radius:10px;padding:5px 11px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:grab;user-select:none;touch-action:none;display:flex;flex-direction:column;align-items:center;line-height:1.2}
   #hastaBox[hidden]{display:none}
   #hastaBox span{font-size:11px;opacity:.75}
@@ -385,6 +396,7 @@ body.dsopen .modal{right:400px}
     <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
     <button id="hoyOpen" title="Lo que tenés que largar hoy para mantener los números normales">📋 Hoy</button>
     <button id="mstOpen" title="Qué hacer con cada socio según el Excel compartido">🗂 Master</button>
+    <button id="qpOpen" title="Pegar imágenes y pasarlas a PDF, o combinar varios PDF en uno">🧰 PDF rápido</button>
     <button id="cfgOpen" title="Configuración: atajos de teclado">⚙</button>
     <button id="infoOpen" title="Manual de uso y guía de trabajo">ℹ Info</button>
     <button id="edOpen" title="Planillas que mandaste a editar">📝 Para editar <span class="badge" id="edCount" hidden>0</span></button>
@@ -697,7 +709,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>🧰 PDF rápido (arriba):</b> aparte de los socios. Pegá imágenes con Ctrl+V (capturas, fotos copiadas), arrastralas o elegí JPG, PNG o PDF; ordená con ▲▼ y tocá ⬇ Armar y descargar PDF (o 💾 Guardar en Listos). Cada imagen va en una hoja A4 (vertical u horizontal según la imagen); los PDF se suman enteros, así también sirve para combinar PDF. Esc cierra. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -1017,6 +1029,19 @@ body.dsopen .modal{right:400px}
     <div id="cfgKeys"></div>
     <button id="cfgReset" class="danger">Restablecer atajos originales</button>
     </details>
+  </div>
+</div>
+<div id="qpPanel" hidden>
+  <div class="qpbox">
+    <div class="edhead"><h3>🧰 PDF rápido</h3><button id="qpClose">✕</button></div>
+    <p class="label">Pegá imágenes con <b>Ctrl+V</b> (capturas, fotos copiadas), arrastralas acá o elegí archivos. También podés sumar PDF para <b>combinarlos</b>. Ordená con ▲▼ y armá un solo PDF. No usa carpetas ni socios.</p>
+    <div id="qpDrop">📥 Pegá (Ctrl+V) o soltá acá JPG, PNG o PDF · <button id="qpPick">Elegir archivos…</button><input type="file" id="qpFile" multiple accept="image/*,.pdf,application/pdf" hidden></div>
+    <ol id="qpList"></ol>
+    <div class="frow"><label>Nombre: <input id="qpName" value="documento" style="width:240px"></label><span class="label">.pdf</span>
+      <button id="qpClear">Vaciar</button>
+      <button id="qpOut" title="Guardarlo en tu carpeta de Listos">💾 Guardar en Listos</button>
+      <button class="primary" id="qpGo">⬇ Armar y descargar PDF</button></div>
+    <p id="qpStatus" class="label"></p>
   </div>
 </div>
 <div id="hastaBox" hidden title="Fecha hasta de este socio (desde cuándo bajar la documentación). Arrastrala adonde no moleste."><span>📅 Fecha hasta</span><b id="hastaVal"></b></div>
@@ -4689,6 +4714,98 @@ body.dsopen .modal{right:400px}
     }
     catch (e) { toast("No pude volver a leer el Excel (¿lo moviste?). Elegilo de nuevo."); }
   };
+  /* 🧰 PDF rápido: imágenes pegadas o archivos -> un PDF; también combina PDF. Independiente de socios y carpetas. */
+  const qp = []; // {name, type: "img"|"pdf", bytes, url}
+  const qpSay = (t, c) => { $("qpStatus").textContent = t; $("qpStatus").style.color = c === "err" ? "#c0392b" : ""; };
+  function qpRender() {
+    $("qpList").innerHTML = qp.map((x, i) => `<li>${x.type === "img" ? `<img src="${x.url}">` : `<span class="pdfi">📄</span>`}<span class="nm">${escapeHtml(x.name)}</span><button data-qp="up" data-i="${i}" ${i ? "" : "disabled"}>▲</button><button data-qp="down" data-i="${i}" ${i < qp.length - 1 ? "" : "disabled"}>▼</button><button data-qp="del" data-i="${i}">✕</button></li>`).join("");
+    qpSay(qp.length ? `${qp.length} archivo(s) en la lista.` : "Todavía no hay nada.");
+  }
+  async function qpAdd(files) {
+    let n = 0;
+    for (const f of files) {
+      const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name || "");
+      if (!isPdf && !/^image\//.test(f.type)) continue;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      qp.push({ name: f.name && f.name !== "image.png" ? f.name : `imagen pegada ${qp.length + 1}`, type: isPdf ? "pdf" : "img", bytes, mime: f.type, url: isPdf ? "" : URL.createObjectURL(f) });
+      n++;
+    }
+    qpRender(); if (n) qpSay(`✓ Agregados ${n}. Total: ${qp.length}.`); else qpSay("No encontré imágenes ni PDF en eso.", "err");
+  }
+  // Imagen -> JPG o PNG que pdf-lib entienda (WEBP, GIF, etc. se pasan a JPG)
+  async function qpImgBytes(x) {
+    if (/jpe?g/i.test(x.mime)) return { kind: "jpg", bytes: x.bytes };
+    if (/png/i.test(x.mime)) return { kind: "png", bytes: x.bytes };
+    const img = await new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = x.url; });
+    const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0);
+    const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.92));
+    return { kind: "jpg", bytes: new Uint8Array(await b.arrayBuffer()) };
+  }
+  async function qpBuild() {
+    if (!qp.length) { qpSay("Primero pegá o elegí archivos.", "err"); return null; }
+    qpSay("Armando el PDF…");
+    await libs();
+    const out = await PDFDocument.create();
+    for (const x of qp) {
+      if (x.type === "pdf") {
+        try {
+          const src = await PDFDocument.load(x.bytes, { ignoreEncryption: true });
+          for (const pg of await out.copyPages(src, src.getPageIndices())) out.addPage(pg);
+        } catch (e) { qpSay(`No pude leer "${x.name}": ${e.message}`, "err"); return null; }
+      } else {
+        const { kind, bytes } = await qpImgBytes(x);
+        const im = kind === "jpg" ? await out.embedJpg(bytes) : await out.embedPng(bytes);
+        // A4 vertical u horizontal según la imagen, con la imagen centrada y entera
+        const land = im.width > im.height, W = land ? 842 : 595, H = land ? 595 : 842, m = 18;
+        const k = Math.min((W - 2 * m) / im.width, (H - 2 * m) / im.height);
+        const page = out.addPage([W, H]);
+        page.drawImage(im, { x: (W - im.width * k) / 2, y: (H - im.height * k) / 2, width: im.width * k, height: im.height * k });
+      }
+    }
+    return { bytes: await out.save(), pages: out.getPageCount() };
+  }
+  const qpFileName = () => cleanName($("qpName").value || "documento").replace(/\.pdf$/i, "") + ".pdf";
+  $("qpGo").onclick = async () => {
+    try { const r = await qpBuild(); if (!r) return; downloadBytes(r.bytes, qpFileName()); qpSay(`✓ Listo: ${qpFileName()} (${r.pages} página${r.pages === 1 ? "" : "s"}). Quedó en Descargas.`); }
+    catch (e) { qpSay("No pude armar el PDF: " + e.message, "err"); }
+  };
+  $("qpOut").onclick = async () => {
+    if (!outDir) { qpSay("No tenés elegida la carpeta de Listos en este apartado: usá ⬇ Descargar.", "err"); return; }
+    try {
+      const r = await qpBuild(); if (!r) return;
+      if ((await outDir.queryPermission({ mode: "readwrite" })) !== "granted" && (await outDir.requestPermission({ mode: "readwrite" })) !== "granted") { qpSay("Chrome no dio permiso para escribir en Listos.", "err"); return; }
+      const name = qpFileName();
+      if (await fileExists(outDir, name) && !confirm(`Ya existe "${name}" en Listos. ¿Reemplazarlo?`)) return;
+      const fh = await outDir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(r.bytes); await w.close();
+      qpSay(`✓ Guardado en Listos: ${name} (${r.pages} página${r.pages === 1 ? "" : "s"}).`);
+    } catch (e) { qpSay("No pude guardar: " + e.message, "err"); }
+  };
+  $("qpList").addEventListener("click", e => {
+    const b = e.target.closest("[data-qp]"); if (!b) return; const i = +b.dataset.i;
+    if (b.dataset.qp === "del") { const [x] = qp.splice(i, 1); if (x.url) URL.revokeObjectURL(x.url); }
+    else { const j = b.dataset.qp === "up" ? i - 1 : i + 1; [qp[i], qp[j]] = [qp[j], qp[i]]; }
+    qpRender();
+  });
+  $("qpClear").onclick = () => { qp.splice(0).forEach(x => x.url && URL.revokeObjectURL(x.url)); qpRender(); };
+  $("qpPick").onclick = () => $("qpFile").click();
+  $("qpFile").onchange = () => { qpAdd([...$("qpFile").files]); $("qpFile").value = ""; };
+  const qpDrop = $("qpDrop");
+  qpDrop.addEventListener("dragover", e => { e.preventDefault(); qpDrop.classList.add("over"); });
+  qpDrop.addEventListener("dragleave", () => qpDrop.classList.remove("over"));
+  qpDrop.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); qpDrop.classList.remove("over"); qpAdd([...e.dataTransfer.files]); });
+  // Ctrl+V con el panel abierto: toma las imágenes del portapapeles (no molesta a otros pegados de la página)
+  window.addEventListener("paste", e => {
+    if ($("qpPanel").hidden || e.target === $("qpName")) return;
+    const fs = [...(e.clipboardData && e.clipboardData.files || [])];
+    if (!fs.length) return;
+    e.preventDefault(); e.stopImmediatePropagation(); qpAdd(fs);
+  }, true);
+  $("qpOpen").onclick = () => { $("qpPanel").hidden = false; qpRender(); libs().catch(() => {}); };
+  $("qpClose").onclick = () => { $("qpPanel").hidden = true; };
+  $("qpPanel").addEventListener("click", e => { if (e.target === $("qpPanel")) $("qpPanel").hidden = true; });
+  // Con el panel abierto, los atajos del Armador no se disparan (Esc cierra; Ctrl+V pega)
+  document.addEventListener("keydown", e => { if ($("qpPanel").hidden) return; e.stopImmediatePropagation(); if (e.key === "Escape") $("qpPanel").hidden = true; }, true);
   /* 📋 Hoy: los 5 pasos para largar a ritmo normal + control semanal */
   let hoyChk = {};
   const habilesEntre = (a, b) => { let n = 0; for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) n++; return n; };
