@@ -697,7 +697,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -994,7 +994,8 @@ body.dsopen .modal{right:400px}
     <button id="set_holdPick" class="b">📁 Carpeta de espera: elegir…</button>
     <p class="label">Elegí (o creá) una carpeta <b>aparte</b>, por ejemplo "En espera", fuera de la de listos/para firmar. Lo guardado queda ahí y ya cuenta como Listo. Con <b>📤 Mandar a firmar</b> pasás la cantidad que elijas a la carpeta de listos, a mano o en automático.</p>
     <h4>Firmados</h4>
-    <p class="edhint">Un PDF firmado cuenta solo si se firmó después de que dejaste listo a ese socio en el Armador (así no se confunden con los del año pasado). Si el Armador no tiene registro de ese socio, se toman los firmados de los últimos:</p>
+    <label class="cfgchk"><input type="checkbox" id="set_firmSoloMios"> Contar como firmado solo el PDF que guardé yo en el Armador (recomendado: así no cuentan los de compañeros ni los de otro apartado)</label>
+    <p class="edhint">Con la opción de arriba prendida, un socio queda ✍ Firmado solo si en Firmados aparece el mismo PDF que guardaste vos (con "_signed"), firmado después de guardarlo. Si la apagás, cuenta cualquier PDF con su DNI o CUIL firmado después de dejarlo listo o, si el Armador no tiene registro de ese socio, en los últimos:</p>
     <label class="cfgchk"><input type="number" id="set_signDays" min="1" max="365" style="width:70px"> días</label>
     </details>
     <details open><summary>🔁 Historial de socios</summary>
@@ -1364,10 +1365,18 @@ body.dsopen .modal{right:400px}
     const n = noteOf(s); if (n.fpTs && n.fpTs > t) t = n.fpTs;
     return t;
   }
-  // Firmado = hay un PDF con su DNI o CUIL en el nombre, firmado DESPUÉS de que lo dejaste listo.
-  // Si el Armador no tiene registro de ese socio, vale solo si se firmó en los últimos N días (Configuración).
+  // Firmado = en Firmados está el MISMO archivo que guardaste para ese socio (nombre + "_signed"), firmado después de guardarlo.
+  // Así no cuentan los firmados de compañeros, de otro apartado o del año pasado.
+  // Solo si apagás "solo lo mío" en Configuración vuelve a la regla vieja (cualquier PDF con su DNI o CUIL).
+  const sinFirma = n => n.toLowerCase().replace(/\.pdf$/, "").replace(/[\s_-]*signed$/, "").trim();
   function isFirmado(s) {
     if (!firmados.length) return false;
+    const mios = new Map();   // nombre guardado -> cuándo
+    for (const r of dayLog) if (r.socio === s.name && r.root === scopeOf(s) && r.file) {
+      const k = sinFirma(r.file); if (!mios.has(k) || r.ts > mios.get(k)) mios.set(k, r.ts);
+    }
+    if (mios.size) return firmados.some(f => { const t = mios.get(sinFirma(f.n)); return t !== undefined && f.t >= t - 10 * 60 * 1000; });
+    if (settings.firmSoloMios !== false) return false;
     const ids = [s.dni, cuilOf(s)].filter(Boolean);
     const desde = listoDesde(s);
     const minimo = desde ? desde - 10 * 60 * 1000 : Date.now() - (settings.signDays || 30) * 24 * 3600 * 1000;
@@ -3832,7 +3841,7 @@ body.dsopen .modal{right:400px}
   });
 
   /* Opciones generales */
-  let settings = { autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true, hold: false, holdN: 10, hideRep: false };
+  let settings = { firmSoloMios: true, autoNext: true, autoNextQ: false, openFirst: true, signDays: 30, requireFp: true, hold: false, holdN: 10, hideRep: false };
   async function goNextAuto() {
     const n = nextPending();
     if (!n) { toast("🎉 No quedan pendientes en esta fecha."); return; }
@@ -3846,9 +3855,10 @@ body.dsopen .modal{right:400px}
   function renderSettings() {
     for (const k of Object.keys(settings)) { const el = $("set_" + k); if (el) { if (el.type === "checkbox") el.checked = !!settings[k]; else el.value = settings[k]; } }
   }
-  for (const k of ["autoNext", "autoNextQ", "openFirst", "requireFp", "hold"]) {
+  for (const k of ["autoNext", "autoNextQ", "openFirst", "requireFp", "hold", "firmSoloMios"]) {
     $("set_" + k).addEventListener("change", async () => {
       settings[k] = $("set_" + k).checked; kvSet("settings", settings);
+      if (k === "firmSoloMios") { renderSocios(); if (current) updateSocioHead(); }
       if (k === "hold") { if (settings.hold && !holdDir && !(await pickHold())) { settings.hold = false; $("set_hold").checked = false; kvSet("settings", settings); } updateHoldUi(); }
     });
   }
