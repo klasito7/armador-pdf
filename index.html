@@ -574,6 +574,7 @@ body.dsopen .modal{right:400px}
     <span id="zPageLbl"></span>
     <button id="zNext" title="Página siguiente (→)">▶</button>
     <button id="zIncl" title="Incluir / excluir esta página (Espacio)"></button>
+    <button id="zRotL" title="Rotar 90° a la izquierda (Shift+R)">⟲</button><button id="zRotR" title="Rotar 90° a la derecha (R)">⟳ <kbd data-k="rotate">R</kbd></button>
     <span class="sep"></span>
     <button id="zOut" title="Alejar">−</button><span id="zZoomVal">100%</span><button id="zIn" title="Acercar">+</button><button id="zFitBtn">Ajustar</button>
     <span class="label">· ruedita = zoom</span>
@@ -696,7 +697,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -2212,6 +2213,10 @@ body.dsopen .modal{right:400px}
   $("zPrev").onclick = () => zGo(-1);
   $("zNext").onclick = () => zGo(1);
   $("zIncl").onclick = () => { zItem.on = !zItem.on; zUpdateBar(); render(); };
+  // Rotar desde el visor: queda igual que el ⟳ de la tarjeta (se aplica al guardar)
+  const zRot = d => { if (!zItem) return; zItem.rot = (zItem.rot + d + 360) % 360; render(); zoom(zItem); };
+  $("zRotR").onclick = () => zRot(90);
+  $("zRotL").onclick = () => zRot(-90);
   $("zIn").onclick = () => setZoom(zZoom * 1.25);
   $("zOut").onclick = () => setZoom(zZoom / 1.25);
   $("zFitBtn").onclick = () => setZoom(1);
@@ -2250,6 +2255,8 @@ body.dsopen .modal{right:400px}
     if (keyIs(e, "prevPage")) { e.preventDefault(); zGo(-1); }
     else if (keyIs(e, "nextPage")) { e.preventDefault(); zGo(1); }
     else if (keyIs(e, "toggleIncl")) { e.preventDefault(); $("zIncl").click(); }
+    else if (keyIs(e, "rotate")) { e.preventDefault(); zRot(90); }
+    else if (e.shiftKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); zRot(-90); }
   });
   $("zAngle").addEventListener("input", () => { zAng = +$("zAngle").value; $("zAngleVal").textContent = zAng + "°"; zDraw(); });
   $("zClearCrop").onclick = () => { zRect = null; zShowSel(); };
@@ -3690,7 +3697,8 @@ body.dsopen .modal{right:400px}
     ["closePreview", "Cerrar hoja en grande / vista previa", "enter"],
     ["toggleIncl", "Incluir/excluir hoja (en grande)", "space"],
     ["prevPage", "Hoja anterior (en grande)", "arrowleft"],
-    ["nextPage", "Hoja siguiente (en grande)", "arrowright"]
+    ["nextPage", "Hoja siguiente (en grande)", "arrowright"],
+    ["rotate", "Rotar 90° a la derecha (en grande)", "r"]
   ];
   const KEY_DEFAULTS = Object.fromEntries(KEY_ACTIONS.map(([a, , k]) => [a, k]));
   // Antes la E era "Para editar": si quedó guardada así, pasa a L y la E queda para Photopea
@@ -3892,7 +3900,7 @@ body.dsopen .modal{right:400px}
   /* Barra de atajos incrustada: se mueve al apartado en el que estás y cambia su contenido */
   const KB = {
     get lista() { return ["Lista de páginas", [["Clic", "ver en grande"], ["Ctrl+clic", "incluir/excluir"], ["Shift+clic", "tramo"], [KL("none"), "ninguna"], [KL("all"), "todas"], [KL("invert"), "invertir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("photopea"), "Photopea"], [KL("toEdit"), "para editar"], [KL("preview"), "vista previa"], [KL("save"), "guardar"]]]; },
-    get visor() { return ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], [KL("prevPage") + " " + KL("nextPage"), "página"], [KL("toggleIncl"), "incluir/excluir"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("photopea"), "Photopea"], [KL("toEdit"), "para editar"], [KL("closePreview"), "cerrar"], ["Clic afuera", "cerrar"]]]; },
+    get visor() { return ["Hoja en grande", [["Ruedita", "zoom"], ["Arrastrar", "mover"], [KL("prevPage") + " " + KL("nextPage"), "página"], [KL("toggleIncl"), "incluir/excluir"], [KL("rotate") + " / Shift+R", "rotar"], [KL("quickDate"), "fecha a mano"], [KL("readDate"), "leer fecha"], [KL("photopea"), "Photopea"], [KL("toEdit"), "para editar"], [KL("closePreview"), "cerrar"], ["Clic afuera", "cerrar"]]]; },
     get previa() { return ["Vista previa", [[KL("quickDate"), "fecha a mano"], ["Ctrl+ruedita", "zoom"], ["Arrastrar", "mover"], [KL("save"), "guardar"], [KL("closePreview"), "volver"], ["Clic afuera", "volver"]]]; },
     panel: ["Para editar", [["Enter", "guardar nota"], ["✕", "descartar"], ["Esc", "cerrar"]]]
   };
