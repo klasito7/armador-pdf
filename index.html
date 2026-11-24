@@ -104,6 +104,10 @@
   .dsmot{color:#b45309;margin-top:2px}
   .mstmot{width:100%;min-width:180px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit}
   .mstmots{margin:4px 0 8px;font-size:13px}
+  #hastaBox{position:fixed;left:14px;bottom:110px;z-index:45;background:var(--panel);border:2px solid #2b6cdf;border-radius:10px;padding:5px 11px;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:grab;user-select:none;touch-action:none;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+  #hastaBox[hidden]{display:none}
+  #hastaBox span{font-size:11px;opacity:.75}
+  #hastaBox b{font-size:16px}
   .docb{position:absolute;left:6px;bottom:6px;z-index:3;background:#2b8a3e;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cfgbody details{border:1px solid var(--line);border-radius:10px;padding:6px 12px;margin:0 0 10px}
   .cfgbody summary{cursor:pointer;font-weight:700;padding:6px 0;font-size:14.5px}
@@ -692,7 +696,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -1013,6 +1017,7 @@ body.dsopen .modal{right:400px}
     </details>
   </div>
 </div>
+<div id="hastaBox" hidden title="Fecha hasta de este socio (desde cuándo bajar la documentación). Arrastrala adonde no moleste."><span>📅 Fecha hasta</span><b id="hastaVal"></b></div>
 <div id="hoyPanel" class="sidepanel">
   <div class="edhead"><h3 id="hoyTit">📋 Hoy</h3><button id="hoyClose">✕</button></div>
   <div class="cfgbody" id="hoyBody"></div>
@@ -1115,6 +1120,7 @@ body.dsopen .modal{right:400px}
     return false;
   }
   const usesNamesList = () => Object.keys(namesMap).length > 0 || Object.keys(cuilMap).length > 0;
+  let hastaMap = {};          // DNI -> Fecha hasta (desde cuándo bajar la documentación), pegada con la lista de nombres
   let cuilMap = {};           // DNI -> CUIL (11 números)
   const cuilOf = s => (s && (cuilMap[s.dni] || "")) || "";
   const fmtCuil = c => c && c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : (c || "");
@@ -1653,8 +1659,22 @@ body.dsopen .modal{right:400px}
     $("fname").value = isSocio ? nameFor(s) : "documento.pdf";
     updateTplPreview();
   }
+  /* Ventanita flotante "Fecha hasta": movible, recuerda dónde la dejaste */
+  function renderHasta() {
+    const b = $("hastaBox"), v = current && hastaMap[current.dni];
+    b.hidden = !v; if (v) $("hastaVal").textContent = v;
+  }
+  (() => {
+    const b = $("hastaBox");
+    try { const p = JSON.parse(localStorage.getItem("hastaPos") || "null"); if (p) { b.style.left = p.x + "px"; b.style.top = p.y + "px"; b.style.bottom = "auto"; } } catch (e) {}
+    let d = null;
+    b.addEventListener("pointerdown", e => { d = { dx: e.clientX - b.offsetLeft, dy: e.clientY - b.offsetTop }; b.setPointerCapture(e.pointerId); });
+    b.addEventListener("pointermove", e => { if (!d) return; const x = Math.max(0, Math.min(innerWidth - b.offsetWidth, e.clientX - d.dx)), y = Math.max(0, Math.min(innerHeight - b.offsetHeight, e.clientY - d.dy)); b.style.left = x + "px"; b.style.top = y + "px"; b.style.bottom = "auto"; });
+    b.addEventListener("pointerup", () => { if (!d) return; d = null; try { localStorage.setItem("hastaPos", JSON.stringify({ x: b.offsetLeft, y: b.offsetTop })); } catch (e) {} });
+  })();
   function updateSocioHead() {
     if (!current) return;
+    renderHasta();
     const st = statusOf(current);
     const chip = $("socioChip"); chip.className = "chip " + st; chip.textContent = CHIP[st];
     $("toggleNoApto").textContent = flags[flagKey(current)] === "noapto" ? "↩ Quitar marca no apto" : "⚠️ Marcar no apto";
@@ -3487,7 +3507,9 @@ body.dsopen .modal{right:400px}
     const iC = find("cuil", "cuil beneficiario", "cuil afiliado");
     const iN = find("apellido y nombre", "nombre beneficiario", "nombre y apellido", "apellido, nombre", "nombre");
     const iD = find("numero de documento", "dni consultado", "dni", "nro documento", "documento");
-    if (iC < 0 && iN < 0) return null;
+    const iH = find("fecha hasta", "hasta", "vigencia hasta", "fecha vigencia hasta");
+    if (iC < 0 && iN < 0 && !(iH >= 0 && iD >= 0)) return null;
+    const hastas = {};
     const names = {}, cuils = {}, stats = { filas: lines.length - 1, sinDni: 0, repetidos: 0 }, vistos = new Set();
     for (const l of lines.slice(1)) {
       const c = l.split(sep).map(x => x.replace(/"/g, "").trim());
@@ -3499,8 +3521,9 @@ body.dsopen .modal{right:400px}
       if (vistos.has(dni)) stats.repetidos++; else vistos.add(dni);
       if (iN >= 0 && c[iN] && /[a-záéíóúñ]/i.test(c[iN])) names[dni] = c[iN].replace(/\s+/g, " ");
       if (cuil.length === 11) cuils[dni] = cuil;
+      if (iH >= 0 && c[iH]) { const v = c[iH].trim(); hastas[dni] = /^\d{5}$/.test(v) ? fmtFecha(isoDay(new Date(Date.UTC(1899, 11, 30) + v * 864e5 + 12 * 36e5))) : v; }
     }
-    return { names, cuils, stats };
+    return { names, cuils, stats, hastas };
   }
   // Historial desde el Excel compartido: necesita encabezados
   function parseHist(txt) {
@@ -3541,7 +3564,7 @@ body.dsopen .modal{right:400px}
   }
   function parseNames(txt) {
     const byHead = parseByHeader(txt);
-    if (byHead && (Object.keys(byHead.names).length || Object.keys(byHead.cuils).length)) return cuilDeOtro(byHead);
+    if (byHead && (Object.keys(byHead.names).length || Object.keys(byHead.cuils).length || Object.keys(byHead.hastas).length)) return cuilDeOtro(byHead);
     const names = {}, cuils = {}, stats = { filas: 0, sinDni: 0, repetidos: 0 }, vistos = new Set();
     for (const raw of txt.split(/\r?\n/)) {
       let line = raw.replace(/"/g, " ").trim(); if (!line) continue;
@@ -3620,13 +3643,14 @@ body.dsopen .modal{right:400px}
     const got = parseNames($("nmText").value);
     Object.assign(namesMap, got.names); Object.assign(cuilMap, got.cuils);
     await kvSet(pk("names"), namesMap); await kvSet(pk("cuils"), cuilMap);
+    if (got.hastas && Object.keys(got.hastas).length) { Object.assign(hastaMap, got.hastas); await kvSet(pk("hastas"), hastaMap); }
     $("nmlg").hidden = true; updateNamesUi(); renderSocios(); updatePerson();
     if (current) { $("fname").dataset.manual = ""; updateSocioHead(); }
-    toast(`👥 ${Object.keys(got.names).length} nombres y ${Object.keys(got.cuils).length} CUIL cargados · ${socios.filter(s => namesMap[s.dni]).length} carpetas con nombre.`);
+    toast(`👥 ${Object.keys(got.names).length} nombres y ${Object.keys(got.cuils).length} CUIL cargados${got.hastas && Object.keys(got.hastas).length ? ` · ${Object.keys(got.hastas).length} con Fecha hasta` : ""} · ${socios.filter(s => namesMap[s.dni]).length} carpetas con nombre.`);
   };
   $("nmClear").onclick = async () => {
     if (!confirm("¿Borrar toda la lista de nombres de este apartado?")) return;
-    namesMap = {}; cuilMap = {}; await kvSet(pk("names"), namesMap); await kvSet(pk("cuils"), cuilMap);
+    namesMap = {}; cuilMap = {}; hastaMap = {}; await kvSet(pk("names"), namesMap); await kvSet(pk("cuils"), cuilMap); await kvSet(pk("hastas"), hastaMap);
     $("nmlg").hidden = true; updateNamesUi(); renderSocios(); if (current) updateSocioHead();
   };
 
@@ -3918,6 +3942,7 @@ body.dsopen .modal{right:400px}
     if (tpl === "{dni} - {nombre} - {tipo} - {periodo}") { tpl = "{dni} - {nombre} - {tipo} {periodo}"; $("tpl").value = tpl; kvSet(pk("tpl"), tpl); }
     namesMap = (await kvGet(pk("names"))) || {};
     cuilMap = (await kvGet(pk("cuils"))) || {};
+    hastaMap = (await kvGet(pk("hastas"))) || {}; renderHasta();
     tandaSel = (await kvGet(pk("tanda"))) || "";
     dayLog = (await kvGet(pk("daylog"))) || []; updateDayCount();
     hist = (await kvGet(pk("hist"))) || null;
