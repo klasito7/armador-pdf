@@ -344,6 +344,11 @@
 #mstTabla table{border-collapse:collapse;width:100%;font-size:12.5px}#mstTabla th{position:sticky;top:0;background:var(--panel);text-align:left;border-bottom:2px solid var(--line);padding:5px 8px}
 #mstTabla td{border-bottom:1px solid var(--line);padding:4px 8px}
 #mstTabla tr.hoy td{background:color-mix(in srgb,#f0a020 14%,transparent)}
+.rep table{border-collapse:collapse;width:min(760px,100%);margin:4px 0 14px}
+.rep td{border-bottom:1px solid var(--line);padding:5px 8px}
+.rep td.n{text-align:right;font-weight:700;width:80px}
+.rep td.x{opacity:.7;font-size:12.5px}
+.rep h3{margin:14px 0 2px}
 .mstprod table{border-collapse:collapse}
 .mstprod th,.mstprod td{padding:4px 8px;text-align:right;white-space:nowrap}
 .mstprod th:first-child,.mstprod td:first-child{text-align:left}
@@ -782,6 +787,9 @@ body.dsopen .modal{right:400px}
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
 <li><b>📋 Hoy (arriba, apartado Diabetes):</b> lo que tenés que largar en el día para mantener números normales, con lo que producís de más guardado como colchón. 5 pasos tildables: 1) análisis al compartido (hechos / cupo, desde el Master); 2) mandar a firma (enviados hoy / cupo editable, 22 de entrada; necesita Retener prendido); 3) cargas en SURGE (hechos / cupo y minutos de la tanda); 4) fila en emp. y reemp.; 5) fecha en tu base. 1 a 3 se tildan solos al llegar al cupo. Abajo, <b>Control</b>: tus cargas del mes (según 👤 Analista del Master), proyección a fin de mes contra el promedio de los 3 meses anteriores (avisa si vas 30 % arriba) y cuántos días de colchón tenés (avisa si pasa de 2 semanas). Los días de oficina (mié-vie) lo recuerda arriba.</li>
+<li><b>🛰 SURGE vs Excel:</b> botón 🛰 SURGE en el Master. La primera vez elegís tu carpeta de Descargas; después lee solo el CSV de SURGE más nuevo (Exportador SURGE o Exportar CSV de SURGE; Shift+clic para elegir otra carpeta) y arma la sección <b>SURGE vs Excel</b>: rechazados y borradores en SURGE, estado distinto, otro nº de solicitud y los que están en SURGE pero no en el Excel. Cada fila dice qué figura en SURGE y qué en el Excel, con ↗ Abrir nº.</li>
+<li><b>🔎 Vencen en 90 días: buscar planilla:</b> grupo nuevo en emp. y reemp. con los vigentes que vencen en 90 días y cuya planilla no va a servir. 📋 Copiar DNI y pegalos en el bot de SGI para tener la planilla a tiempo.</li>
+<li><b>📄 Reporte del mes:</b> botón al lado de 📈 Por analista. Tus cargas del mes (o las de todo el equipo si no elegís analista) con la proyección y el promedio de los 3 meses anteriores, lo analizado en el Armador y el estado de la cartera. 🖨 Imprimir / guardar PDF lo deja listo para mostrar.</li>
 <li><b>📈 Por analista:</b> botón al lado del filtro de analista en el Master. Tabla con cuántos empadronamientos (E) y reempadronamientos (R) cargó cada analista en los últimos 6 meses, con el total. Tocando un mes se ve por día hábil (← Volver a meses). Cuenta por la fecha de carga de la hoja emp. y reemp.; quién cargó = Usuario (Usuario2 en el reemp.) o, si está vacía, Analista. 📋 Copiar tabla la copia para Excel.</li>
 <li><b>🔴 Motivos de rechazo:</b> en el grupo Rechazados del Master cada fila tiene <b>Motivo del rechazo</b>: escribís lo que puso la SSS (te sugiere los que ya usaste). Arriba de la tabla se ven los más repetidos del último año, y en 🧾 Datos SURGE (tecla D) aparecen los 3 más comunes para revisarlos antes de cargar.</li>
 <li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
@@ -989,10 +997,11 @@ body.dsopen .modal{right:400px}
 <div id="mstPanel" hidden>
   <div class="msthead"><h2>🗂 Master Diabetes</h2>
     <button class="primary" id="mstReload">↻ Actualizar</button><button id="mstPick">📂 Elegir Excel compartido</button><input type="file" id="mstFile" accept=".xlsx,.xlsm" hidden>
+    <button id="mstSurgeBtn" title="Compara con SURGE: lee el CSV más nuevo que bajaste de SURGE (Exportador SURGE o el botón Exportar CSV de SURGE) en tu carpeta de Descargas">🛰 SURGE</button>
     <button id="mstPickBase" title="Tu base propia (el listado del Armador con tu columna Fecha cargado en base padron diabetes): .xlsx, .txt o .csv">🧍 Mi base</button><input type="file" id="mstFileBase" accept=".xlsx,.xlsm,.txt,.csv,.tsv" hidden>
     <span id="mstInfo" class="label">Elegí el Excel compartido (.xlsx). Se lee acá en tu PC: no se sube a ningún lado.</span>
     <button id="mstClose">✕</button></div>
-  <div class="mstfilt"><label>👤 Analista <select id="mstAnalista"><option value="">Todos los analistas</option></select></label> <button id="mstProdBtn" title="Cuántos empadronamientos y reempadronamientos cargó cada analista, por mes y por día">📈 Por analista</button> <span id="mstResumen"></span></div>
+  <div class="mstfilt"><label>👤 Analista <select id="mstAnalista"><option value="">Todos los analistas</option></select></label> <button id="mstProdBtn" title="Cuántos empadronamientos y reempadronamientos cargó cada analista, por mes y por día">📈 Por analista</button> <button id="mstRepBtn" title="Resumen del mes listo para mostrar o imprimir">📄 Reporte del mes</button> <span id="mstResumen"></span></div>
   <div id="mstCards"></div>
   <div class="mstbar"><h3 id="mstTitulo"></h3><button id="mstCopyDni">📋 Copiar DNI</button><button id="mstCopyTabla">📋 Copiar tabla</button></div>
   <div class="msttanda" id="mstTanda" hidden></div>
@@ -4495,9 +4504,17 @@ body.dsopen .modal{right:400px}
       ["unclick", "🟠 Reempadronar a 1 click", "Vencido y la planilla cargada sirve (es de 3 meses antes del vencimiento o más nueva)"],
       ["buscar", "🟠 Vencidos: buscar planilla nueva", "La planilla que hay es vieja y ya debería haber una nueva en SGI"],
       ["esperando", "⚪ Vencidos: esperando planilla", "Planilla vieja, pero todavía no pasó un año: buscar desde la fecha indicada"],
+      ["venc90", "🔎 Vencen en 90 días: buscar planilla", "Vigentes que vencen en los próximos 90 días y cuya planilla no va a servir para reempadronar: 📋 Copiar DNI y pegalos en el bot de SGI para tener la planilla nueva a tiempo"],
       ["prontos", "⚪ Vencen en los próximos 30 días", "Todavía no se puede hacer nada; dice si la planilla va a servir"],
       ["pendiente", "⚪ Enviados (pendiente de revisión)", "Esperar respuesta de la SSS"],
       ["vigente", "✅ Vigentes", "Al día: nada que hacer hasta que venzan"]
+    ]],
+    ["🛰 SURGE vs Excel (del CSV de SURGE)", [
+      ["sur_rech", "🔴 Rechazados en SURGE", "En SURGE la última solicitud está Rechazada: corregir y reenviar (el detalle dice qué figura en el Excel)"],
+      ["sur_borr", "🟠 Borradores en SURGE", "Quedaron en Borrador en SURGE sin enviar"],
+      ["sur_dif", "≠ Estado distinto", "El estado de SURGE no coincide con el del Excel: corregir el Excel"],
+      ["sur_nro", "≠ Otro nº de solicitud", "En SURGE la última solicitud es otra que la del Excel"],
+      ["sur_falta", "➕ En SURGE y no en el Excel", "Hay solicitud en SURGE pero el CUIL no está en emp. y reemp."]
     ]],
     ["⚠ Revisar", [
       ["inconsistente", "⚠ No coinciden las hojas", "ESTADO ACTUAL de análisis no coincide con emp. y reemp."]
@@ -4599,9 +4616,74 @@ body.dsopen .modal{right:400px}
       G[f.g].push({ ...f.x, det: f.det, analista: f.analista });
     }
     for (const k in G) G[k].sort((a, b) => ((a.ciclo && a.ciclo.hasta) || 0) - ((b.ciclo && b.ciclo.hasta) || 0));
-    Object.assign(G, mstMi());
+    // Vencen en 90 días y la planilla que hay no va a servir (es de más de 3 meses antes del vencimiento)
+    const hoy0 = new Date(); hoy0.setHours(0, 0, 0, 0); const lim = new Date(hoy0); lim.setDate(lim.getDate() + 90);
+    G.venc90 = [...G.vigente, ...G.prontos].filter(x => { const h = x.ciclo && x.ciclo.hasta; if (!h || h <= hoy0 || h > lim) return false; const corte = new Date(h); corte.setMonth(corte.getMonth() - 3); return !(x.fp && x.fp >= corte); })
+      .map(x => ({ ...x, det: `Vence ${fmtFecha(isoDay(x.ciclo.hasta))} · planilla ${x.fp ? fmtFecha(isoDay(x.fp)) : "sin fecha"} · sirve desde ${(() => { const c = new Date(x.ciclo.hasta); c.setMonth(c.getMonth() - 3); return fmtFecha(isoDay(c)); })()}` }))
+      .sort((a, b) => a.ciclo.hasta - b.ciclo.hasta);
+    Object.assign(G, mstMi(), mstSurge());
     return G;
   }
+  /* ---------- SURGE vs Excel: CSV bajado de SURGE (Exportador SURGE o Exportar CSV de SURGE) ---------- */
+  let surgeCsv = null;   // { nombre, fecha, porCuil: { cuil: [{nro, estado, inicio, fin, nombre}] } }
+  function parseSurgeCsv(txt) {
+    const L = txt.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim());
+    if (!L.length) throw new Error("el CSV está vacío");
+    const sep = L[0].split(";").length > L[0].split(",").length ? ";" : (L[0].includes("\t") ? "\t" : ",");
+    const split = l => { const out = []; let cur = "", q = false; for (let i = 0; i < l.length; i++) { const ch = l[i]; if (ch === '"') { if (q && l[i + 1] === '"') { cur += '"'; i++; } else q = !q; } else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(c => c.trim()); };
+    const H = split(L[0]).map(h => mNorm(h));
+    const col = (...res) => { for (const re of res) { const i = H.findIndex(h => re.test(h)); if (i >= 0) return i; } return -1; };
+    const iC = col(/cuil/), iE = col(/^estado$/, /estado/), iN = col(/solicitud/, /^#$/, /^id$/, /^nro$/, /^n(ro|°|º)?\.? ?empadronamiento$/), iI = col(/inicio/), iF = col(/(^|\s)fin/), iNom = col(/nombre/), iP = col(/patolog/);
+    if (iC < 0 || iE < 0 || iN < 0) throw new Error("no encuentro las columnas CUIL, Estado y Nº de solicitud en el CSV");
+    const porCuil = {};
+    for (const l of L.slice(1)) {
+      const c = split(l); const cuil = String(c[iC] || "").replace(/\D/g, ""); if (cuil.length !== 11) continue;
+      if (iP >= 0 && c[iP] && !/diabet/i.test(c[iP])) continue;
+      const nro = String(c[iN] || "").replace(/\D/g, ""); if (!nro) continue;
+      (porCuil[cuil] = porCuil[cuil] || []).push({ nro, estado: c[iE] || "", inicio: iI >= 0 ? mFecha(c[iI]) : null, fin: iF >= 0 ? mFecha(c[iF]) : null, nombre: iNom >= 0 ? c[iNom] : "" });
+    }
+    for (const k in porCuil) porCuil[k].sort((a, b) => (+b.nro) - (+a.nro));
+    return porCuil;
+  }
+  const estNorm = e => { e = mNorm(e); if (/rechaz/.test(e)) return "rechazado"; if (/borrador/.test(e)) return "borrador"; if (/pendiente|revision/.test(e)) return "pendiente"; if (/vencid/.test(e)) return "vencido"; if (/acept|vigente|aprob/.test(e)) return "aceptado"; return e; };
+  function mstSurge() {
+    const G = { sur_rech: [], sur_borr: [], sur_dif: [], sur_nro: [], sur_falta: [] };
+    if (!surgeCsv || !mstData) return G;
+    const porCuil = {};
+    for (const d in mstData.P) { const x = mstData.P[d]; const c = String(x.cuil || "").replace(/\D/g, ""); if (c) porCuil[c] = x; }
+    const fila = (x, ult, det) => ({ ...x, analista: x.analistaEm || x.analista || "", det, ciclo: { ...(x.ciclo || {}), nro: ult.nro } });
+    for (const [cuil, sols] of Object.entries(surgeCsv.porCuil)) {
+      const ult = sols[0], eS = estNorm(ult.estado), x = porCuil[cuil];
+      const fSurge = `SURGE: ${ult.estado} nº ${ult.nro}${ult.fin ? " (fin " + fmtFecha(isoDay(ult.fin)) + ")" : ""}`;
+      if (!x) { if (!mstAnalista) G.sur_falta.push({ dni: cuil.slice(2, 10).replace(/^0+/, ""), cuil, nombre: ult.nombre, analista: "", det: fSurge, ciclo: { nro: ult.nro } }); continue; }
+      if (mstAnalista === "__sin" ? (x.analistaEm || x.analista) : mstAnalista && (x.analistaEm || x.analista) !== mstAnalista) continue;
+      const c = x.ciclo || {}, eX = estNorm(c.estado || ""), nX = String(c.nro ?? "").replace(/\.0+$/, "").replace(/\D/g, "");
+      const fExcel = `Excel: ${c.estado || "sin estado"}${nX ? " nº " + nX : ""}`;
+      if (eS === "rechazado") G.sur_rech.push(fila(x, ult, `${fSurge} · ${fExcel}`));
+      else if (eS === "borrador") G.sur_borr.push(fila(x, ult, `${fSurge} · ${fExcel}`));
+      if (nX && nX !== ult.nro && !sols.some(s2 => s2.nro === nX)) G.sur_nro.push(fila(x, ult, `${fSurge} · ${fExcel}`));
+      else if (eS !== "rechazado" && eS !== "borrador" && eX && eS !== eX && !(eS === "vencido" && eX === "aceptado")) G.sur_dif.push(fila(x, ult, `${fSurge} · ${fExcel}`));
+    }
+    return G;
+  }
+  async function surgeLeer(elegir) {
+    let dir = elegir ? null : await kvGet("surgeDir");
+    try {
+      if (dir && (await dir.queryPermission({ mode: "read" })) !== "granted" && (await dir.requestPermission({ mode: "read" })) !== "granted") dir = null;
+      if (!dir) { toast("Elegí la carpeta donde se bajan los CSV de SURGE (normalmente Descargas)."); dir = await window.showDirectoryPicker({ id: "descargas", mode: "read" }); await kvSet("surgeDir", dir); }
+      let best = null;
+      for await (const [n, h] of dir.entries()) if (h.kind === "file" && /\.csv$/i.test(n) && /surge|empadronamiento/i.test(n)) { const f = await h.getFile(); if (!best || f.lastModified > best.lastModified) best = f; }
+      if (!best) { toast("No encontré en esa carpeta ningún CSV de SURGE (nombre con \"surge\" o \"empadronamiento\"). Bajalo con el Exportador SURGE."); return; }
+      surgeCsv = { nombre: best.name, fecha: best.lastModified, porCuil: parseSurgeCsv(await best.text()) };
+      const n = Object.keys(surgeCsv.porCuil).length;
+      $("mstSurgeBtn").textContent = `🛰 SURGE · ${new Date(best.lastModified).toLocaleDateString("es-AR")}`;
+      $("mstSurgeBtn").title = `${best.name} · ${n} CUIL de Diabetes. Tocá para releer (Shift+clic: elegir otra carpeta).`;
+      toast(`🛰 Leí ${best.name}: ${n} CUIL de Diabetes.`);
+      if (mstData) mstRender();
+    } catch (e) { if (e.name !== "AbortError") toast("No pude leer el CSV de SURGE: " + e.message); }
+  }
+  $("mstSurgeBtn").onclick = e => surgeLeer(e.shiftKey);
+
   /* ---------- Mi base propia: lo que hice y todavía no pasé (al compartido / a SURGE) ---------- */
   let miBase = null, mstPasados = { mi_an: {}, mi_surge: {} }, mstCupos = { mi_an: 32, mi_surge: 25 };
   Promise.all([kvGet("mstPasados"), kvGet("mstCupos")]).then(([a, b]) => { if (a) mstPasados = { mi_an: {}, mi_surge: {}, ...a }; if (b) mstCupos = { ...mstCupos, ...b }; });
@@ -4687,6 +4769,7 @@ body.dsopen .modal{right:400px}
     $("mstResumen").innerHTML = `<b>${vistos.size}</b> socios${mstAnalista ? " de <b>" + escapeHtml(mstAnalista === "__sin" ? "(sin analista)" : mstAnalista) + "</b>" : ""} · vencen este mes <b>${vencenMes}</b> · para cargar ya <b>${porHacer}</b> (≈ <b>${Math.ceil(porHacer / (habiles || 1))}</b> por día hábil hasta fin de mes)`;
     $("mstCards").innerHTML = MST_SECCIONES.map(([tit, gs]) => `<div class="mstsec"><h4>${tit}</h4><div class="mstgrid">${gs.map(([k, t, desc]) => `<button class="mstcard ${G[k].length ? "" : "vacia"}" data-g="${k}" title="${escapeHtml(desc)}"><span>${t}</span><b>${G[k].length}</b></button>`).join("")}</div></div>`).join("");
     mstData.G = G;
+    if (mstSel === "__rep") { $("mstRepBtn").click(); return; }
     mstShow(mstSel === "__prod" ? "__prod" : mstSel && G[mstSel] ? mstSel : MST_GRUPOS.find(([k]) => G[k].length)?.[0] || "vigente");
   }
   let mstSel = "";
@@ -4774,6 +4857,44 @@ body.dsopen .modal{right:400px}
     prodCopia = ["Analista\t" + cols.map(colTxt).join("\t") + "\tTotal", ...filas.map(f => [f.a, ...cols.map(k => { const v = T[f.a][k] || { E: 0, R: 0 }; return v.E + v.R; }), f.tot.E + f.tot.R].join("\t"))].join("\r\n");
     const v = $("prodVolver"); if (v) v.onclick = () => { prodMes = ""; mstProd(); };
   }
+  /* 📄 Reporte del mes: tus números y el estado de la cartera, para mostrar o imprimir */
+  function mstReporteHtml() {
+    const hoy = new Date(), yo = mstAnalista && mstAnalista !== "__sin" ? mstAnalista : "";
+    const mk = d => d.getFullYear() * 12 + d.getMonth(), m0 = mk(hoy);
+    const C = (mstData.cargas || []).filter(c => !yo || mNorm(c.a) === mNorm(yo));
+    const enMes = m => { const L = C.filter(c => mk(c.d) === m); return { E: L.filter(c => c.t === "E").length, R: L.filter(c => c.t === "R").length }; };
+    const act = enMes(m0), prev = [1, 2, 3].map(i => enMes(m0 - i)), tot = v => v.E + v.R;
+    const conDatos = prev.filter(v => tot(v)), prom = conDatos.length ? Math.round(conDatos.reduce((a, v) => a + tot(v), 0) / conDatos.length) : null;
+    const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    let hab = 0, habPas = 0; for (const d = new Date(ini); d <= fin; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) { hab++; if (d <= hoy) habPas++; }
+    const proy = habPas ? Math.round(tot(act) / habPas * hab) : 0;
+    const anal = new Set((dayLog || []).filter(r => mk(new Date(r.ts)) === m0 && r.file).map(r => r.socio)).size;
+    const G = mstData.G || mstGrupos(), n = k => (G[k] || []).length;
+    const mesTxt = hoy.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+    const fila = (t, v, extra = "") => `<tr><td>${t}</td><td class="n">${v}</td><td class="x">${extra}</td></tr>`;
+    return `<div class="rep"><h2>Reporte de ${escapeHtml(mesTxt)}${yo ? " · " + escapeHtml(yo) : " · todo el equipo"}</h2><p class="label">Al ${hoy.toLocaleDateString("es-AR")} · ${habPas} de ${hab} días hábiles</p>
+      <h3>Cargas en SURGE</h3><table>
+      ${fila("Empadronamientos cargados", act.E)}${fila("Reempadronamientos cargados", act.R)}${fila("<b>Total del mes</b>", `<b>${tot(act)}</b>`, `a este ritmo cierra en ~${proy}`)}
+      ${fila("Promedio de los 3 meses anteriores", prom ?? "—", prev.map((v, i) => { const d = new Date(hoy.getFullYear(), hoy.getMonth() - 1 - i, 1); return d.toLocaleDateString("es-AR", { month: "short" }) + " " + tot(v); }).join(" · "))}
+      </table>
+      ${anal ? `<h3>Análisis en el Armador</h3><table>${fila("Socios analizados y armados este mes (en esta PC)", anal)}</table>` : ""}
+      <h3>Estado de la cartera${yo ? " (" + escapeHtml(yo) + ")" : ""}</h3><table>
+      ${fila("Vigentes", n("vigente"))}${fila("Enviados, esperando a la SSS", n("pendiente"))}${fila("Rechazados para corregir", n("rechazado"), surgeCsv ? `en SURGE: ${n("sur_rech")}` : "")}${fila("Borradores sin enviar", n("borrador"))}
+      ${fila("Para reempadronar ya (a 1 click)", n("unclick"))}${fila("Vencidos: buscar planilla nueva", n("buscar"))}${fila("Vencen en 90 días sin planilla que sirva", n("venc90"))}
+      ${fila("A analizar", n("an_aanalizar"))}${fila("A empadronar / reempadronar (análisis)", n("an_aempadronar") + n("an_areempadronar"))}
+      </table><p class="label">Fuente: Excel compartido${surgeCsv ? " y CSV de SURGE del " + new Date(surgeCsv.fecha).toLocaleDateString("es-AR") : ""}. Cargas según "Fecha carga" de la hoja emp. y reemp.</p></div>`;
+  }
+  $("mstRepBtn").onclick = () => {
+    if (!mstData) { toast("Primero leé el Excel compartido."); return; }
+    mstSel = "__rep"; document.querySelectorAll(".mstcard").forEach(b => b.classList.remove("on")); $("mstTanda").hidden = true;
+    $("mstTitulo").innerHTML = `📄 Reporte del mes <button id="repPrint">🖨 Imprimir / guardar PDF</button>`;
+    $("mstTabla").innerHTML = mstReporteHtml();
+    $("repPrint").onclick = () => {
+      const w = window.open("", "_blank"); if (!w) { toast("Chrome bloqueó la ventana: permití las ventanas emergentes."); return; }
+      w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Reporte</title><style>body{font:14px system-ui,Segoe UI,Arial;margin:28px;color:#111}table{border-collapse:collapse;width:100%;margin:6px 0 16px}td{border-bottom:1px solid #ddd;padding:6px 8px}td.n{text-align:right;font-weight:700;width:90px}td.x{color:#555;font-size:12.5px}.label{color:#555;font-size:12.5px}h2{margin:0 0 4px}h3{margin:18px 0 4px}</style></head><body>${$("mstTabla").innerHTML}</body></html>`);
+      w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+    };
+  };
   $("mstProdBtn").onclick = () => { if (!mstData) { toast("Primero leé el Excel compartido."); return; } prodMes = ""; mstProd(); };
   $("mstTabla").addEventListener("click", e => { const th = e.target.closest("th.mes"); if (th) { prodMes = th.dataset.mes; mstProd(); } });
   $("mstCards").addEventListener("click", e => { const b = e.target.closest(".mstcard"); if (b) mstShow(b.dataset.g); });
@@ -4804,8 +4925,8 @@ body.dsopen .modal{right:400px}
     b.classList.add("ya"); b.textContent = "✓ abierto " + new Date().toTimeString().slice(0, 5);
   });
   $("mstAnalista").addEventListener("change", () => { mstAnalista = $("mstAnalista").value; kvSet("mstAnalista", mstAnalista); mstRender(); });
-  $("mstCopyDni").onclick = async () => { if (mstSel === "__prod") { toast("En 📈 Por analista no hay DNI: usá 📋 Copiar tabla."); return; } const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(L.map(x => x.dni).join("\r\n")); toast(`📋 ${L.length} DNI copiados (uno por línea).`); };
-  $("mstCopyTabla").onclick = async () => { if (mstSel === "__prod") { await navigator.clipboard.writeText(prodCopia); toast("📋 Tabla por analista copiada para Excel."); return; } const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tAnalista\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.analista, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
+  $("mstCopyDni").onclick = async () => { if (mstSel === "__rep") { toast("En el reporte no hay DNI."); return; } if (mstSel === "__prod") { toast("En 📈 Por analista no hay DNI: usá 📋 Copiar tabla."); return; } const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(L.map(x => x.dni).join("\r\n")); toast(`📋 ${L.length} DNI copiados (uno por línea).`); };
+  $("mstCopyTabla").onclick = async () => { if (mstSel === "__rep") { await navigator.clipboard.writeText($("mstTabla").innerText); toast("📋 Reporte copiado como texto."); return; } if (mstSel === "__prod") { await navigator.clipboard.writeText(prodCopia); toast("📋 Tabla por analista copiada para Excel."); return; } const L = mstData && mstData.G[mstSel] || []; await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tAnalista\tEstado actual\tDetalle", ...L.map(x => [x.dni, x.cuil, x.nombre, x.analista, x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 ${L.length} filas copiadas para Excel.`); };
   async function mstCargar(file) {
     $("mstInfo").textContent = `Leyendo ${file.name}…`;
     try {
