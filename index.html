@@ -404,7 +404,7 @@ body.dsopen .modal{right:400px}
   <h1>📄 Armador de PDF</h1>
   <div class="profs" id="profs">
     <button data-p="diabetes">🩸 Diabetes</button>
-    <button data-p="hsextras">⏱ Hs extras</button>
+    <button data-p="hsextras">💊 Medicación</button>
   </div>
   <div class="folder" id="fsControls">
     <span>📁 Socios: <b id="rootName">—</b></span><button id="pickRoot">Elegir</button>
@@ -412,7 +412,7 @@ body.dsopen .modal{right:400px}
     <span style="margin-left:8px" title="Carpeta donde quedan los PDF ya firmados (opcional)">✍ Firmados: <b id="signName">—</b></span><button id="pickSign">Elegir</button>
     <button id="reconnect" class="primary" hidden>🔓 Reconectar carpetas</button>
     <button id="mtOpen" title="Cuántos hiciste, cuántos editaste y el avance del objetivo">📊 Métricas</button>
-    <button id="hoyOpen" title="Lo que tenés que largar hoy para mantener los números normales">📋 Hoy</button>
+    <button id="hoyOpen" title="Lo que falta hacer hoy y cómo vas en el mes">📋 Hoy</button>
     <button id="mstOpen" title="Qué hacer con cada socio según el Excel compartido">🗂 Master</button>
     <button id="qpOpen" title="Pegar imágenes y pasarlas a PDF, o combinar varios PDF en uno">🧰 PDF rápido</button>
     <button id="cfgOpen" title="Configuración: atajos de teclado">⚙</button>
@@ -656,7 +656,7 @@ body.dsopen .modal{right:400px}
   <h3>⏱ Automático</h3>
   <p>Pasar <input type="number" id="aK" min="1" style="width:56px"> cada <input type="number" id="aMin" min="1" style="width:56px"> min,
      solo de <input type="number" id="aDesde" min="0" max="23" style="width:50px"> a <input type="number" id="aHasta" min="1" max="24" style="width:50px"> h.</p>
-  <p class="label">El intervalo varía un poco cada vez (±20 %). Funciona con esta pestaña abierta y la PC prendida.</p>
+  <p class="label">Funciona con esta pestaña abierta y la PC prendida.</p>
   <div class="frow"><button id="aToggle"></button></div>
   <p id="aInfo" class="label"></p>
   <h3>✍ Seguimiento</h3>
@@ -669,14 +669,14 @@ body.dsopen .modal{right:400px}
     <label>Día <input type="date" id="dayDate"></label>
     <label><input type="checkbox" id="dayHead" checked> Con encabezados</label>
     <label><input type="checkbox" id="dayPend"> Sumar pendientes (no aptos / para editar)</label>
-    <label title="Toma lo hecho que todavía no pasaste, del más viejo al más nuevo, de a una tanda por día"><input type="checkbox" id="dayRep"> Repartir: tanda de <input type="number" id="dayCupo" min="1" max="200" style="width:56px"> por día</label>
+    <label title="Muestra todo lo hecho que todavía no marcaste como pegado en el Excel, de cualquier día"><input type="checkbox" id="dayRep"> Todo lo que falta pasar al Excel</label>
   </div>
   <p id="dayInfo"></p>
   <textarea id="dayText" rows="12" readonly></textarea>
   <div class="frow">
     <button class="primary" id="dayCopy">📋 Copiar para Excel</button>
     <button id="dayTxt">💾 Guardar .txt</button>
-    <button id="dayDone" hidden title="Marca esta tanda como pasada al Excel: mañana sale la siguiente">✓ Ya los pegué</button>
+    <button id="dayDone" hidden title="Marca todo lo de la lista como pegado en el Excel">✓ Ya los pegué</button>
     <button id="dayClose" style="margin-left:auto">Cerrar</button>
   </div>
 </div></div>
@@ -716,22 +716,22 @@ body.dsopen .modal{right:400px}
 <li><b>Nada se sube a internet:</b> la página lee y escribe en tus carpetas. Los originales nunca se modifican.</li>
 <li><b>Arranque rápido:</b> la página aparece al instante; las herramientas de PDF se bajan solas en segundo plano. Si abrís un PDF en el primer segundo, espera un instante y sigue. La carpeta Firmados se revisa cada 30 s solo si la programación está prendida o hay envíos esperando firma.</li>
 <li><b>Lo que cargás queda en ese Chrome de esa PC:</b> fechas, observaciones, listas, pendientes, cierres. Para pasarlo a otra PC se usa la copia de seguridad (ver Configuración).</li>
-<li><b>Dos apartados:</b> Diabetes y Hs extras, cada uno con sus carpetas, formato de nombre, listas y métricas (azul = Diabetes, violeta = Hs extras).</li>
+<li><b>Dos apartados:</b> Diabetes y Medicación, cada uno con sus carpetas, formato de nombre, listas y métricas (azul = Diabetes, violeta = Medicación).</li>
 <li><b>Después de una actualización:</b> recargá con <b>Ctrl + F5</b>.</li>
 </ul>
 <h3>Primera configuración (una vez por apartado)</h3>
 <p>Se hace una sola vez. Si Chrome pide permiso al volver, tocá <b>Reconectar carpetas</b> y elegí "Permitir en cada visita".</p>
 <ol>
-<li>Elegí el apartado arriba: <b>Diabetes</b> o <b>Hs extras</b>.</li>
+<li>Elegí el apartado arriba: <b>Diabetes</b> o <b>Medicación</b>.</li>
 <li><b>Socios: Elegir</b> → la carpeta principal, con las carpetas de fecha (16-11-26) y adentro una carpeta por DNI.</li>
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>📅 Fechas de RHC (Carga rápida v13):</b> en SURGE, en el listado, favorito → abrí "📅 Fechas de RHC", pegá filas del Excel con el CUIL (o con encabezados y una columna "Nro") y tocá Buscar fechas. Por cada socio toma su empadronamiento o reempadronamiento de Diabetes más nuevo, lee la fecha del Resumen de HC cargada y te dice si sirve para reempadronar: tiene que estar entre 3 meses antes del vencimiento y un día antes de cumplirse el año. 📋 Copiar para Excel devuelve las filas en el mismo orden que pegaste (CUIL, nº, estado, vigencias, fecha RHC, ¿sirve?, desde/hasta, nota). Tarda ~1 s por socio. <b>🔴 Rechazados en Carga rápida (v12):</b> en SURGE, en cualquier pantalla que no sea un empadronamiento, tocá el favorito → <b>🔴 Rechazados de Diabetes</b>: lista todos con el <b>motivo de la SSS</b> y la fecha, el más nuevo arriba; elegí tu nombre en la lista de al lado para ver solo los que cargaste vos (queda guardado). <b>Abrir ✎</b> te lleva directo a corregirlo. Al abrir un rechazado, el panel muestra arriba el motivo en rojo. <b>🔒 Contraseña (⚙ Configuración):</b> opcional. Cifra todo lo que el Armador guarda en Chrome (listas, historial, datos SURGE, cierres, motivos) y las copias de seguridad. Se pide una vez por día (o también si no lo usás por X minutos, si lo elegís). Al activarla te muestra un <b>código de recuperación</b> una sola vez: anotalo fuera de la PC. Si te olvidás la contraseña, en la pantalla de bloqueo tocás "Me olvidé", ponés el código y elegís otra; nada se borra. Una copia cifrada se importa en otra PC con la contraseña o el código que tenía. No cifra los PDF ni las carpetas de tu PC/OneDrive. <b>🧰 PDF rápido (arriba):</b> aparte de los socios. Pegá imágenes con Ctrl+V (capturas, fotos copiadas), arrastralas o elegí JPG, PNG o PDF; ordená con ▲▼ y tocá ⬇ Armar y descargar PDF (o 💾 Guardar en Listos). Cada imagen va en una hoja A4 (vertical u horizontal según la imagen); los PDF se suman enteros, así también sirve para combinar PDF. Esc cierra. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
-<li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
+<li><b>Medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>📅 Fechas de RHC (Carga rápida v13):</b> en SURGE, en el listado, favorito → abrí "📅 Fechas de RHC", pegá filas del Excel con el CUIL (o con encabezados y una columna "Nro") y tocá Buscar fechas. Por cada socio toma su empadronamiento o reempadronamiento de Diabetes más nuevo, lee la fecha del Resumen de HC cargada y te dice si sirve para reempadronar: tiene que estar entre 3 meses antes del vencimiento y un día antes de cumplirse el año. 📋 Copiar para Excel devuelve las filas en el mismo orden que pegaste (CUIL, nº, estado, vigencias, fecha RHC, ¿sirve?, desde/hasta, nota). Tarda ~1 s por socio. <b>🔴 Rechazados en Carga rápida (v12):</b> en SURGE, en cualquier pantalla que no sea un empadronamiento, tocá el favorito → <b>🔴 Rechazados de Diabetes</b>: lista todos con el <b>motivo de la SSS</b> y la fecha, el más nuevo arriba; elegí tu nombre en la lista de al lado para ver solo los que cargaste vos (queda guardado). <b>Abrir ✎</b> te lleva directo a corregirlo. Al abrir un rechazado, el panel muestra arriba el motivo en rojo. <b>🔒 Contraseña (⚙ Configuración):</b> opcional. Cifra todo lo que el Armador guarda en Chrome (listas, historial, datos SURGE, cierres, motivos) y las copias de seguridad. Se pide una vez por día (o también si no lo usás por X minutos, si lo elegís). Al activarla te muestra un <b>código de recuperación</b> una sola vez: anotalo fuera de la PC. Si te olvidás la contraseña, en la pantalla de bloqueo tocás "Me olvidé", ponés el código y elegís otra; nada se borra. Una copia cifrada se importa en otra PC con la contraseña o el código que tenía. No cifra los PDF ni las carpetas de tu PC/OneDrive. <b>🧰 PDF rápido (arriba):</b> aparte de los socios. Pegá imágenes con Ctrl+V (capturas, fotos copiadas), arrastralas o elegí JPG, PNG o PDF; ordená con ▲▼ y tocá ⬇ Armar y descargar PDF (o 💾 Guardar en Listos). Cada imagen va en una hoja A4 (vertical u horizontal según la imagen); los PDF se suman enteros, así también sirve para combinar PDF. Esc cierra. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Medicación:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Medicación no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Medicación: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
-<table><tr><th>Dato</th><th>Qué pone</th></tr><tr><td><code>{dni}</code></td><td>DNI de la carpeta</td></tr><tr><td><code>{cuil}</code></td><td>CUIL de la lista de nombres</td></tr><tr><td><code>{nombre}</code></td><td>Apellido y nombre</td></tr><tr><td><code>{tipo}</code></td><td>Tipo de documentación (Hs extras)</td></tr><tr><td><code>{periodo}</code></td><td>Período, ej. 9-26 (Hs extras)</td></tr><tr><td><code>{tramite}</code> / <code>{fecha}</code></td><td>Número y fecha del trámite</td></tr><tr><td><code>{carpeta}</code></td><td>Nombre completo de la carpeta</td></tr></table>
+<table><tr><th>Dato</th><th>Qué pone</th></tr><tr><td><code>{dni}</code></td><td>DNI de la carpeta</td></tr><tr><td><code>{cuil}</code></td><td>CUIL de la lista de nombres</td></tr><tr><td><code>{nombre}</code></td><td>Apellido y nombre</td></tr><tr><td><code>{tipo}</code></td><td>Tipo de documentación (Medicación)</td></tr><tr><td><code>{periodo}</code></td><td>Período, ej. 9-26 (Medicación)</td></tr><tr><td><code>{tramite}</code> / <code>{fecha}</code></td><td>Número y fecha del trámite</td></tr><tr><td><code>{carpeta}</code></td><td>Nombre completo de la carpeta</td></tr></table>
 <h3>La pantalla principal</h3>
 <p>A la izquierda está la tanda: el selector de fecha, el buscador y la lista de socios con su estado.</p>
 <ul>
@@ -744,7 +744,7 @@ body.dsopen .modal{right:400px}
 <p>Al tocar un DNI se cargan sus hojas y arriba aparece el cartel con DNI o CUIL y nombre, para chequear que la documentación no sea de un pariente.</p>
 <ul>
 <li><b>Trámite:</b> abre el más reciente; tocá otro para cambiar, o <b>Todos</b>.</li>
-<li><b>Campos:</b> Fecha planilla, Observación y, en Hs extras, Nombre, Tipo y Período.</li>
+<li><b>Campos:</b> Fecha planilla, Observación y, en Medicación, Nombre, Tipo y Período.</li>
 <li><b>Clic</b> en una hoja: la abre en grande. <b>Ctrl + clic:</b> incluir/excluir. <b>Shift + clic:</b> un tramo.</li>
 <li><b>Arrastrar</b> (o ◀ ▶) cambia el orden. <b>⟳</b> rota. <b>✕</b> la saca. <b>Tijera:</b> desde esa hoja empieza otro archivo.</li>
 <li><b>Rango:</b> <code>1-3, 5</code> y <b>Dejar solo estas</b> o <b>Quitar estas</b>.</li>
@@ -764,7 +764,7 @@ body.dsopen .modal{right:400px}
 <li><b>Q (a mano):</b> <code>261026</code> y Enter → 26/10/2026. También <code>26102026</code>, <code>2610</code> o <code>26/10/26</code>.</li>
 <li><b>F (automática):</b> lee la fecha escrita a mano abajo a la derecha. La primera vez descarga el lector (unos 100 MB).</li>
 <li><b>Si F no la entiende:</b> escribila o tocá <b>Marcar dónde está la fecha</b>. Aprende el lugar, no la letra.</li>
-<li><b>Hs extras:</b> el Período se completa con el mes de la fecha de planilla.</li>
+<li><b>Medicación:</b> el Período se completa con el mes de la fecha de planilla.</li>
 </ul>
 <h3>Photopea y Para editar</h3>
 <ul>
@@ -778,7 +778,7 @@ body.dsopen .modal{right:400px}
 <p><b>Ctrl + S</b> guarda en Listos con el nombre armado; si falta un dato (CUIL, tipo, período) avisa qué falta. Sin fecha de planilla no guarda (se apaga en Configuración).</p>
 <ul>
 <li><b>Vista previa (P):</b> zoom con <b>Ctrl + ruedita</b>; se cierra con Enter, Esc o clic a los costados.</li>
-<li><b>Hs extras:</b> Tipo y Período en la vista previa: <code>RHC</code>, Tab, <code>9-26</code>, Enter.</li>
+<li><b>Medicación:</b> Tipo y Período en la vista previa: <code>RHC</code>, Tab, <code>9-26</code>, Enter.</li>
 <li><b>Uno tras otro:</b> después de guardar abre el siguiente pendiente.</li>
 </ul>
 <h3>Cierre del día, listado y métricas</h3>
@@ -786,15 +786,15 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día:</b> Copiar para Excel o Guardar .txt. <b>Sumar pendientes</b> agrega no aptos y Para editar.</li>
 <li><b>🔁 Repetidos:</b> el Armador guarda un historial (DNI, CUIL, nombre, fecha de planilla y fecha de análisis) de todo lo que guardás o marcás incompleto. Si un socio de la tanda ya pasó antes, lo marca: <span class="rep reciente">naranja</span> = ya listo con planilla vigente (probable repetido), <span class="rep viejo">azul</span> = antes quedó incompleto o la planilla está vencida. Arriba de la lista: <b>Saltear repetidos</b> los oculta (y el "siguiente" los saltea); <b>Mostrar todos</b> los vuelve a mostrar. Lo viejo se suma desde ⚙ Configuración → Historial → Pegar desde el Excel.</li>
 <li><b>🧩 Doc. incompleta:</b> botón arriba del socio. Queda en el filtro Incompletos, en el historial y en el Cierre del día como "Doc. incompleta" con la fecha de hoy como <b>Fecha análisis</b> (columna nueva al final del cierre).</li>
-<li><b>📋 Hoy (arriba, apartado Diabetes):</b> lo que tenés que largar en el día para mantener números normales, con lo que producís de más guardado como colchón. 5 pasos tildables: 1) análisis al compartido (hechos / cupo, desde el Master); 2) mandar a firma (enviados hoy / cupo editable, 22 de entrada; necesita Retener prendido); 3) cargas en SURGE (hechos / cupo y minutos de la tanda); 4) fila en emp. y reemp.; 5) fecha en tu base. 1 a 3 se tildan solos al llegar al cupo. Abajo, <b>Control</b>: tus cargas del mes (según 👤 Analista del Master), proyección a fin de mes contra el promedio de los 3 meses anteriores (avisa si vas 30 % arriba) y cuántos días de colchón tenés (avisa si pasa de 2 semanas). Los días de oficina (mié-vie) lo recuerda arriba.</li>
+<li><b>📋 Hoy (arriba, apartado Diabetes):</b> lo que falta hacer en el día, sin cupos. 5 pasos tildables: 1) análisis al compartido (pasados hoy / faltan, desde el Master); 2) mandar a firma (enviados hoy y en espera si Retener está prendido); 3) cargas en SURGE (cargados hoy / faltan, con los minutos estimados); 4) fila en emp. y reemp.; 5) fecha en tu base. 1 y 3 se tildan solos cuando no falta nada. Abajo, <b>Tu mes</b>: tus cargas del mes (según 👤 Analista del Master), proyección a fin de mes, promedio de los 3 meses anteriores y lo que falta pasar.</li>
 <li><b>🛰 SURGE vs Excel:</b> botón 🛰 SURGE en el Master. La primera vez elegís tu carpeta de Descargas; después lee solo el CSV de SURGE más nuevo (Exportador SURGE o Exportar CSV de SURGE; Shift+clic para elegir otra carpeta) y arma la sección <b>SURGE vs Excel</b>: rechazados y borradores en SURGE, estado distinto, otro nº de solicitud y los que están en SURGE pero no en el Excel. Cada fila dice qué figura en SURGE y qué en el Excel, con ↗ Abrir nº.</li>
 <li><b>🔎 Vencen en 90 días: buscar planilla:</b> grupo nuevo en emp. y reemp. con los vigentes que vencen en 90 días y cuya planilla no va a servir. 📋 Copiar DNI y pegalos en el bot de SGI para tener la planilla a tiempo.</li>
 <li><b>📄 Reporte del mes:</b> botón al lado de 📈 Por analista. Tus cargas del mes (o las de todo el equipo si no elegís analista) con la proyección y el promedio de los 3 meses anteriores, lo analizado en el Armador y el estado de la cartera. 🖨 Imprimir / guardar PDF lo deja listo para mostrar.</li>
 <li><b>📈 Por analista:</b> botón al lado del filtro de analista en el Master. Tabla con cuántos empadronamientos (E) y reempadronamientos (R) cargó cada analista en los últimos 6 meses, con el total. Tocando un mes se ve por día hábil (← Volver a meses). Cuenta por la fecha de carga de la hoja emp. y reemp.; quién cargó = Usuario (Usuario2 en el reemp.) o, si está vacía, Analista. 📋 Copiar tabla la copia para Excel.</li>
 <li><b>🔴 Motivos de rechazo:</b> en el grupo Rechazados del Master cada fila tiene <b>Motivo del rechazo</b>: escribís lo que puso la SSS (te sugiere los que ya usaste). Arriba de la tabla se ven los más repetidos del último año, y en 🧾 Datos SURGE (tecla D) aparecen los 3 más comunes para revisarlos antes de cargar.</li>
-<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno con <b>cupo por día</b> (análisis 32, SURGE 25), la tanda de hoy resaltada, 📋 Copiar tanda de hoy y ✓ Ya los pasé. Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
+<li><b>🗂 Master (arriba, apartado Diabetes):</b> elegís el Excel compartido (.xlsx) y lo lee acá, sin subirlo. Arriba se elige el <b>👤 Analista</b> (columna Analista de cada hoja; queda guardado). Los grupos van separados en <b>📋 Análisis</b> (según ESTADO ACTUAL), <b>🗂 Empadronamientos y reempadronamientos</b> (según el estado del último ciclo) y <b>⚠ Revisar</b> (las hojas no coinciden). Ordena a todos los socios por lo que hay que hacer: Rechazados, Borradores, Reempadronar a 1 click (vencido y la planilla es de 3 meses antes del vencimiento o más nueva), Vencidos sin planilla que sirva, A empadronar, A analizar, Sin documentación para volver a buscar (un año después de la última planilla), Vencen en 30 días, Esperando documentación, Enviados, Vigentes, No recuperables y "Revisar en el Excel" (ESTADO ACTUAL no coincide con emp. y reemp.). Cada grupo: 📋 Copiar DNI o Copiar tabla. <b>🧍 Mi base</b>: elegís tu base propia (el listado del Armador con tu columna "Fecha cargado en base padron diabetes"; .xlsx, .txt o .csv) y arriba aparece "Mi trabajo por pasar": <b>Análisis por pasar al compartido</b> (analizado y sin fecha cargado), <b>Por cargar en SURGE</b> (firmado y sin empadronamiento en curso; ≈3 min alta, 1 min reemp) y <b>Ya está en el compartido</b> (falta tu fecha). Cada uno muestra cuántos pasaste hoy y cuántos faltan, con 📋 Copiar todos y ✓ Ya los pasé (sin cupo por día). Columna <b>SURGE</b>: en los vencidos, <b>↻ Reempadronar</b> abre /extender_empadronamiento/&lt;nº de la solicitud vencida&gt; (crea la solicitud nueva; pregunta antes y marca "✓ abierto" para no repetir); en los demás, <b>↗ Abrir nº</b> abre la solicitud. ↻ Actualizar vuelve a leer el mismo archivo. Lee el Excel en segundo plano (la página no se traba aunque sea enorme) y solo abre las hojas que sirven: análisis, emp. y reemp. y tu base.</li>
 <li><b>🧾 Datos SURGE (tecla D):</b> panel a la derecha para tipear los datos de la planilla en el mismo orden que SURGE, con la planilla en grande al lado (RePág / AvPág cambian de hoja). Fecha al lado del valor con Tab (2023 = 01/01/2023; vacía = la de planilla). En la lista: 🧾 n/20 o 🧾 datos ✓. <b>📋 Datos para SURGE</b> (barra izquierda) copia los completos con CUIL y fecha de planilla para Carga rápida.</li>
-<li><b>Repartir:</b> tilde "Repartir: tanda de N por día" (22 de entrada). Muestra lo hecho que todavía no pasaste, del más viejo al más nuevo, hasta N. Pegás y tocás <b>✓ Ya los pegué</b>: al día siguiente sale la tanda que sigue. Cuenta desde el día que lo prendiste.</li>
+<li><b>Todo lo que falta pasar al Excel:</b> tilde en el Cierre del día. Muestra todo lo hecho que todavía no marcaste como pegado, de cualquier día, del más viejo al más nuevo. Pegás y tocás <b>✓ Ya los pegué</b>.</li>
 <li><b>Copiar / Guardar listado:</b> todos los socios de la tanda.</li>
 <li><b>Métricas:</b> listos y editadas hoy, avance de la tanda, objetivo y cuántos por día hábil.</li>
 </ul>
@@ -823,7 +823,7 @@ body.dsopen .modal{right:400px}
 <li><b>Copia automática:</b> elegís una vez una carpeta tuya ("Copias Armador", fuera de las de trabajo) y el Armador guarda solo un archivo por día (armador-copia-AAAA-MM-DD.json) con lo último: cada 10 minutos si cambiaste algo y al cambiar de ventana. Deja los últimos 14 días. Si Chrome pide permiso de nuevo, se reactiva con 🔓 Reconectar carpetas o 💾 Guardar copia ahora. Para recuperar: 📂 Importar configuración y elegís el archivo del día.</li>
 <li><b>Atajos:</b> tocá la tecla y apretá la nueva; si choca, se intercambian.</li>
 <li><b>Envío a firma (Retener):</b> lo guardado queda en una carpeta de espera aparte, que elegís vos fuera de la de listos (cuenta como Listo). Con <b>📤 Mandar a firmar</b> (barra de la izquierda) elegís cuántas pasar a la carpeta de listos; van las más viejas primero.</li>
-<li><b>Automático:</b> en el mismo cartel, "Pasar N cada M min, solo de X a Y h" (el intervalo varía ±20 %) → ▶ Arrancar. Necesita la pestaña abierta y la PC prendida. <b>Seguimiento:</b> mira en Firmados si cada uno volvió con _signed y avisa si alguno tarda más de los minutos que elijas.</li>
+<li><b>Automático:</b> en el mismo cartel, "Pasar N cada M min, solo de X a Y h" → ▶ Arrancar. Necesita la pestaña abierta y la PC prendida. <b>Seguimiento:</b> mira en Firmados si cada uno volvió con _signed y avisa si alguno tarda más de los minutos que elijas.</li>
 <li><b>Firmados:</b> días hacia atrás para socios sin registro.</li>
 <li><b>Exportar / Importar configuración:</b> copia de todo para otra PC. Las carpetas se eligen de nuevo.</li>
 </ul>
@@ -852,7 +852,7 @@ body.dsopen .modal{right:400px}
 <li><label><input type='checkbox'> Clasificador: <code>ANALISTA = "gino"</code> y <code>NUMERO_EN_NOMBRE = "cuil"</code>.</label></li>
 <li><label><input type='checkbox'> Carpeta de socios con una carpeta por fecha adentro.</label></li>
 <li><label><input type='checkbox'> Armador Diabetes: Socios, Listos (= para_firmar), Firmados, <b>Guardar con: CUIL</b>.</label></li>
-<li><label><input type='checkbox'> Armador Hs extras: sus carpetas y su formato de nombre.</label></li>
+<li><label><input type='checkbox'> Armador Medicación: sus carpetas y su formato de nombre.</label></li>
 <li><label><input type='checkbox'> Objetivo del mes en Métricas.</label></li>
 </ul>
 <h3>Paso 1: SURGE y cruce con el Excel</h3>
@@ -933,7 +933,7 @@ body.dsopen .modal{right:400px}
 <li><b>Cierre del día</b> → Sumar pendientes → <b>Copiar para Excel</b> → pegar en el Excel compartido.</li>
 <li>Con Retener prendido: <b>📤 Mandar a firmar</b> → cantidad de la tanda → Enter. Lo demás queda en espera para después.</li>
 <li>O en automático: en <b>📤 Mandar a firmar</b> → ⏱ "Pasar N cada M min, de X a Y h" → ▶ Arrancar. Dejá la pestaña abierta. En Seguimiento ves cuáles volvieron con _signed y te avisa si alguno tarda.</li>
-<li>Si hiciste más de lo que pasás por día: <b>Repartir</b> (tanda de 20-25) → Copiar → pegar → <b>✓ Ya los pegué</b>. Lo que queda sale en los días siguientes.</li>
+<li>Si quedó algo de días anteriores sin pegar: tildá <b>Todo lo que falta pasar al Excel</b> → Copiar → pegar → <b>✓ Ya los pegué</b>.</li>
 <li><b>Guardar .txt</b> del cierre.</li>
 <li>Revisar <b>Para editar</b> y anotar lo pendiente.</li>
 <li>Si la tanda quedó completa, <b>Marcar lista</b> la fecha.</li>
@@ -941,7 +941,7 @@ body.dsopen .modal{right:400px}
 <li>Repetir en el otro apartado si trabajaste los dos.</li>
 <li>Viernes: <b>Exportar configuración</b>.</li>
 </ol>
-<h3>Hs extras: qué cambia</h3>
+<h3>Medicación: qué cambia</h3>
 <ul>
 <li>Carpetas propias y su propia <b>Lista de nombres</b> (pegarla al empezar la tanda).</li>
 <li>Nombre: <code>DNI - APELLIDO, NOMBRE - TIPO PERÍODO</code>, ej. <code>16749332 - GALEAZZI, SILVINA SANDRA - RHC 9-26.pdf</code>.</li>
@@ -1235,7 +1235,7 @@ body.dsopen .modal{right:400px}
   let rootDir = null, outDir = null, signDir = null;
   let firmados = [];          // archivos de la carpeta de firmados: {n: nombre en minúsculas, t: fecha de modificación}
   // Apartados: cada uno con sus carpetas, formato de nombre, fechas, marcas y "Para editar"
-  const PROFS = { diabetes: "🩸 Diabetes", hsextras: "⏱ Hs extras" };
+  const PROFS = { diabetes: "🩸 Diabetes", hsextras: "💊 Medicación" };
   let prof = "diabetes";
   const pk = k => prof === "diabetes" ? k : `${prof}:${k}`;   // Diabetes conserva las claves de antes
   let namesMap = {};          // DNI -> "APELLIDO, NOMBRE" (pegado desde Excel)
@@ -1293,7 +1293,7 @@ body.dsopen .modal{right:400px}
     const sel = s.groups.find(g => g.key === s.sel && g.nro);
     return sel || s.groups.find(g => g.nro) || null;
   }
-  // Campos que se completan por socio (Hs extras): {nombre} {tipo} {periodo}
+  // Campos que se completan por socio (Medicación): {nombre} {tipo} {periodo}
   const FIELD_TOKENS = { nombre: "Nombre y apellido", tipo: "Tipo de documentación", periodo: "Período" };
   const usesTok = t => new RegExp("\\{" + t + "\\}", "i").test(tpl);
   const VAR_RE = /\{(tramite|fecha|nombre|tipo|periodo)\}/i;
@@ -1608,7 +1608,7 @@ body.dsopen .modal{right:400px}
   async function loadAuto() { auto = { ...auto, on: false, ...((await kvGet(pk("auto"))) || {}) }; renderAuto(); }
   const saveAuto = () => kvSet(pk("auto"), auto);
   const hhmm = t => new Date(t).toTimeString().slice(0, 5);
-  const jitter = min => min * 60000 * (0.8 + Math.random() * 0.4);
+  const jitter = min => min * 60000;   // intervalo fijo
   const enHorario = d => { const h = d.getHours() + d.getMinutes() / 60; return h >= auto.desde && h < auto.hasta; };
   function renderAuto() {
     $("aK").value = auto.k; $("aMin").value = auto.min; $("aDesde").value = auto.desde; $("aHasta").value = auto.hasta; $("aAlerta").value = auto.alerta;
@@ -2558,7 +2558,7 @@ body.dsopen .modal{right:400px}
       const el = $("f_" + falta.find(f => f !== "cuil")); if (el) { el.focus(); el.classList.add("missing"); }
       return false;
     }
-    if (settings.requireFp && current && !usesTok("periodo") && !noteOf(current).fp) {   // en Hs extras manda el período, no la fecha
+    if (settings.requireFp && current && !usesTok("periodo") && !noteOf(current).fp) {   // en Medicación manda el período, no la fecha
       say(`Falta la fecha de planilla: cargala con ${KL("quickDate")} (o ${KL("readDate")} para leerla) y volvé a guardar.`, "err");
       toast(`📅 Falta la fecha de planilla — apretá ${KL("quickDate")} para cargarla.`);
       $("fechaPlanilla").classList.add("missing");
@@ -2601,7 +2601,7 @@ body.dsopen .modal{right:400px}
     try { await fn(); } catch (e) { console.error(e); say("Error: " + (e.message || e), "err"); }
     finally { btn.disabled = false; }
   }
-  /* Hs extras (medicación): un PDF por documento (RHC, PASI, estudios…) sin salir del socio */
+  /* Medicación: un PDF por documento (RHC, PASI, estudios…) sin salir del socio */
   $("saveDocBtn").onclick = () => withBuild($("saveDocBtn"), setStatus, async () => {
     const tipo = current ? fieldVal(current, "tipo") : "";
     if (!tipo) { setStatus("Escribí arriba el tipo de este documento (RHC, PASI, estudio…) y volvé a guardar.", "err"); $("f_tipo").focus(); $("f_tipo").classList.add("missing"); return; }
@@ -3136,7 +3136,7 @@ body.dsopen .modal{right:400px}
   // Tecla F
   document.addEventListener("keydown", e => {
     if (!keyIs(e, "readDate")) return;
-    // Hs extras: la F lleva al tipo de documentación, donde se escribe "RHC 9-26" (tipo y período juntos)
+    // Medicación: la F lleva al tipo de documentación, donde se escribe "RHC 9-26" (tipo y período juntos)
     if (usesTok("tipo") && current && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && $("fdlg").hidden && !$("ppOv").classList.contains("show") && !$("work").hidden) {
       e.preventDefault();
       if (modal.classList.contains("show")) $("mclose").click();
@@ -3405,7 +3405,7 @@ body.dsopen .modal{right:400px}
     // primero los guardados (tienen archivo); después las fechas de planilla que no tengan guardado ese día
     for (const r of [...dayLog, ...fpEvents()]) {
       const d = isoDay(new Date(r.ts)); if (d < from || d > to) continue;
-      // Hs extras: cada documento (RHC, PASI…) es su propia fila
+      // Medicación: cada documento (RHC, PASI…) es su propia fila
       const base = d + "|" + r.root + "|" + r.socio, k = base + (r.file && r.tipo ? "|" + r.tipo : "");
       if (r.viaFecha && !seen.has(k) && [...seen.keys()].some(x => x.startsWith(base + "|"))) continue;
       if (!seen.has(k)) seen.set(k, r);
@@ -3508,21 +3508,21 @@ body.dsopen .modal{right:400px}
     if (Object.keys(cuilMap).length || usesTok("cuil")) cols.push(["CUIL", r => cuilMap[r.dni] || ""]);
     if (showNames()) cols.push(["Nombre y apellido", r => r.nombre]);
     if (usesTok("tipo")) cols.push(["Tipo", r => r.tipo]);
-    // Hs extras: lo que importa es el mes; para el Excel va como 01/MM/AAAA (9-26 → 01/09/2026)
+    // Medicación: lo que importa es el mes; para el Excel va como 01/MM/AAAA (9-26 → 01/09/2026)
     const perFecha = p => { const m = String(p || "").match(/^(\d{1,2})\D+(\d{2}|\d{4})$/); return m ? `01/${m[1].padStart(2, "0")}/${m[2].length === 2 ? "20" + m[2] : m[2]}` : (p || ""); };
     if (usesTok("periodo")) cols.push(["Período", r => perFecha(r.periodo)]);
     else cols.push(["Fecha planilla", r => fmtFecha(r.fp)]);
     cols.push(["Estado", r => r.estado || "Listo"], ["Archivo", r => r.file], ["Hora", r => r.ts ? new Date(r.ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""], ["Observación", r => r.obs], ["Fecha análisis", r => r.ts ? fmtFecha(isoDay(new Date(r.ts))) : ""]);
     return cols;
   }
-  // Repartir: lo hecho se pasa al Excel de a una tanda por día (del más viejo al más nuevo)
+  // Falta pasar: todo lo hecho que todavía no marcaste como pegado en el Excel (del más viejo al más nuevo)
   let pasados = new Set(), repDesde = 0;
   const repKey = r => isoDay(new Date(r.ts)) + "|" + r.root + "|" + r.socio + (r.file && r.tipo ? "|" + r.tipo : "");
   function repRows() {
     return savesIn("0000-00-00", "9999-12-31").filter(r => r.ts >= repDesde && !pasados.has(repKey(r))).sort((a, b) => a.ts - b.ts);
   }
   function dayRows() {
-    if ($("dayRep").checked) return repRows().slice(0, Math.max(1, +$("dayCupo").value || 22));
+    if ($("dayRep").checked) return repRows();
     const day = $("dayDate").value;
     let rows = savesIn(day, day).sort((a, b) => a.ts - b.ts);
     if ($("dayPend").checked) {
@@ -3550,8 +3550,7 @@ body.dsopen .modal{right:400px}
     $("dayDone").hidden = !rep || !rows.length;
     $("dayDate").disabled = $("dayPend").disabled = rep;
     if (rep) {
-      const quedan = repRows().length - rows.length;
-      $("dayInfo").textContent = rows.length ? `Tanda para pasar: ${rows.length} · quedan ${quedan} para los próximos días · desde ${fmtFecha(isoDay(new Date(repDesde)))}` : "No queda nada sin pasar. 🎉";
+      $("dayInfo").textContent = rows.length ? `Falta pasar al Excel: ${rows.length} · desde ${fmtFecha(isoDay(new Date(repDesde)))}` : "No queda nada sin pasar. 🎉";
       return;
     }
     $("dayInfo").textContent = `${fmtFecha($("dayDate").value)} · ${nOk} listo${nOk === 1 ? "" : "s"}` + (pend ? ` · ${pend} pendiente${pend === 1 ? "" : "s"}` : "") + (rows.length ? "" : " · No hay nada guardado ese día en este apartado.");
@@ -3562,7 +3561,6 @@ body.dsopen .modal{right:400px}
     pasados = new Set((await kvGet(pk("pasados"))) || []);
     repDesde = (await kvGet(pk("repDesde"))) || 0;
     $("dayRep").checked = !!((await kvGet(pk("repOn"))) && repDesde);
-    $("dayCupo").value = (await kvGet(pk("cupo"))) || 22;
     renderDay(); $("daylg").hidden = false;
   };
   ["dayDate", "dayHead", "dayPend"].forEach(id => $(id).addEventListener("change", renderDay));
@@ -3571,7 +3569,6 @@ body.dsopen .modal{right:400px}
     if ($("dayRep").checked && !repDesde) { const d = new Date(); d.setHours(0, 0, 0, 0); repDesde = d.getTime(); kvSet(pk("repDesde"), repDesde); }
     kvSet(pk("repOn"), $("dayRep").checked); renderDay();
   });
-  $("dayCupo").addEventListener("change", () => { kvSet(pk("cupo"), Math.max(1, +$("dayCupo").value || 22)); renderDay(); });
   $("dayDone").onclick = () => {
     const rows = dayRows(); rows.forEach(r => pasados.add(repKey(r)));
     const cut = Date.now() - 1000 * 60 * 60 * 24 * 130;
@@ -3839,9 +3836,9 @@ body.dsopen .modal{right:400px}
     ["invert", "Invertir selección", "i"],
     ["preview", "Abrir vista previa", "p"],
     ["save", "Guardar en Listos", "ctrl+s"],
-    ["saveDoc", "Guardar documento y seguir (Hs extras)", "ctrl+shift+s"],
+    ["saveDoc", "Guardar documento y seguir (Medicación)", "ctrl+shift+s"],
     ["quickDate", "Fecha de planilla a mano", "q"],
-    ["readDate", "Leer fecha manuscrita (Hs extras: tipo y período)", "f"],
+    ["readDate", "Leer fecha manuscrita (Medicación: tipo y período)", "f"],
     ["photopea", "Abrir en Photopea", "e"],
     ["surge", "Datos para SURGE (panel)", "d"],
     ["toEdit", "Mandar a Para editar (lista)", "l"],
@@ -4735,7 +4732,7 @@ body.dsopen .modal{right:400px}
     return G;
   }
   const hechosHoy = k => Object.values(mstPasados[k] || {}).filter(d => d === hoyIso()).length;
-  function tandaDe(k) { const L = mstData.G[k] || []; return L.slice(0, Math.max(0, (mstCupos[k] || 0) - hechosHoy(k))); }
+  function tandaDe(k) { return mstData.G[k] || []; }   // todo lo que falta pasar, sin cupo
   async function cargarBase(file) {
     try {
       miBase = parseBase(/\.xls[xm]$/i.test(file.name) ? await leerXlsx(await file.arrayBuffer(), [["dni", "fecha planilla", "estado"]]) : await (async () => { const buf = await file.arrayBuffer(); let t = new TextDecoder("utf-8").decode(buf); if (t.includes("\uFFFD")) t = new TextDecoder("windows-1252").decode(buf); return t; })());
@@ -4783,13 +4780,12 @@ body.dsopen .modal{right:400px}
     const esMi = k === "mi_an" || k === "mi_surge", tanda = esMi ? new Set(tandaDe(k).map(x => x.dni)) : new Set();
     const tb = $("mstTanda"); tb.hidden = !esMi;
     if (esMi) {
-      const tl = tandaDe(k), hh = hechosHoy(k), cupo = mstCupos[k];
+      const tl = tandaDe(k), hh = hechosHoy(k);
       const mins = k === "mi_surge" ? tl.reduce((a, x) => a + (x.min || 2), 0) : 0;
-      tb.innerHTML = `Cupo por día <input type="number" id="mstCupo" min="1" value="${cupo}"> · hoy ya pasaste <b>${hh}</b> · tanda de hoy: <b>${tl.length}</b>${mins ? ` (≈ ${mins} min)` : ""}${hh >= cupo ? " · ✅ cupo de hoy cumplido" : ""}
-        <button id="mstTandaCopy" ${tl.length ? "" : "disabled"}>📋 Copiar tanda de hoy</button><button class="primary" id="mstTandaOk" ${tl.length ? "" : "disabled"}>✓ Ya los pasé</button>
+      tb.innerHTML = `Hoy ya pasaste <b>${hh}</b> · faltan: <b>${tl.length}</b>${mins ? ` (≈ ${mins} min)` : ""}${!tl.length ? " · ✅ al día" : ""}
+        <button id="mstTandaCopy" ${tl.length ? "" : "disabled"}>📋 Copiar todos</button><button class="primary" id="mstTandaOk" ${tl.length ? "" : "disabled"}>✓ Ya los pasé</button>
         <span class="label">${k === "mi_an" ? "Pegalos en la hoja análisis del compartido y poné la fecha en tu base." : "Cargalos en SURGE (Carga rápida); los que ya tengan 🧾 datos ✓ van solos."}</span>`;
-      $("mstCupo").onchange = () => { mstCupos[k] = Math.max(1, +$("mstCupo").value || 1); kvSet("mstCupos", mstCupos); mstShow(k); };
-      $("mstTandaCopy").onclick = async () => { const tl2 = tandaDe(k); await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tFecha planilla\tEstado\tDetalle", ...tl2.map(x => [x.dni, x.cuil, x.nombre, mFmt(x.fp), x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 Tanda de hoy copiada (${tl2.length}).`); };
+      $("mstTandaCopy").onclick = async () => { const tl2 = tandaDe(k); await navigator.clipboard.writeText(["DNI\tCUIL\tNombre\tFecha planilla\tEstado\tDetalle", ...tl2.map(x => [x.dni, x.cuil, x.nombre, mFmt(x.fp), x.estadoActual, x.det].map(v => String(v || "").replace(/[\t\r\n]+/g, " ")).join("\t"))].join("\r\n")); toast(`📋 Copiados (${tl2.length}).`); };
       $("mstTandaOk").onclick = () => { const tl2 = tandaDe(k); tl2.forEach(x => { mstPasados[k][x.dni] = hoyIso(); }); const lim = isoDay(new Date(Date.now() - 90 * 864e5)); for (const g of ["mi_an", "mi_surge"]) for (const [d, f] of Object.entries(mstPasados[g])) if (f < lim) delete mstPasados[g][d]; kvSet("mstPasados", mstPasados); toast(`✓ ${tl2.length} marcados como pasados hoy.`); mstRender(); };
     }
     const conMot = k === "rechazado";
@@ -5182,41 +5178,37 @@ body.dsopen .modal{right:400px}
   $("qpPanel").addEventListener("click", e => { if (e.target === $("qpPanel")) $("qpPanel").hidden = true; });
   // Con el panel abierto, los atajos del Armador no se disparan (Esc cierra; Ctrl+V pega)
   document.addEventListener("keydown", e => { if ($("qpPanel").hidden) return; e.stopImmediatePropagation(); if (e.key === "Escape") $("qpPanel").hidden = true; }, true);
-  /* 📋 Hoy: los 5 pasos para largar a ritmo normal + control semanal */
+  /* 📋 Hoy: lo que falta hacer hoy + cómo vas en el mes */
   let hoyChk = {};
   const habilesEntre = (a, b) => { let n = 0; for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) n++; return n; };
   async function renderHoy() {
     if (!$("hoyPanel").classList.contains("show")) return;
     const hoy = new Date(), iso = hoyIso();
     hoyChk = (await kvGet("hoy:" + iso)) || {};
-    const firmaCupo = (await kvGet("hoyFirmaCupo")) || 22;
     const envHoy = ((await kvGet(pk("envios"))) || []).filter(e => isoDay(new Date(e.ts)) === iso).length;
-    const ofi = [3, 4, 5].includes(hoy.getDay());
     $("hoyTit").textContent = "📋 Hoy · " + hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "numeric" });
     const M = mstData && miBase ? mstData.G : null;
-    const bar = (h, c) => `<div class="hoybar"><i style="width:${Math.min(100, c ? h / c * 100 : 0)}%"></i></div>`;
     const sinMaster = `<br><span class="label">Abrí el Master y tocá ↻ Actualizar (con 🧍 Mi base elegida) para ver los números.</span><br><button data-hoy="master">🗂 Abrir Master</button>`;
     const pasos = [];
     // 1 análisis
-    { const c = mstCupos.mi_an, h = M ? hechosHoy("mi_an") : 0;
-      pasos.push({ id: 1, auto: M && h >= c, html: `<b>Análisis al compartido</b><br>${M ? `<span class="n">${h} / ${c}</span> hoy · quedan ${M.mi_an.length} por pasar${bar(h, c)}<button data-hoy="mi_an">Ver tanda de hoy</button>` : sinMaster}` }); }
+    { const h = M ? hechosHoy("mi_an") : 0;
+      pasos.push({ id: 1, auto: M && !M.mi_an.length, html: `<b>Análisis al compartido</b><br>${M ? `<span class="n">${h}</span> pasados hoy · faltan <b>${M.mi_an.length}</b><br><button data-hoy="mi_an">Ver lista</button>` : sinMaster}` }); }
     // 2 firma
-    { const c = firmaCupo, enE = settings.hold ? enEspera.length : null;
-      pasos.push({ id: 2, auto: envHoy >= c, html: `<b>Mandar a firma</b><br><span class="n">${envHoy} / <input id="hoyFirmaCupo" type="number" min="1" value="${c}" style="width:52px"></span> hoy${enE != null ? ` · ${enE} en espera` : ""}${bar(envHoy, c)}${settings.hold ? `<button data-hoy="firma">📤 Mandar a firmar</button>` : `<span class="label">Retener está apagado: lo que guardás va directo a firmar. Prendelo en ⚙ Configuración → Firma para dosificar.</span>`}` }); }
+    { const enE = settings.hold ? enEspera.length : null;
+      pasos.push({ id: 2, auto: settings.hold && !enEspera.length && envHoy > 0, html: `<b>Mandar a firma</b><br><span class="n">${envHoy}</span> enviados hoy${enE != null ? ` · ${enE} en espera<br><button data-hoy="firma">📤 Mandar a firmar</button>` : `<br><span class="label">Retener está apagado: lo que guardás va directo a firmar.</span>`}` }); }
     // 3 SURGE
-    { const c = mstCupos.mi_surge, h = M ? hechosHoy("mi_surge") : 0, t = M ? tandaDe("mi_surge") : [], min = t.reduce((s, x) => s + (x.min || 0), 0);
-      pasos.push({ id: 3, auto: M && h >= c, html: `<b>Cargas en SURGE</b><br>${M ? `<span class="n">${h} / ${c}</span> hoy · tanda pendiente ≈ ${min} min · quedan ${M.mi_surge.length}${bar(h, c)}<button data-hoy="mi_surge">Ver tanda de hoy</button>` : sinMaster}` }); }
+    { const h = M ? hechosHoy("mi_surge") : 0, t = M ? M.mi_surge : [], min = t.reduce((s, x) => s + (x.min || 0), 0);
+      pasos.push({ id: 3, auto: M && !t.length, html: `<b>Cargas en SURGE</b><br>${M ? `<span class="n">${h}</span> cargados hoy · faltan <b>${t.length}</b>${min ? ` (≈ ${min} min)` : ""}<br><button data-hoy="mi_surge">Ver lista</button>` : sinMaster}` }); }
     // 4 y 5 manuales
     pasos.push({ id: 4, html: `<b>Fila en emp. y reemp.</b><br><span class="label">Pegá en el compartido el bloque que copia Carga rápida al Enviar a revisión (lista "Excel pendientes").</span>` });
     { const n = M ? hechosHoy("mi_an") + hechosHoy("mi_surge") : null;
       pasos.push({ id: 5, html: `<b>Fecha en tu base</b><br><span class="label">Completá "Fecha cargado en base padron diabetes"${n != null ? ` de los ${n} que pasaste hoy` : ""}.</span>` }); }
-    let html = ofi ? `<div class="hoyofi">🏢 Día de oficina: producís a mano, como siempre. Los números de hoy salen del colchón.</div>` : "";
-    html += pasos.map(p => { const ok = !!(hoyChk[p.id] ?? p.auto); return `<div class="hoypaso ${ok ? "ok" : ""}"><input type="checkbox" data-hoychk="${p.id}" ${ok ? "checked" : ""}><div class="hoytxt">${p.id}. ${p.html}</div></div>`; }).join("");
-    // control
+    let html = pasos.map(p => { const ok = !!(hoyChk[p.id] ?? p.auto); return `<div class="hoypaso ${ok ? "ok" : ""}"><input type="checkbox" data-hoychk="${p.id}" ${ok ? "checked" : ""}><div class="hoytxt">${p.id}. ${p.html}</div></div>`; }).join("");
+    // cómo vas en el mes
     let ctl = "";
     if (mstData) {
       const yo = mstAnalista;
-      if (!yo) ctl += `Elegí tu nombre en 👤 Analista del Master para ver tu ritmo del mes.<br>`;
+      if (!yo) ctl += `Elegí tu nombre en 👤 Analista del Master para ver tu mes.<br>`;
       else {
         const C = (mstData.cargas || []).filter(c => mNorm(c.a) === mNorm(yo));
         const mk = d => d.getFullYear() * 12 + d.getMonth(), m0 = mk(hoy);
@@ -5225,18 +5217,12 @@ body.dsopen .modal{right:400px}
         const prom = prev.length ? Math.round(prev.reduce((a, b) => a + b, 0) / prev.length) : null;
         const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
         const proy = Math.round(esteMes / Math.max(1, habilesEntre(ini, hoy)) * habilesEntre(ini, fin));
-        ctl += `<b>Tu mes (${escapeHtml(yo)}):</b> ${esteMes} cargados · a este ritmo cerrás en ~${proy}${prom != null ? ` · promedio de los meses anteriores: ${prom}` : ""}<br>`;
-        if (prom != null && proy > prom * 1.3) ctl += `<span class="warn">⚠ Vas un ${Math.round((proy / prom - 1) * 100)} % arriba de lo normal: bajá el cupo de SURGE.</span><br>`;
+        ctl += `<b>Tu mes (${escapeHtml(yo)}):</b> ${esteMes} cargados · a este ritmo cerrás en ~${proy}${prom != null ? ` · promedio de los 3 meses anteriores: ${prom}` : ""}<br>`;
       }
-      if (M) {
-        const dAn = M.mi_an.length / Math.max(1, mstCupos.mi_an), dSu = M.mi_surge.length / Math.max(1, mstCupos.mi_surge), d = Math.max(dAn, dSu);
-        ctl += `<b>Colchón:</b> ${Math.round(dAn)} días de análisis · ${Math.round(dSu)} días de SURGE<br>`;
-        if (d > 10) ctl += `<span class="warn">⚠ Más de 2 semanas guardadas: frená la producción y usá el tiempo en otra cosa.</span>`;
-      }
-    } else ctl = `Abrí el Master y tocá ↻ Actualizar para ver tu ritmo y el colchón.`;
-    html += `<div class="hoyctl">📊 <b>Control</b><br>${ctl}</div>`;
+      if (M) ctl += `<b>Falta pasar:</b> ${M.mi_an.length} al compartido · ${M.mi_surge.length} a SURGE<br>`;
+    } else ctl = `Abrí el Master y tocá ↻ Actualizar para ver cómo vas en el mes.`;
+    html += `<div class="hoyctl">📊 <b>Tu mes</b><br>${ctl}</div>`;
     $("hoyBody").innerHTML = html;
-    const fc = $("hoyFirmaCupo"); if (fc) fc.onchange = async () => { await kvSet("hoyFirmaCupo", Math.max(1, +fc.value || 1)); renderHoy(); };
   }
   $("hoyBody").addEventListener("change", async e => {
     const c = e.target.closest("[data-hoychk]"); if (!c) return;
