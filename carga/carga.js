@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v12";
+  const VER = "v13";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -81,6 +81,10 @@
 #crp .ok{color:#087}
 #crp .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 #crp button.b{font:inherit;padding:5px 10px;border-radius:6px;border:1px solid #bbb;background:#f5f5f5;cursor:pointer}
+#crp .rhct{border-collapse:collapse;width:100%;font-size:12px}
+#crp .rhct td,#crp .rhct th{border-bottom:1px solid #eee;padding:3px 4px;text-align:left}
+#crp .rhct tr.si td{background:#eaf7ee}
+#crp .rhct tr.no td{background:#fdecea}
 #crp .rrow{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid #eee;padding:7px 0}
 #crp .rrow>div{flex:1}
 #crp .rmot{background:#fdecea;border-left:3px solid #c0392b;padding:4px 7px;margin-top:3px;border-radius:4px;white-space:pre-wrap}
@@ -230,11 +234,80 @@
       if (sel.value === prev) pinta();
     }
   }
+  /* ---------- 📅 Fechas de RHC: por CUIL (o nº de solicitud) trae la fecha del Resumen de HC cargada y dice si sirve para reempadronar ---------- */
+  const addM = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + m); return x; };
+  const isoD = s => { const m = String(s || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+  const dd = d => d ? fmt(d) : "";
+  let rhcStop = false, rhcRes = [];
+  async function fechasRhc() {
+    const txt = box.querySelector("#cr_rhcTxt").value, out = box.querySelector("#cr_rhcOut");
+    const L = txt.split(/\r?\n/).filter(l => l.trim());
+    const enc = (L[0] || "").toLowerCase(), cols = enc.split(/\t|;/).map(c => c.trim());
+    const iNro = /nro|solicitud|n°|nº/.test(enc) ? cols.findIndex(c => /nro|solicitud|n°|nº/.test(c)) : -1;
+    const pedidos = [];
+    for (const l of (iNro >= 0 ? L.slice(1) : L)) {
+      const c = l.split(/\t|;/), cuil = (l.match(/(?<!\d)\d{2}-?\d{8}-?\d(?!\d)/) || [""])[0].replace(/\D/g, ""), nro = iNro >= 0 ? String(c[iNro] || "").replace(/\D/g, "") : "";
+      if (cuil.length === 11 || nro) pedidos.push({ cuil, nro });
+    }
+    if (!pedidos.length) { out.innerHTML = `<p class="msg">No encontré CUIL (11 números) en lo que pegaste. Pegá filas del Excel con la columna CUIL (o con encabezados y una columna "Nro").</p>`; return; }
+    rhcStop = false; rhcRes = [];
+    const hoy = new Date();
+    const pinta = (fin) => {
+      const ok = rhcRes.filter(r => r.sirve === "Sí").length, no = rhcRes.filter(r => r.sirve === "No").length;
+      out.innerHTML = `<p class="hint">${fin ? "✔ Listo" : "Buscando…"} ${rhcRes.length} de ${pedidos.length} · <b>${ok}</b> sirven para reempadronar · <b>${no}</b> buscar planilla nueva${fin ? "" : ` <button class="b" id="cr_rhcStop">Frenar</button>`}</p>
+        ${rhcRes.length ? `<button class="b p" id="cr_rhcCopy">📋 Copiar para Excel</button>` : ""}
+        <div style="max-height:300px;overflow:auto"><table class="rhct"><tr><th>CUIL</th><th>Nº</th><th>Vence</th><th>RHC</th><th>¿Sirve?</th></tr>${rhcRes.slice(-300).map(r => `<tr class="${r.sirve === "Sí" ? "si" : r.sirve === "No" ? "no" : ""}"><td>${esc(r.cuil)}</td><td>${esc(r.nro)}</td><td>${esc(r.fin)}</td><td>${esc(r.rhc)}</td><td title="${esc(r.nota)}">${esc(r.sirve || r.nota)}</td></tr>`).join("")}</table></div>`;
+      const st = out.querySelector("#cr_rhcStop"); if (st) st.onclick = () => { rhcStop = true; };
+      const cp = out.querySelector("#cr_rhcCopy"); if (cp) cp.onclick = async () => {
+        const t = ["CUIL\tNombre\tNº solicitud\tEstado\tVigencia inicio\tVigencia fin\tFecha RHC\t¿Sirve para reempadronar?\tPlanilla válida desde\tPlanilla válida hasta\tNota", ...rhcRes.map(r => [r.cuil, r.nombre, r.nro, r.estado, r.ini, r.fin, r.rhc, r.sirve, r.desde, r.hasta, r.nota].join("\t"))].join("\r\n");
+        try { await navigator.clipboard.writeText(t); } catch (e) { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+        cp.textContent = "✔ Copiado: pegalo en Excel";
+      };
+    };
+    pinta(false);
+    const cola = pedidos.map((p, i) => ({ ...p, i })), porIdx = [];
+    const uno = async p => {
+      const r = { cuil: p.cuil, nro: p.nro, nombre: "", estado: "", ini: "", fin: "", rhc: "", sirve: "", desde: "", hasta: "", nota: "" };
+      try {
+        const q = p.nro ? `id=${p.nro}` : `cuil_beneficiario=${p.cuil}&patologia_id=381`;
+        const L2 = ((await getJ(`/api/empadronamientos?${q}`)).data || []).filter(x => x.patologia_id == 381 || p.nro);
+        if (!L2.length) { r.nota = "no está en SURGE (Diabetes)"; return r; }
+        // la que corresponde: la de vigencia más nueva (si hay un reempadronamiento, ese)
+        L2.sort((a, b) => String(b.vigencia_fin || "").localeCompare(String(a.vigencia_fin || "")) || (+b.id) - (+a.id));
+        const x = L2[0];
+        Object.assign(r, { cuil: x.cuil_beneficiario || p.cuil, nro: String(x.id), nombre: (x.beneficiario && x.beneficiario.nombre) || "", estado: (x.estado && x.estado.nombre) || "", ini: dd(isoD(x.vigencia_inicio)), fin: dd(isoD(x.vigencia_fin)) });
+        const req = await getJ(`/admin/datos_medicos/${x.dato_medico_id}`);
+        const hc = (Array.isArray(req) ? req : []).find(q2 => q2.requisito_id == 61);
+        const f = hc && isoD(hc.fecha), V = isoD(x.vigencia_fin);
+        r.rhc = dd(f);
+        if (!V) { r.nota = "sin vigencia fin"; return r; }
+        const desde = addM(V, -3), hasta = addM(V, 12); hasta.setDate(hasta.getDate() - 1);
+        r.desde = dd(desde); r.hasta = dd(hasta);
+        if (!f) { r.nota = "sin fecha de RHC cargada"; r.sirve = "No"; return r; }
+        r.sirve = f >= desde && f <= hasta ? "Sí" : "No";
+        r.nota = r.sirve === "Sí" ? "reempadronar a 1 click" : `buscar planilla de ${dd(desde)} en adelante`;
+        if (L2.length > 1) r.nota += ` · tiene ${L2.length} solicitudes, tomé la que vence último`;
+      } catch (e) { r.nota = "error: " + e.message; }
+      return r;
+    };
+    // los resultados quedan en el MISMO orden que pegaste, para pegarlos al lado de tus filas
+    await Promise.all([0, 1, 2].map(async () => { while (cola.length && !rhcStop) { const p = cola.shift(); porIdx[p.i] = await uno(p); rhcRes = porIdx.filter(Boolean); if (rhcRes.length % 3 === 0 || !cola.length) pinta(false); } }));
+    rhcRes = pedidos.map((p, i) => porIdx[i] || { cuil: p.cuil, nro: p.nro, nombre: "", estado: "", ini: "", fin: "", rhc: "", sirve: "", desde: "", hasta: "", nota: "sin buscar (frenado)" });
+    pinta(true);
+  }
   if (!mode) {
     box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>
       <div class="btns"><button class="b p" id="cr_rech">🔴 Rechazados de Diabetes</button> <select id="cr_rquien" title="Quién lo cargó"><option value="">Todos</option></select></div>
-      <div id="cr_rlist"></div>`;
+      <div id="cr_rlist"></div>
+      <details style="margin-top:10px"><summary><b>📅 Fechas de RHC</b> (¿se puede reempadronar a 1 click?)</summary>
+        <p class="hint">Pegá filas del Excel que tengan el CUIL (o con encabezados y una columna "Nro" de solicitud). Por cada socio busca su empadronamiento o reempadronamiento más nuevo de Diabetes, la fecha del Resumen de HC cargada y te dice si sirve: tiene que estar entre 3 meses antes del vencimiento y un año después.</p>
+        <textarea id="cr_rhcTxt" rows="4" style="width:100%" placeholder="Ctrl+V acá"></textarea>
+        <div class="btns"><button class="b p" id="cr_rhcGo">Buscar fechas</button></div>
+        <div id="cr_rhcOut"></div>
+      </details>`;
     box.querySelector("[data-close]").onclick = minimizar;
+    box.querySelector("#cr_rhcGo").onclick = fechasRhc;
+    box.querySelector("#cr_rhcTxt").addEventListener("keydown", e => e.stopPropagation());
     box.querySelector("#cr_rech").onclick = listaRechazados;
     box.querySelector("#cr_rquien").onchange = e => { SS("yo", e.target.value); box.querySelector("#cr_rech").click(); };
     return;
