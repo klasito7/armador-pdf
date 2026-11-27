@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<!-- Armador de PDF · © 2026 Franco Baer. Todos los derechos reservados. No se permite copiar, modificar ni distribuir este código sin autorización escrita del autor. -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Armador de PDF</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
@@ -104,6 +107,16 @@
   .dsmot{color:#b45309;margin-top:2px}
   .mstmot{width:100%;min-width:180px;font:inherit;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit}
   .mstmots{margin:4px 0 8px;font-size:13px}
+  #lockScr,#pwDlg{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  #pwDlg{background:#0008}
+  #lockScr[hidden],#pwDlg[hidden]{display:none}
+  .lockbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px;width:min(420px,94vw);text-align:center;box-shadow:0 10px 40px #0005}
+  .lockbox input{display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:9px 10px;font-size:15px}
+  .lockbox button.primary{width:100%;margin-top:4px}
+  .lockbox .frow button.primary{width:auto}
+  .lkerr{color:#c0392b;min-height:1.2em;font-size:13px}
+  .lkwarn{font-size:12.5px;color:#b45309;text-align:left}
+  .lkcode{font:700 20px ui-monospace,Consolas,monospace;letter-spacing:1px;padding:12px;border:2px dashed #2b6cdf;border-radius:10px;margin:10px 0;user-select:all;word-break:break-all}
   #qpPanel{position:fixed;inset:0;z-index:72;background:#0007;display:flex;align-items:center;justify-content:center}
   #qpPanel[hidden]{display:none}
   .qpbox{background:var(--panel);border-radius:12px;padding:14px 18px;width:min(720px,96vw);max-height:92vh;overflow:auto;box-shadow:0 10px 40px #0006}
@@ -709,7 +722,7 @@ body.dsopen .modal{right:400px}
 <li><b>Listos: Elegir</b> → donde se guardan los PDF finales (puede ser la misma para_firmar del clasificador).</li>
 <li><b>Firmados: Elegir</b> (opcional) → donde la autofirma deja los PDF firmados.</li>
 <li><b>Guardar con:</b> DNI o CUIL. En Diabetes se usa <b>CUIL</b>.</li>
-<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>🧰 PDF rápido (arriba):</b> aparte de los socios. Pegá imágenes con Ctrl+V (capturas, fotos copiadas), arrastralas o elegí JPG, PNG o PDF; ordená con ▲▼ y tocá ⬇ Armar y descargar PDF (o 💾 Guardar en Listos). Cada imagen va en una hoja A4 (vertical u horizontal según la imagen); los PDF se suman enteros, así también sirve para combinar PDF. Esc cierra. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
+<li><b>Hs extras / medicación, un PDF por documento:</b> marcá las hojas del RHC, escribí el tipo (RHC) y tocá <b>📄 Guardar documento y seguir</b> (Ctrl+Shift+S). Se guarda ese PDF, las hojas quedan con la etiqueta verde del tipo y te quedás en el mismo socio con el tipo vacío para armar el siguiente (PASI, estudio…). El período queda igual. Cuando terminás el socio, pasás al siguiente como siempre. <b>🔒 Contraseña (⚙ Configuración):</b> opcional. Cifra todo lo que el Armador guarda en Chrome (listas, historial, datos SURGE, cierres, motivos) y las copias de seguridad. Se pide una vez por día (o también si no lo usás por X minutos, si lo elegís). Al activarla te muestra un <b>código de recuperación</b> una sola vez: anotalo fuera de la PC. Si te olvidás la contraseña, en la pantalla de bloqueo tocás "Me olvidé", ponés el código y elegís otra; nada se borra. Una copia cifrada se importa en otra PC con la contraseña o el código que tenía. No cifra los PDF ni las carpetas de tu PC/OneDrive. <b>🧰 PDF rápido (arriba):</b> aparte de los socios. Pegá imágenes con Ctrl+V (capturas, fotos copiadas), arrastralas o elegí JPG, PNG o PDF; ordená con ▲▼ y tocá ⬇ Armar y descargar PDF (o 💾 Guardar en Listos). Cada imagen va en una hoja A4 (vertical u horizontal según la imagen); los PDF se suman enteros, así también sirve para combinar PDF. Esc cierra. <b>✍ Firmado, solo lo tuyo:</b> un socio pasa a Firmado solo si en la carpeta Firmados está el mismo PDF que guardaste vos en el Armador (con "_signed" al final) y firmado después de guardarlo. Los firmados de compañeros, de otro apartado o del año pasado ya no cuentan. Se puede volver a la regla vieja en ⚙ Configuración → Firma. <b>Rotar en el visor:</b> con la hoja en grande, ⟳ o R gira 90° a la derecha y ⟲ o Shift+R a la izquierda; queda igual que con el ⟳ de la tarjeta. <b>📅 Fecha hasta:</b> en 👥 Lista de nombres pegá las filas de tu Excel <b>con la fila de encabezados</b> e incluí la columna "Fecha hasta" (sirve también "Hasta" o "Vigencia hasta"). Al abrir cada socio aparece una ventanita con su Fecha hasta (desde cuándo bajar la documentación). Se arrastra adonde no moleste y queda ahí. <b>Tecla F en Hs extras:</b> va al tipo de documentación; escribís tipo y período juntos ("RHC 9-26") y al dar Enter se separan solos. En el siguiente documento la F te deja el período puesto y el cursor al principio: escribís solo "PASI". En Diabetes la F sigue leyendo la fecha. En Hs extras no se pide fecha de planilla: manda el período (9-26), y en el Cierre del día sale como 01/09/2026, una fila por documento.</li>
 <li><b>Nombre:</b> el formato del archivo. Diabetes: <code>{cuil} gino</code>. Hs extras: <code>{dni} - {nombre} - {tipo} {periodo}</code>.</li>
 <li><b>Lista de nombres:</b> pegá desde Excel DNI, CUIL y Apellido, Nombre, o el resultado del Buscador Padrón tal cual. Un CUIL que no corresponde a su DNI (familiar con el CUIL del titular en el padrón) se ignora y te avisa. También se puede cargar un archivo <b>.txt o .csv</b> (en Excel: Guardar como → Texto delimitado por tabulaciones o CSV).</li>
 </ol>
@@ -1014,6 +1027,16 @@ body.dsopen .modal{right:400px}
     <p class="label">Sirve para avisar cuando un socio ya pasó antes. Se llena solo con lo que guardás o marcás incompleto. Para sumar lo viejo:</p>
     <button id="histPaste" class="b">📋 Pegar desde el Excel</button> <span id="histCount" class="label"></span>
     </details>
+    <details open><summary>🔒 Contraseña</summary>
+    <p id="pwState" class="label"></p>
+    <div class="frow" id="pwOff"><button id="pwActivate" class="primary">Activar contraseña</button></div>
+    <div id="pwOn" hidden>
+      <div class="frow"><button id="pwLockNow">🔒 Bloquear ahora</button><button id="pwChange">Cambiar contraseña</button><button id="pwNewCode">Nuevo código de recuperación</button></div>
+      <label class="cfgchk">Bloquear solo si no lo uso por <select id="pwIdle"><option value="0">nunca (solo a la medianoche)</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">1 hora</option></select></label>
+      <div class="frow"><button id="pwRemove" class="danger">Quitar contraseña</button></div>
+    </div>
+    <p class="edhint">Con contraseña, todo lo que el Armador guarda en Chrome (listas de nombres y CUIL, historial, datos SURGE, cierres, motivos…) queda cifrado, y también las copias de seguridad. Se pide una vez por día. <b>No cifra</b> los PDF ni las carpetas de tu PC/OneDrive, ni el Excel. Si te olvidás la contraseña, entrás con el código de recuperación; nada se borra.</p>
+    </details>
     <details open><summary>💾 Copia de seguridad</summary>
     <p class="edhint">Guarda todo lo cargado (fechas, observaciones, listas de nombres y CUIL, Para editar, cierres, historial, datos para SURGE, envíos, métricas, atajos) de los dos apartados. Sirve si se borra Chrome o cambiás de PC. Las carpetas no viajan: después de importar elegilas de nuevo.</p>
     <h4>Automática</h4>
@@ -1029,6 +1052,48 @@ body.dsopen .modal{right:400px}
     <div id="cfgKeys"></div>
     <button id="cfgReset" class="danger">Restablecer atajos originales</button>
     </details>
+  </div>
+</div>
+<div id="lockScr" hidden>
+  <div class="lockbox">
+    <div style="font-size:42px">🔒</div>
+    <h2>Armador de PDF</h2>
+    <div id="lkMain">
+      <p class="label">Ingresá tu contraseña. Queda abierta hasta la medianoche.</p>
+      <input type="password" id="lkPw" autocomplete="current-password" placeholder="Contraseña">
+      <button class="primary" id="lkGo">Abrir</button>
+      <p id="lkErr" class="lkerr"></p>
+      <a href="#" id="lkForgot">Me olvidé la contraseña</a>
+    </div>
+    <div id="lkRec" hidden>
+      <p class="label">Escribí el <b>código de recuperación</b> que anotaste al activar la contraseña y elegí una contraseña nueva. Tus datos no se borran.</p>
+      <input id="lkCode" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+      <input type="password" id="lkN1" placeholder="Contraseña nueva (mínimo 8)" autocomplete="new-password">
+      <input type="password" id="lkN2" placeholder="Repetila" autocomplete="new-password">
+      <button class="primary" id="lkRecGo">Usar código y abrir</button>
+      <p id="lkRecErr" class="lkerr"></p>
+      <p class="label">Si tampoco tenés el código, lo guardado queda cifrado y no se puede leer, pero <b>no se borra</b>: podés volver a intentar cuando lo encuentres.</p>
+      <a href="#" id="lkBack">← Volver</a>
+    </div>
+  </div>
+</div>
+<div id="pwDlg" hidden>
+  <div class="lockbox">
+    <h3 id="pwTit">🔒 Contraseña</h3>
+    <div id="pwForm">
+      <p id="pwTxt" class="label"></p>
+      <input type="password" id="pwOld" placeholder="Contraseña actual" autocomplete="current-password">
+      <input type="password" id="pw1" placeholder="Contraseña nueva (mínimo 8)" autocomplete="new-password">
+      <input type="password" id="pw2" placeholder="Repetila" autocomplete="new-password">
+      <p class="lkwarn">Si te la olvidás, solo se recupera con el código de recuperación que te voy a mostrar. Anotá los dos en un lugar seguro, fuera de la PC.</p>
+      <div class="frow" style="justify-content:flex-end"><button id="pwCancel">Cancelar</button><button class="primary" id="pwOk">Aceptar</button></div>
+      <p id="pwErr" class="lkerr"></p>
+    </div>
+    <div id="pwCodeBox" hidden>
+      <p class="label">Este es tu <b>código de recuperación</b>. Sirve para entrar y elegir otra contraseña si te olvidás la tuya. <b>Se muestra una sola vez.</b> Anotalo en papel o guardalo fuera de esta PC.</p>
+      <div id="pwCode" class="lkcode"></div>
+      <div class="frow" style="justify-content:flex-end"><button id="pwCopy">📋 Copiar</button><label class="cfgchk" style="margin:0"><input type="checkbox" id="pwSaved"> Ya lo anoté</label><button class="primary" id="pwDone" disabled>Listo</button></div>
+    </div>
   </div>
 </div>
 <div id="qpPanel" hidden>
@@ -1101,24 +1166,60 @@ body.dsopen .modal{right:400px}
       r.onerror = () => rej(r.error);
     });
   }
+  /* ===== Contraseña (opcional): cifra todo lo guardado en Chrome =====
+     - Una clave de datos (AES-GCM 256) cifra cada valor. Esa clave se guarda "envuelta" dos veces:
+       con la contraseña (PBKDF2-SHA256, 600.000 vueltas) y con el código de recuperación.
+     - La contraseña nunca se guarda. La clave del día queda como CryptoKey NO exportable hasta la medianoche.
+     - Si te olvidás la contraseña: con el código de recuperación elegís una nueva. No hay botón de borrar. */
+  const LOCK_K = "__lock", DAY_K = "__daykey";
+  const isHandleV = v => typeof FileSystemHandle !== "undefined" && v instanceof FileSystemHandle;
+  const b64 = u => { let s = ""; const a = new Uint8Array(u); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  let dataKey = null;                         // CryptoKey del día (null = sin contraseña o bloqueado)
+  let lockInfo = null;                        // candado guardado (null = sin contraseña)
+  let gateOpen; const gate = new Promise(r => gateOpen = r);   // los datos se leen recién después de abrir
+  function rawGet(k) { return openDb().then(db => new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })); }
+  function rawPutMany(entries, dels = []) { return openDb().then(db => new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"), st = t.objectStore("kv"); for (const [k, v] of entries) st.put(v, k); for (const k of dels) st.delete(k); t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error("abortado")); })); }
+  function rawAll() { return openDb().then(db => new Promise((res, rej) => { const out = {}, q = db.transaction("kv").objectStore("kv").openCursor(); q.onsuccess = () => { const c = q.result; if (!c) return res(out); out[c.key] = c.value; c.continue(); }; q.onerror = () => rej(q.error); })); }
+  async function aesEnc(key, bytes) { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, bytes)); const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return o; }
+  async function aesDec(key, bytes) { bytes = new Uint8Array(bytes); return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.subarray(0, 12) }, key, bytes.subarray(12))); }
+  async function kekFrom(secret, salt, iter) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret.normalize("NFC")), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt, iterations: iter }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  const importDK = raw => crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+  const encVal = async v => (dataKey && v !== undefined && !isHandleV(v)) ? { __enc: 1, x: await aesEnc(dataKey, new TextEncoder().encode(JSON.stringify(v))) } : v;
+  const decVal = async v => (v && v.__enc && v.x) ? (dataKey ? JSON.parse(new TextDecoder().decode(await aesDec(dataKey, v.x))) : undefined) : v;
+  const recNorm = c => String(c || "").toUpperCase().replace(/[^A-Z2-9]/g, "");
+  function newRecoveryCode() { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint8Array(24)); let s = ""; for (let i = 0; i < 24; i++) s += A[r[i] % 32]; return s.match(/.{4}/g).join("-"); }
+  async function wrapLock(rawDK, pw, recCode, prev) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), it = 600000;
+    const L = { v: 1, id: prev ? prev.id : b64(crypto.getRandomValues(new Uint8Array(9))), salt: b64(salt), iter: it, wpw: b64(await aesEnc(await kekFrom(pw, salt, it), rawDK)) };
+    if (recCode) { const rs = crypto.getRandomValues(new Uint8Array(16)); L.rsalt = b64(rs); L.riter = 200000; L.wrec = b64(await aesEnc(await kekFrom(recNorm(recCode), rs, 200000), rawDK)); }
+    else if (prev) { L.rsalt = prev.rsalt; L.riter = prev.riter; L.wrec = prev.wrec; }
+    return L;
+  }
+  const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+  async function openWith(rawDK) { dataKey = await importDK(rawDK); rawDK.fill(0); await rawPutMany([[DAY_K, { key: dataKey, exp: midnight() }]]); }
+  async function tryPassword(pw) { try { const raw = await aesDec(await kekFrom(pw, unb64(lockInfo.salt), lockInfo.iter), unb64(lockInfo.wpw)); await openWith(raw); return true; } catch (e) { return false; } }
+  async function tryRecovery(code) { if (!lockInfo.wrec) return null; try { return await aesDec(await kekFrom(recNorm(code), unb64(lockInfo.rsalt), lockInfo.riter), unb64(lockInfo.wrec)); } catch (e) { return null; } }
+
   async function kvGet(k) {
-    try { const db = await openDb(); return await new Promise((res, rej) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+    try { await gate; return await decVal(await rawGet(k)); }
     catch (e) { return undefined; }
   }
   let bkDirty = false;   // hubo cambios desde la última copia automática
   async function kvSet(k, v) {
     if (k !== "bkLast") bkDirty = true;
-    try { const db = await openDb(); await new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+    try { await gate; await rawPutMany([[k, await encVal(v)]]); }
     catch (e) { console.warn("No se pudo guardar", k, e); }
   }
 
   async function kvAll() {
-    const db = await openDb();
-    return new Promise((res, rej) => {
-      const out = {}, st = db.transaction("kv").objectStore("kv"), q = st.openCursor();
-      q.onsuccess = () => { const c = q.result; if (!c) return res(out); out[c.key] = c.value; c.continue(); };
-      q.onerror = () => rej(q.error);
-    });
+    await gate;
+    const all = await rawAll(), out = {};
+    for (const [k, v] of Object.entries(all)) { if (k === LOCK_K || k === DAY_K) continue; out[k] = await decVal(v); }
+    return out;
   }
 
   /* ================= Estado ================= */
@@ -3798,7 +3899,12 @@ body.dsopen .modal{right:400px}
     for (const [k, v] of Object.entries(all)) {
       if (isHandle(v)) carpetas[k] = v.name; else if (k !== "bkLast") data[k] = v;
     }
-    return JSON.stringify({ app: "armador-pdf", version: 1, exportado: new Date().toISOString(), carpetas, data }, null, 1);
+    const exportado = new Date().toISOString();
+    if (lockInfo && dataKey) {   // con contraseña, la copia también va cifrada (se abre con la misma contraseña o el código)
+      const enc = await aesEnc(dataKey, new TextEncoder().encode(JSON.stringify({ carpetas, data })));
+      return JSON.stringify({ app: "armador-pdf", version: 2, exportado, lock: lockInfo, enc: b64(enc) });
+    }
+    return JSON.stringify({ app: "armador-pdf", version: 1, exportado, carpetas, data }, null, 1);
   }
   $("cfgExport").onclick = async () => {
     try {
@@ -3852,8 +3958,23 @@ body.dsopen .modal{right:400px}
   $("cfgFile").addEventListener("change", async e => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     try {
-      const p = JSON.parse(await f.text());
+      let p = JSON.parse(await f.text());
+      if (p.app === "armador-pdf" && p.enc && p.lock) {   // copia cifrada
+        let key = (lockInfo && dataKey && p.lock.id === lockInfo.id) ? dataKey : null;
+        if (!key) {
+          const pw = prompt("Esta copia está cifrada. Escribí la contraseña que tenía el Armador cuando se hizo (o su código de recuperación):");
+          if (!pw) return;
+          let raw = null;
+          try { raw = await aesDec(await kekFrom(pw, unb64(p.lock.salt), p.lock.iter), unb64(p.lock.wpw)); } catch (e) {}
+          if (!raw && p.lock.wrec) try { raw = await aesDec(await kekFrom(recNorm(pw), unb64(p.lock.rsalt), p.lock.riter), unb64(p.lock.wrec)); } catch (e) {}
+          if (!raw) throw new Error("esa contraseña no abre esta copia");
+          key = await importDK(raw);
+        }
+        const inner = JSON.parse(new TextDecoder().decode(await aesDec(key, unb64(p.enc))));
+        p = { app: p.app, version: 1, exportado: p.exportado, carpetas: inner.carpetas, data: inner.data };
+      }
       if (p.app !== "armador-pdf" || !p.data) throw new Error("no es un archivo de configuración del Armador");
+      for (const k of Object.keys(p.data)) if (k.startsWith("__")) delete p.data[k];
       if (!confirm(`Importar la configuración del ${new Date(p.exportado).toLocaleString("es-AR")}?\nReemplaza lo cargado en esta PC (las carpetas elegidas se mantienen).`)) return;
       for (const [k, v] of Object.entries(p.data)) await kvSet(k, v);
       const carp = Object.entries(p.carpetas || {}).map(([k, n]) => `${k}: ${n}`).join(" · ");
@@ -3903,7 +4024,7 @@ body.dsopen .modal{right:400px}
     ["manual", "guia", "procesos"].forEach(t => { $("info_" + t).hidden = b.dataset.t !== t; });
     document.querySelector(".infobody").scrollTop = 0;
   });
-  function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); renderBk(); $("cfgPanel").classList.add("show"); }
+  function openCfg() { closeEdPanel(); closeMetrics(); capturing = null; renderCfg(); renderBk(); renderPw(); $("cfgPanel").classList.add("show"); }
   function closeCfg() { capturing = null; $("cfgPanel").classList.remove("show"); }
   $("cfgOpen").onclick = () => $("cfgPanel").classList.contains("show") ? closeCfg() : openCfg();
   $("cfgClose").onclick = closeCfg;
@@ -4713,6 +4834,140 @@ body.dsopen .modal{right:400px}
       if (hb && ((await hb.queryPermission({ mode: "read" })) === "granted" || (await hb.requestPermission({ mode: "read" })) === "granted")) await cargarBase(await hb.getFile());
     }
     catch (e) { toast("No pude volver a leer el Excel (¿lo moviste?). Elegilo de nuevo."); }
+  };
+  /* ===== Pantalla de bloqueo y manejo de la contraseña ===== */
+  const LK_LS = "armLockFails";
+  const lkFails = () => { try { return JSON.parse(localStorage.getItem(LK_LS) || '{"n":0,"until":0}'); } catch (e) { return { n: 0, until: 0 }; } };
+  const lkSetFails = o => { try { localStorage.setItem(LK_LS, JSON.stringify(o)); } catch (e) {} };
+  function showLock() {
+    $("lockScr").hidden = false; $("lkMain").hidden = false; $("lkRec").hidden = true;
+    setTimeout(() => $("lkPw").focus(), 50);
+  }
+  async function lkTry() {
+    const f = lkFails(), now = Date.now();
+    if (f.until > now) { $("lkErr").textContent = `Esperá ${Math.ceil((f.until - now) / 1000)} s para volver a intentar.`; return; }
+    const pw = $("lkPw").value; if (!pw) return;
+    $("lkGo").disabled = true; $("lkErr").textContent = "Verificando…";
+    const ok = await tryPassword(pw);
+    $("lkGo").disabled = false; $("lkPw").value = "";
+    if (ok) { lkSetFails({ n: 0, until: 0 }); $("lockScr").hidden = true; $("lkErr").textContent = ""; gateOpen(); return; }
+    f.n++; if (f.n >= 5) f.until = now + Math.min(300, 15 * 2 ** (f.n - 5)) * 1000;
+    lkSetFails(f);
+    $("lkErr").textContent = "Contraseña incorrecta." + (f.until > now ? ` Esperá ${Math.round((f.until - now) / 1000)} s.` : "");
+  }
+  $("lkGo").onclick = lkTry;
+  $("lkPw").addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") lkTry(); });
+  $("lkForgot").onclick = e => { e.preventDefault(); $("lkMain").hidden = true; $("lkRec").hidden = false; $("lkCode").focus(); };
+  $("lkBack").onclick = e => { e.preventDefault(); $("lkRec").hidden = true; $("lkMain").hidden = false; };
+  ["lkCode", "lkN1", "lkN2"].forEach(id => $(id).addEventListener("keydown", e => e.stopPropagation()));
+  $("lkRecGo").onclick = async () => {
+    const n1 = $("lkN1").value, n2 = $("lkN2").value;
+    if (n1.length < 8) { $("lkRecErr").textContent = "La contraseña nueva tiene que tener al menos 8 caracteres."; return; }
+    if (n1 !== n2) { $("lkRecErr").textContent = "Las dos contraseñas no coinciden."; return; }
+    $("lkRecErr").textContent = "Verificando el código…";
+    const raw = await tryRecovery($("lkCode").value);
+    if (!raw) { $("lkRecErr").textContent = "Ese código no es correcto. Revisalo (no importan mayúsculas ni guiones)."; return; }
+    const L = await wrapLock(raw, n1, null, lockInfo);
+    await rawPutMany([[LOCK_K, L]]); lockInfo = L;
+    await openWith(raw);
+    lkSetFails({ n: 0, until: 0 }); $("lockScr").hidden = true; gateOpen();
+    toast("🔓 Listo: entraste con el código y la contraseña nueva quedó guardada. El código de recuperación sigue siendo el mismo.");
+  };
+  // Al arrancar: si hay contraseña y no hay clave del día vigente, pide la contraseña ANTES de leer datos
+  (async () => {
+    try {
+      lockInfo = await rawGet(LOCK_K) || null;
+      if (!lockInfo) { gateOpen(); return; }
+      const day = await rawGet(DAY_K);
+      if (day && day.key && day.exp > Date.now()) { dataKey = day.key; gateOpen(); return; }
+      if (day) await rawPutMany([], [DAY_K]);
+      showLock();
+    } catch (e) { console.warn("Candado", e); gateOpen(); }
+  })();
+  // Medianoche y bloqueo por inactividad
+  let lastAct = Date.now();
+  ["pointerdown", "keydown"].forEach(ev => window.addEventListener(ev, () => { lastAct = Date.now(); }, true));
+  const idleMin = () => +(localStorage.getItem("armLockIdle") || 0);
+  async function lockNow() { try { await rawPutMany([], [DAY_K]); } catch (e) {} location.reload(); }
+  async function lockCheck() {
+    if (!lockInfo || !dataKey) return;
+    const day = await rawGet(DAY_K); if (!day || day.exp <= Date.now()) return lockNow();   // pasó la medianoche
+    const m = idleMin(); if (m && Date.now() - lastAct > m * 60000) return lockNow();
+  }
+  setInterval(lockCheck, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) lockCheck(); });
+
+  // Configuración → Contraseña
+  function renderPw() {
+    const on = !!lockInfo;
+    $("pwOff").hidden = on; $("pwOn").hidden = !on;
+    $("pwState").textContent = on ? "🔒 Activada: lo guardado en Chrome está cifrado." : "Sin contraseña: lo guardado en Chrome se puede leer desde esta PC.";
+    $("pwIdle").value = String(idleMin());
+  }
+  $("pwIdle").onchange = () => { try { localStorage.setItem("armLockIdle", $("pwIdle").value); } catch (e) {} };
+  let pwMode = "";
+  function pwOpen(mode) {
+    pwMode = mode;
+    const t = { activar: ["🔒 Activar contraseña", "Mínimo 8 caracteres. Se pide una vez por día."], cambiar: ["🔑 Cambiar contraseña", "Escribí la actual y la nueva. El código de recuperación no cambia."], codigo: ["🧾 Nuevo código de recuperación", "Escribí tu contraseña actual. El código anterior deja de servir."] }[mode];
+    $("pwTit").textContent = t[0]; $("pwTxt").textContent = t[1];
+    $("pwOld").hidden = mode === "activar"; $("pw1").hidden = $("pw2").hidden = mode === "codigo";
+    document.querySelector("#pwForm .lkwarn").hidden = mode !== "activar";
+    ["pwOld", "pw1", "pw2"].forEach(id => $(id).value = ""); $("pwErr").textContent = "";
+    $("pwForm").hidden = false; $("pwCodeBox").hidden = true; $("pwDlg").hidden = false;
+    setTimeout(() => $(mode === "activar" ? "pw1" : "pwOld").focus(), 50);
+  }
+  ["pwOld", "pw1", "pw2"].forEach(id => $(id).addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") $("pwOk").click(); }));
+  $("pwCancel").onclick = () => { $("pwDlg").hidden = true; };
+  function showCode(code) {
+    $("pwForm").hidden = true; $("pwCodeBox").hidden = false; $("pwCode").textContent = code;
+    $("pwSaved").checked = false; $("pwDone").disabled = true;
+  }
+  $("pwSaved").onchange = () => { $("pwDone").disabled = !$("pwSaved").checked; };
+  $("pwCopy").onclick = async () => { try { await navigator.clipboard.writeText($("pwCode").textContent); toast("📋 Código copiado. Pegalo en un lugar seguro fuera de esta PC y después borralo del portapapeles."); } catch (e) {} };
+  $("pwDone").onclick = () => { $("pwDlg").hidden = true; $("pwCode").textContent = ""; renderPw(); };
+  async function unwrapWithPw(pw) { try { return await aesDec(await kekFrom(pw, unb64(lockInfo.salt), lockInfo.iter), unb64(lockInfo.wpw)); } catch (e) { return null; } }
+  $("pwOk").onclick = async () => {
+    const err = t => { $("pwErr").textContent = t; };
+    const n1 = $("pw1").value, n2 = $("pw2").value, old = $("pwOld").value;
+    if (pwMode !== "codigo") { if (n1.length < 8) return err("Mínimo 8 caracteres."); if (n1 !== n2) return err("Las dos contraseñas no coinciden."); }
+    $("pwOk").disabled = true; err("Un momento…");
+    try {
+      if (pwMode === "activar") {
+        await gate;
+        const all = await rawAll(), raw = crypto.getRandomValues(new Uint8Array(32)), code = newRecoveryCode();
+        const L = await wrapLock(raw, n1, code);
+        dataKey = await importDK(raw.slice());
+        const entries = [];
+        for (const [k, v] of Object.entries(all)) { if (k === LOCK_K || k === DAY_K || (v && v.__enc)) continue; entries.push([k, await encVal(v)]); }
+        entries.push([LOCK_K, L], [DAY_K, { key: dataKey, exp: midnight() }]);
+        await rawPutMany(entries);           // todo junto: o se cifra todo o no cambia nada
+        raw.fill(0); lockInfo = L; bkDirty = true;
+        showCode(code);
+      } else {
+        const raw = await unwrapWithPw(old);
+        if (!raw) { err("La contraseña actual no es correcta."); return; }
+        if (pwMode === "cambiar") { const L = await wrapLock(raw, n1, null, lockInfo); await rawPutMany([[LOCK_K, L]]); lockInfo = L; $("pwDlg").hidden = true; toast("🔑 Contraseña cambiada."); }
+        else { const code = newRecoveryCode(); const L = await wrapLock(raw, old, code, lockInfo); await rawPutMany([[LOCK_K, L]]); lockInfo = L; showCode(code); }
+        raw.fill(0);
+      }
+    } catch (e) { err("No se pudo: " + e.message); }
+    finally { $("pwOk").disabled = false; }
+  };
+  $("pwActivate").onclick = () => pwOpen("activar");
+  $("pwChange").onclick = () => pwOpen("cambiar");
+  $("pwNewCode").onclick = () => pwOpen("codigo");
+  $("pwLockNow").onclick = () => lockNow();
+  let pwRemoveArm = 0;
+  $("pwRemove").onclick = async () => {
+    if (Date.now() - pwRemoveArm > 4000) { pwRemoveArm = Date.now(); $("pwRemove").textContent = "Tocá de nuevo para quitarla"; setTimeout(() => $("pwRemove").textContent = "Quitar contraseña", 4000); return; }
+    pwRemoveArm = 0;
+    try {
+      const all = await rawAll(), entries = [];
+      for (const [k, v] of Object.entries(all)) { if (k === LOCK_K || k === DAY_K) continue; entries.push([k, await decVal(v)]); }
+      await rawPutMany(entries, [LOCK_K, DAY_K]);
+      lockInfo = null; dataKey = null; bkDirty = true; renderPw();
+      toast("🔓 Contraseña quitada: lo guardado volvió a quedar sin cifrar.");
+    } catch (e) { toast("No pude quitarla: " + e.message); }
   };
   /* 🧰 PDF rápido: imágenes pegadas o archivos -> un PDF; también combina PDF. Independiente de socios y carpetas. */
   const qp = []; // {name, type: "img"|"pdf", bytes, url}
