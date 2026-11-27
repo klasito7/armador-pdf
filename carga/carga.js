@@ -1,7 +1,7 @@
 /* Carga rápida — panel de teclado para el empadronamiento de Diabetes en SURGE.
    Solo completa los campos de la página. Guardar, Guardar todo y Enviar a revisión los aprieta la persona. */
 (() => {
-  const VER = "v11";
+  const VER = "v12";
   if (window.__cr) { window.__cr.toggle(); return; }
   const $ = window.jQuery;
   const LS = (k, d) => { try { return JSON.parse(localStorage.getItem("cr_" + k)) ?? d; } catch (e) { return d; } };
@@ -81,6 +81,9 @@
 #crp .ok{color:#087}
 #crp .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 #crp button.b{font:inherit;padding:5px 10px;border-radius:6px;border:1px solid #bbb;background:#f5f5f5;cursor:pointer}
+#crp .rrow{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid #eee;padding:7px 0}
+#crp .rrow>div{flex:1}
+#crp .rmot{background:#fdecea;border-left:3px solid #c0392b;padding:4px 7px;margin-top:3px;border-radius:4px;white-space:pre-wrap}
 #crp button.p{background:#f0a020;border-color:#f0a020;color:#fff;font-weight:600}
 #crp .hint{font-size:11.5px;color:#777;margin-top:6px}
 #crp kbd{background:#eee;border:1px solid #ccc;border-radius:3px;padding:0 4px;font-size:11px}`;
@@ -197,9 +200,43 @@
   const esperar = (cond, ms) => new Promise(res => { const t0 = Date.now(); const t = setInterval(() => { if (cond()) { clearInterval(t); res(true); } else if (Date.now() - t0 > ms) { clearInterval(t); res(false); } }, 300); });
   const focusFirst = () => setTimeout(() => { const i = box.querySelector("[data-first]") || box.querySelector("input"); if (i) i.focus(); }, 30);
 
+  /* ---------- Rechazados de Diabetes: lista con el motivo y un click para abrir y corregir ---------- */
+  const API_H = { headers: { accept: "application/json", "X-Requested-With": "XMLHttpRequest" } };
+  const getJ = async u => { const r = await fetch(u, API_H); if (!r.ok) throw new Error("SURGE respondió " + r.status); return r.json(); };
+  const fISO = s => s ? isoToFmt(String(s).slice(0, 10)) : "";
+  async function listaRechazados() {
+    const out = box.querySelector("#cr_rlist"), sel = box.querySelector("#cr_rquien");
+    out.innerHTML = `<p class="hint">Buscando rechazados de Diabetes…</p>`;
+    let todos = [];
+    try {
+      const p1 = await getJ("/api/empadronamientos/rechazado?patologia_id=381&page=1");
+      todos = p1.data;
+      for (let p = 2; p <= (p1.last_page || 1); p++) todos = todos.concat((await getJ(`/api/empadronamientos/rechazado?patologia_id=381&page=${p}`)).data);
+    } catch (e) { out.innerHTML = `<p class="msg">No pude leer los rechazados: ${esc(e.message)}</p>`; return; }
+    todos.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+    const quien = {};   // id -> quién lo cargó (del historial)
+    const pinta = () => {
+      const yo = sel.value, vis = todos.filter(x => !yo || quien[x.id] === yo);
+      out.innerHTML = vis.length ? vis.map(x => `<div class="rrow"><div><b>${esc((x.beneficiario && x.beneficiario.nombre) || "")}</b> · ${esc(x.cuil_beneficiario || "")} · nº ${x.id}<br><small>Rechazado ${fISO(x.updated_at)}${quien[x.id] ? " · cargó " + esc(quien[x.id]) : ""}</small><div class="rmot">${esc(x.observaciones_estado || "(sin motivo escrito)")}</div></div><button class="b p" data-abrir="${x.id}">Abrir ✎</button></div>`).join("") : `<p class="hint">No hay rechazados${yo ? " de " + esc(yo) : ""}. 🎉</p>`;
+      out.querySelectorAll("[data-abrir]").forEach(b => b.onclick = () => { location.href = `/admin/empadronamientos/${b.dataset.abrir}/edit`; });
+    };
+    pinta();
+    // quién cargó cada uno (en segundo plano, para poder filtrar "los míos")
+    for (const x of todos) {
+      try { const h = await getJ(`/admin/empadronamientos/${x.id}/historial`); const arr = (Array.isArray(h) ? h : h.data || []).slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))); const u = arr[0] && arr[0].user; quien[x.id] = u ? (u.full_name || [u.name, u.apellido].filter(Boolean).join(" ")) : ""; } catch (e) { quien[x.id] = ""; }
+      const nombres = [...new Set(Object.values(quien).filter(Boolean))].sort();
+      const prev = sel.value || LS("yo", "");
+      sel.innerHTML = `<option value="">Todos (${todos.length})</option>` + nombres.map(n => `<option ${n === prev ? "selected" : ""}>${esc(n)}</option>`).join("");
+      if (sel.value === prev) pinta();
+    }
+  }
   if (!mode) {
-    box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>`;
+    box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <button class="x" data-close>✕</button></h3><p>Abrí un empadronamiento (Alta, Editar o Reempadronar) y volvé a tocar el marcador.</p>
+      <div class="btns"><button class="b p" id="cr_rech">🔴 Rechazados de Diabetes</button> <select id="cr_rquien" title="Quién lo cargó"><option value="">Todos</option></select></div>
+      <div id="cr_rlist"></div>`;
     box.querySelector("[data-close]").onclick = minimizar;
+    box.querySelector("#cr_rech").onclick = listaRechazados;
+    box.querySelector("#cr_rquien").onchange = e => { SS("yo", e.target.value); box.querySelector("#cr_rech").click(); };
     return;
   }
 
@@ -431,6 +468,7 @@
     box.innerHTML = `<h3>⚡ Carga rápida <small style="font-weight:400;color:#999">${VER}</small> <small style="font-weight:400;color:#888">solicitud ${esc(solicitud)}</small><button class="x" data-close>✕</button></h3>
       <div class="top">${fpInput}
       </div>
+      <div id="cr_motivo"></div>
       ${editable ? "" : `<p class="msg">Este empadronamiento no se puede editar (aceptado o pendiente). Abrí uno en Borrador, Rechazado o Reempadronar.</p>`}
       <div id="cr_rows">${defs.map(rowHtml).join("")}</div>
       ${excelHtml()}
@@ -661,6 +699,13 @@
   });
   window.__cr.ver = async otra => { const f = await abrirPlanilla(cuilPage, otra); if (f) { archivo = f; const vi = rowInput("hc"); if (vi) vi.value = f.name; } };
   render();
+  // Si este empadronamiento fue rechazado, muestra arriba el motivo de la SSS (se mantiene aunque se vuelva a dibujar el panel)
+  let motivoRech = "";
+  const pintaMotivo = () => { const m = box.querySelector("#cr_motivo"); if (m) m.innerHTML = motivoRech ? `<div class="rmot"><b>🔴 Motivo del rechazo:</b> ${esc(motivoRech)}</div>` : ""; };
+  if (solicitud && mode === "edit") getJ(`/admin/empadronamientos/${solicitud}/historial`).then(h => {
+    const arr = (Array.isArray(h) ? h : h.data || []).slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const ult = arr[0]; if (ult && ult.estado && /rechaz/i.test(ult.estado.nombre)) { motivoRech = ult.observaciones_estado || "(sin motivo escrito)"; pintaMotivo(); new MutationObserver(() => { if (!box.querySelector("#cr_motivo .rmot")) pintaMotivo(); }).observe(box, { childList: true }); }
+  }).catch(() => {});
   // Si vengo del Alta de este mismo CUIL, la fecha de planilla ya la sé
   if (!box.querySelector("#cr_fp").value && pend && pend.cuil === cuilPage && pend.fp) { box.querySelector("#cr_fp").value = pend.fp; SS("fp_" + solicitud, pend.fp); }
   // Si este CUIL viene en la cola del Armador: completa todo, adjunta la planilla y aprieta Guardar todo
