@@ -947,6 +947,7 @@ body.dsopen .modal{right:400px}
 <li>Nombre: <code>DNI - APELLIDO, NOMBRE - TIPO PERÍODO</code>, ej. <code>16749332 - GALEAZZI, SILVINA SANDRA - RHC 9-26.pdf</code>.</li>
 <li>En la vista previa completar Tipo y Período; no guarda si faltan.</li>
 </ul>
+<p><b>Bots de Python:</b> todos se corren desde el <b>🤖 Panel de bots</b> (ver pestaña Procesos).</p>
 <h3>Checklist rápida del día</h3>
 <ul class='chk'>
 <li><label><input type='checkbox'> Exportar SURGE y correr el cruce</label></li>
@@ -966,6 +967,9 @@ body.dsopen .modal{right:400px}
     </div>
     <div id="info_procesos" hidden>
 <p class="infolink">Las herramientas que se usan alrededor del Armador, en el orden del circuito. Los .bat y .py van todos en la misma carpeta; los favoritos van en la barra de Chrome.</p>
+<h3>🤖 Panel de bots <span class="label">Panel de bots.bat</span></h3>
+<p><b>Qué es:</b> una sola ventana para correr todos los bots de Python (Altas nuevas, Vencimientos, Buscador Padrón, Cruce SURGE, Bot Planillas) sin la consola. Va en la carpeta raíz de los bots; doble clic en <code>Panel de bots.bat</code>.</p>
+<p><b>Cómo se usa:</b> cada bot es una tarjeta con sus opciones y ▶. A la derecha se ve lo que hace, en vivo (una pestaña por corrida); si pregunta algo se contesta abajo, y ■ Detener lo corta. Abajo de cada tarjeta, sus resultados: 📂 abrir o 📋 copiar (DNI para SGI, lista de nombres para el Armador, resultado del Padrón). ⚙ Configuración: Excel compartido, Reporte Altas, Descargas y usuario, una sola vez para todos. Los .bat de cada bot siguen funcionando igual.</p>
 <h3>1 · Altas nuevas <span class="label">ejecutar_altas.bat</span></h3>
 <p><b>Cuándo:</b> cuando llega por mail el Excel de Altas nuevas.</p>
 <p><b>Qué hace:</b> cruza las altas con el Excel compartido (análisis y emp. y reemp.), saltea vigentes, en trámite y jubilados, vuelve a consultar los "no desregula" y "baja Swiss", corre el Buscador Padrón y separa los que hoy tienen Swiss.</p>
